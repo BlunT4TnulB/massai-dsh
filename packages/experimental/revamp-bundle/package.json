@@ -16,7 +16,8 @@
     "bundle": {
       "patch": [
         "./cordis.patch.yml",
-        "./presets/scanner-desk.patch.yml"
+        "./presets/scanner-desk.patch.yml",
+        "./presets/cheap.patch.yml"
       ]
     }
   },

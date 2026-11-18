@@ -1,0 +1,25 @@
+# Cheap preset: minimal tools + concise persona for fast, low-cost runs.
+# Pair with deepseek-flash (see cordis.patch.yml in this bundle) for the cheapest path.
+- insert:
+    - id: preset-cheap
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: cheap
+        name: 'Cheap'
+        description: 'Minimal tools and a concise persona for fast, low-cost runs.'
+        order: 4
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are a fast, low-cost coding assistant. Be concise, prefer direct answers,
+                and use only the tools you need. Do not over-explain.
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'

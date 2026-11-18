@@ -37,7 +37,10 @@ plus more.
   `packages/llm/llm-deepseek/src/models.ts` (it was known but invisible in the picker).
 - ✅ `packages/experimental/revamp-bundle` created — cost-aware `agent-default-model` patch.
 - ✅ `dsh-revamp` + `model-routing` skills added (5 skills live).
-- ⏳ Custom agent presets, branding/theme, and a bundle-of-7-bundles wrapper.
+- ✅ Custom agent presets in `revamp-bundle`: **scanner-desk** (focused project preset)
+  and **cheap** (minimal tools + concise persona, pairs with Flash).
+- ✅ Trademark note: name the fork using "DSH", not "DeepSeek Harness" (see BRAND_GUIDELINES.md).
+- ⏳ Branding/theme + a bundle-of-7-bundles wrapper.
 
 ### Phase 2 — Custom plugins (own packages)
 - `dsh-plugin-secrets-vault` — encrypted secrets + account connectors (Drive/GitHub/Postgres).
