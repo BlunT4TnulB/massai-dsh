@@ -217,12 +217,21 @@ export class DeepSeekAuth extends Service {
     const { ctx } = this
     const reference = connection.reference ?? DEEPSEEK_API_KEY
     const owner = connection.owner ?? request.consumer
+    const userId = request.userId
+    const userCredentials = userId === undefined ? undefined
+      : ctx.get('userCredentials') as { resolveFor(userId: string): Promise<string | undefined> } | undefined
     return {
       kind: 'api-key', endpoint, reference,
-      configured: () => credentialRefConfigured(ctx, reference),
+      configured: async () => userCredentials === undefined
+        ? credentialRefConfigured(ctx, reference)
+        : await userCredentials.resolveFor(userId) !== undefined,
       resolve: async (signal) => {
         signal?.throwIfAborted()
-        const raw = await resolveCredentialRef(ctx, reference)
+        let raw: string | undefined
+        if (userCredentials !== undefined) {
+          raw = await userCredentials.resolveFor(userId)
+        }
+        raw ??= await resolveCredentialRef(ctx, reference)
         if (raw === undefined) return undefined
         const checked = normalizeApiKey(raw)
         if (!checked.ok) throw new DeepSeekAuthError(unusableKey(checked.reason, owner, reference), 'INVALID_CREDENTIAL')

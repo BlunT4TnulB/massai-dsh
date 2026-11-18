@@ -52,6 +52,11 @@ export interface DeepSeekAuthRequest {
   readonly connections?: Readonly<Partial<Record<DeepSeekAuthKind, DeepSeekAuthConnection>>>
   /** Headers an API key is sent in; `authorization` when omitted. The account sign-in chooses its own header. */
   readonly apiKeyHeaders?: readonly DeepSeekApiKeyHeader[]
+  /**
+   * Hosted link only: the signed-in user id. When set and a `userCredentials` service is mounted, the API key is
+   * resolved per-user; otherwise the global reference is used (unchanged local behavior).
+   */
+  readonly userId?: string
 }
 
 /** The credential of one kind released for one request, ready to send. */
