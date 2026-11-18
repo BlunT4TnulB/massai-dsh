@@ -37,7 +37,7 @@ plus more.
   `packages/llm/llm-deepseek/src/models.ts` (it was known but invisible in the picker).
 - ✅ `packages/experimental/massai-bundle` created — cost-aware `agent-default-model` patch.
 - ✅ `dsh-revamp` + `model-routing` skills added (5 skills live).
-- ✅ Custom agent presets in `massai-bundle`: **scanner-desk** (focused project preset)
+- ✅ Custom agent presets in `massai-bundle`: **massai** (default coding preset)
   and **cheap** (minimal tools + concise persona, pairs with Flash).
 - ✅ Trademark note: name the fork using "DSH", not "DeepSeek Harness" (see BRAND_GUIDELINES.md).
 - ⏳ Branding/theme + a bundle-of-7-bundles wrapper.

@@ -11,7 +11,7 @@ is `packages/llm/llm-deepseek/src/models.ts` (`DEFAULT_MODELS`), configurable vi
 provider's `models` array (`config.ts`, volatile).
 
 **Plan (two tiers):**
-- **Tier A — catalog + presets (done):** flash surfaced + `cheap`/`scanner-desk` presets.
+- **Tier A — catalog + presets (done):** flash surfaced + `massai`/`cheap` presets.
 - **Tier B — router adapter:** author `packages/llm/llm-router` as a new provider
   adapter that multiplexes `deepseek-flash` / `deepseek-v4-pro` / the local gateway
   (`coding-agent-interface`, OpenAI-compatible) / Ollama, with failover. Model it on
