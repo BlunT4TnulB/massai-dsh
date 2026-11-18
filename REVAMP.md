@@ -60,12 +60,15 @@ plus more.
 
 ```bash
 cd /workspaces/deepseek-harness
-pnpm install
-# see Makefile / README for the exact build targets (web, cli, native)
+pnpm install --frozen-lockfile   # pnpm@11.28.5, Node 24
+pnpm run typecheck               # light compile gate
+pnpm run build                   # full build (web: build:web, native: build:native-system)
 ```
 
-⚠️ The native mobile build needs Android SDK/JDK (use GitHub Actions or a dev machine);
-this phone environment has neither.
+- CI: `.github/workflows/revamp-ci.yml` runs `pnpm install` + `typecheck` on push/PR
+  (additive; upstream's heavy `check:ci` lanes are untouched).
+- ⚠️ The native mobile build needs Android SDK/JDK (use GitHub Actions or a dev machine);
+  this phone environment has neither.
 
 ## Ground rules
 
