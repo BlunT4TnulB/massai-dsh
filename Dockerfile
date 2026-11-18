@@ -3,7 +3,8 @@
 # `dsh web` = `dsh --profile web`, which takes:
 #   --host <ip>    one concrete IPv4/IPv6 literal (0.0.0.0 is rejected)
 #   --port <port>  listen port (0 = OS-assigned)
-# We bind the container's own address (`hostname -i`) and $PORT.
+# The container's own address is resolved with Node (slim images have no
+# `hostname` binary).
 
 FROM node:24-slim
 
@@ -29,4 +30,5 @@ RUN pnpm install --no-frozen-lockfile
 ENV PORT=3080
 EXPOSE 3080
 
-CMD ["sh", "-c", 'exec node --import tsx/esm apps/cli/src/bin.ts web --host "$(hostname -i)" --port "${PORT:-3080}"']
+# Resolve the container's first non-internal IPv4 with Node, then boot the web app.
+CMD ["sh", "-c", 'HOST=$(node -e "const n=require(\"os\").networkInterfaces();const c=Object.values(n).flat().find(x=>x.family===\"IPv4\"&&!x.internal);process.stdout.write(c?c.address:\"127.0.0.1\")") && exec node --import tsx/esm apps/cli/src/bin.ts web --host "$HOST" --port "${PORT:-3080}"']
