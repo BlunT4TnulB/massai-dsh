@@ -23,6 +23,11 @@
     - id: model-router
       name: "@deepseek-ai/dsh-model-router"
 
+# Account connectors (store/list credentials in the vault).
+- insert:
+    - id: account-connect
+      name: "@deepseek-ai/dsh-account-connect"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
