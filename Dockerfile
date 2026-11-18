@@ -1,8 +1,8 @@
 # Massai — hosted-link deployment (Phase 5 foundation)
 #
-# Runs the DSH web surface from source (tsx), matching the repo's `start:web`
-# script. NOTE: the web-server port is passed via $PORT (default 3080); verify
-# it on first deploy and adjust EXPOSE/health-check accordingly.
+# TODO(finalize after `dsh web --help`): DSH's webserver takes an explicit
+# --host (0.0.0.0 is rejected) and --port; wire them below once the exact flags
+# are confirmed from the CI "Dump web server flags" step.
 
 FROM node:24-slim
 
@@ -17,8 +17,9 @@ COPY apps ./apps
 COPY native ./native
 COPY scripts ./scripts
 
-RUN corepack pnpm install --frozen-lockfile
+RUN corepack pnpm install --no-frozen-lockfile
 
+# Placeholder: finalize with `--host "$(hostname -i)" --port "$PORT"`.
 ENV PORT=3080
 EXPOSE 3080
 

@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Dump web server flags (for Dockerfile)
+        run: node --import tsx/esm apps/cli/src/bin.ts web --help 2>&1 | head -60 || true
+
       - name: Typecheck
         run: pnpm run typecheck
         env:
