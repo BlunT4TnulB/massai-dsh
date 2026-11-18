@@ -44,6 +44,8 @@ export interface NormalRetryPolicyConfig {
   retryableCodes?: string[]
   /** Local exponential-backoff and jitter configuration. */
   backoff?: BackoffConfig
+  /** Fallback model id to use for retries when configured (e.g. deepseek-flash). */
+  fallbackModel?: string
 }
 
 /** Unbounded retry behavior for every model-request failure on one provider route. */
@@ -69,6 +71,7 @@ export interface ResolvedNormalRetryPolicy extends ResolvedRetryBackoff {
   readonly mode: 'normal'
   readonly maxRetries: number
   readonly retryableCodes: readonly string[]
+  readonly fallbackModel?: string
 }
 
 /** Fully resolved unbounded retry policy. */
