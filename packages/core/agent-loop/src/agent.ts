@@ -447,8 +447,11 @@ export class ReactLoopAgent implements Agent {
     const { assembly } = decision
     const renderedPrompt = renderPrompt(assembly)
     let firstAttempt = true
+    let retryModel: string | undefined
     while (true) {
       const { config, preparedCall } = await this.prepareRequest(turn, step, decision.selection, signal)
+      const effectiveConfig = retryModel === undefined ? config : { ...config, model: retryModel }
+      retryModel = undefined
       const currentContext = this.loopCtx.systemPrompt.refreshContext(assembly, {
         ...assembleContextFor(this, signal), modelSelection: decision.selection,
       })
@@ -482,7 +485,7 @@ export class ReactLoopAgent implements Agent {
         this.session.append('user/message', context, { surfaceOp: 'append' })
       }
       firstAttempt = false
-      const request = this.buildRequest(config, preparedCall, assembly.tools, { turn, step }, startsRequestSeries, signal)
+      const request = this.buildRequest(effectiveConfig, preparedCall, assembly.tools, { turn, step }, startsRequestSeries, signal)
       const live = new AssistantStreamAttempt(
         this.session.id,
         ++this.assistantAttemptCounter,
@@ -566,6 +569,7 @@ export class ReactLoopAgent implements Agent {
           if (action?.kind !== 'retry') {
             throw LlmError.fromFailure(finish.failure)
           }
+          if (action.model !== undefined) retryModel = action.model
           continue
         }
 
