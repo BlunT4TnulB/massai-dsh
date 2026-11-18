@@ -17,12 +17,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.host.json tsconfig.client.json ./
-COPY vendor ./vendor
-COPY packages ./packages
-COPY apps ./apps
-COPY native ./native
-COPY scripts ./scripts
+# Copy the whole workspace (the pnpm workspace spans packages/apps/native/vendor/
+# benchmarks/website/python/patches); .dockerignore excludes git + node_modules.
+COPY . .
 
 RUN pnpm install --no-frozen-lockfile
 
