@@ -71,6 +71,7 @@ function retryPolicyKey(policy: ResolvedRetryPolicy): string {
       policy.mode,
       policy.maxRetries,
       [...policy.retryableCodes].sort(),
+      policy.fallbackModel,
       policy.initialDelayMs,
       policy.maxDelayMs,
       policy.jitterRatio,
@@ -185,7 +186,10 @@ export async function apply(ctx: Context, config: Config = {}, internals: RetryI
     agent.session.append('llm/retry', eventData)
     if (!await cancellableDelay(delayMs, fusedSignal)) return
     agent.session.append('llm/retry-started', { retryId, turn, step, retry })
-    return { kind: 'retry' }
+    const fallbackModel = policy.mode === 'normal' ? policy.fallbackModel : undefined
+    return fallbackModel !== undefined
+      ? { kind: 'retry', model: fallbackModel }
+      : { kind: 'retry' }
   }
 
   async function recover(
