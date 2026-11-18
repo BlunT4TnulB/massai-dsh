@@ -1,4 +1,4 @@
-name: Revamp CI
+name: Massai CI
 
 # Light, additive gate for the fork: verifies the revamp still typechecks.
 # (Upstream's heavy `check:ci` lanes need self-hosted runners + bubblewrap;

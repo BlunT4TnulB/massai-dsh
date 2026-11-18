@@ -1,4 +1,4 @@
-# DSH Revamp — The Plan
+# Massai — The Plan
 
 A fork of `deepseek-ai/deepseek-harness` (MIT) rebuilt into a superior, self-owned
 agent environment with **DeepSeek as the backbone** — everything the current DSH does,
@@ -35,15 +35,15 @@ plus more.
 ### Phase 1 — Extension wins (no core changes, survive updates)
 - ✅ Flash model surfaced: added the missing `description` to `deepseek-flash` in
   `packages/llm/llm-deepseek/src/models.ts` (it was known but invisible in the picker).
-- ✅ `packages/experimental/revamp-bundle` created — cost-aware `agent-default-model` patch.
+- ✅ `packages/experimental/massai-bundle` created — cost-aware `agent-default-model` patch.
 - ✅ `dsh-revamp` + `model-routing` skills added (5 skills live).
-- ✅ Custom agent presets in `revamp-bundle`: **scanner-desk** (focused project preset)
+- ✅ Custom agent presets in `massai-bundle`: **scanner-desk** (focused project preset)
   and **cheap** (minimal tools + concise persona, pairs with Flash).
 - ✅ Trademark note: name the fork using "DSH", not "DeepSeek Harness" (see BRAND_GUIDELINES.md).
 - ⏳ Branding/theme + a bundle-of-7-bundles wrapper.
 
 ### Phase 2 — Custom plugins (own packages)
-- 📐 Implementation spec: `packages/experimental/revamp-bundle/docs/SUPERIOR.md`
+- 📐 Implementation spec: `packages/experimental/massai-bundle/docs/SUPERIOR.md`
   (model-router adapter, account-connectors, sync-sources, cai-tool — with exact
   repo paths, service names, and conventions).
 - ⏳ `packages/llm/llm-router` — cost-aware provider adapter (flash/v4-pro/gateway/Ollama + failover)

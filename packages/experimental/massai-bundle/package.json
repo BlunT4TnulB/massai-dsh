@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-revamp-bundle",
-  "description": "BlunT4TnulB's revamp bundle: cost-aware model routing, custom presets, and skills for the forked DSH.",
+  "name": "@deepseek-ai/dsh-experimental-massai-bundle",
+  "description": "Massai bundle: cost-aware model routing, presets, and the cai tool for the Massai fork of DSH.",
   "version": "0.2.2-rc.4",
   "publishConfig": {
     "access": "restricted"
@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/BlunT4TnulB/deepseek-harness.git",
-    "directory": "packages/experimental/revamp-bundle"
+    "directory": "packages/experimental/massai-bundle"
   },
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "bundle": {
       "patch": [
         "./cordis.patch.yml",
-        "./presets/scanner-desk.patch.yml",
+        "./presets/massai.patch.yml",
         "./presets/cheap.patch.yml"
       ]
     }

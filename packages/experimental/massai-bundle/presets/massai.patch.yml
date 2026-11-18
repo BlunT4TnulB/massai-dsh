@@ -1,22 +1,19 @@
-# Scanner Desk preset: a focused agent preset for the stock-dashboard project,
-# inserted by the revamp bundle. Base it on the web-app's standard preset tool set,
-# with a Scanner-Desk persona.
+# Massai default preset: the primary coding-agent preset for the Massai fork.
 - insert:
-    - id: preset-scanner-desk
+    - id: preset-massai
       name: '@deepseek-ai/dsh-agent-preset'
       config:
-        id: scanner-desk
-        name: 'Scanner Desk'
-        description: 'Focused preset for the Scanner Desk stock-scanning dashboard project.'
-        order: 2
+        id: massai
+        name: 'Massai'
+        description: 'Default coding-agent preset for Massai (DeepSeek-backed).'
+        order: 1
         plugins:
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
               prefix: >-
-                You are a coding agent working on the Scanner Desk stock-scanning dashboard
-                (Node 24 + React/Vite + Express/Drizzle, plus a Python scanner). Before acting,
-                load the scanner-desk, mission-control, and python-testing skills for project context.
+                You are Massai, a DeepSeek-backed coding agent. Work autonomously,
+                make small correct edits, verify your work, and summarize what you changed.
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
