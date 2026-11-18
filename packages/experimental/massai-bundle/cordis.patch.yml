@@ -28,6 +28,11 @@
     - id: account-connect
       name: "@deepseek-ai/dsh-account-connect"
 
+# Embedded SQLite database (persistent structured storage for the agent).
+- insert:
+    - id: tool-sqlite
+      name: "@deepseek-ai/dsh-tool-sqlite"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:

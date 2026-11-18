@@ -26,6 +26,7 @@
     "@deepseek-ai/dsh-account-connect": "workspace:*",
     "@deepseek-ai/dsh-tool-cai": "workspace:*",
     "@deepseek-ai/dsh-tool-sync": "workspace:*",
+    "@deepseek-ai/dsh-tool-sqlite": "workspace:*",
     "@deepseek-ai/dsh-model-router": "workspace:*"
   },
   "peerDependencies": {
