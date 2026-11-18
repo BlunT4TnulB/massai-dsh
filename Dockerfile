@@ -47,6 +47,6 @@ EXPOSE 3080
 
 # Bind 0.0.0.0 for the hosted link (Render's port detection requires it).
 # DSH rejects the wildcard address by default; DSH_ALLOW_WILDCARD_HOST opts in.
-# Default port 10000 matches Render's image-service default; --no-open skips the
-# browser launch (a container has no display).
-CMD echo "massai booting on ${PORT:-10000}" && exec node --import tsx/esm apps/cli/src/bin.ts web --no-open --host 0.0.0.0 --port "${PORT:-10000}"
+# Run the PRE-BUILT CLI (lib/bin.js), not `tsx apps/cli/src/bin.ts`: tsx compiles
+# hundreds of plugins at boot, which exceeds Render's startup timeout.
+CMD echo "massai booting on ${PORT:-10000}" && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port "${PORT:-10000}"
