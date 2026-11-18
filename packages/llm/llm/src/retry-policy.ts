@@ -95,6 +95,7 @@ const normalPolicySchema: z<NormalRetryPolicyConfig> = z.object({
   retryableCodes: z.array(z.union([...RETRY_CODE_CHOICES.map(code => z.const(code)), z.string().min(1)]))
     .min(1).default([...DEFAULT_RETRYABLE_CODES]),
   backoff: backoffSchema,
+  fallbackModel: z.string(),
 })
 
 const alwaysPolicySchema: z<AlwaysRetryPolicyConfig> = z.object({
@@ -109,12 +110,12 @@ export const RetryPolicySchema: z<RetryPolicyConfig> = z.union([
 ])
 
 const NORMAL_POLICY_KEYS: ReadonlySet<string> = new Set([
-  'mode', 'maxRetries', 'retryableCodes', 'backoff',
+  'mode', 'maxRetries', 'retryableCodes', 'backoff', 'fallbackModel',
 ])
 // Layered configuration can retain normal-only fields after switching modes;
 // always mode ignores those inactive values while still rejecting unknown keys.
 const ALWAYS_POLICY_KEYS: ReadonlySet<string> = new Set([
-  'mode', 'maxRetries', 'retryableCodes', 'backoff',
+  'mode', 'maxRetries', 'retryableCodes', 'backoff', 'fallbackModel',
 ])
 const BACKOFF_KEYS: ReadonlySet<string> = new Set(['initialDelayMs', 'maxDelayMs', 'jitterRatio'])
 
@@ -182,10 +183,15 @@ export function resolveRetryPolicy(
       if (new Set(retryableCodes).size !== retryableCodes.length) {
         throw new Error(`${path}.retryableCodes must not contain duplicates`)
       }
+      const fallbackModel = config.fallbackModel
+      if (fallbackModel !== undefined && fallbackModel.length === 0) {
+        throw new Error(`${path}.fallbackModel must not be empty`)
+      }
       return Object.freeze({
         mode: 'normal',
         maxRetries,
         retryableCodes: Object.freeze([...retryableCodes]),
+        ...(fallbackModel !== undefined ? { fallbackModel } : {}),
         ...resolveBackoff(config.backoff, `${path}.backoff`),
       })
     }
