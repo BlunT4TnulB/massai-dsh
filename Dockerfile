@@ -27,6 +27,13 @@ RUN git init -q
 
 RUN pnpm install --no-frozen-lockfile
 
+# Client build environment (the build orchestrator normally computes these; the
+# tsdown client config embeds them and skips packages without them).
+ENV DSH_CLIENT_BUILD_PROFILE=official \
+    DSH_CLIENT_TITLE=Massai \
+    DSH_CLIENT_VERSION=0.2.2-rc.4 \
+    DSH_CLIENT_COMMIT_HASH=0000000
+
 # Build the client modules + web frontend (`dsh web` serves prebuilt client bundles).
 # Targeted build — not the full `pnpm run build`, which also wants the Rust toolchain.
 RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:lib:client && pnpm run build:web
