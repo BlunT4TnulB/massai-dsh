@@ -1,4 +1,5 @@
 # Render blueprint — one-click deploy of Massai (the hosted link).
+# The Dockerfile binds the container's own address on $PORT (DSH rejects 0.0.0.0).
 services:
   - type: web
     name: massai

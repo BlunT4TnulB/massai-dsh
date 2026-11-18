@@ -1,8 +1,9 @@
-# Massai — hosted-link deployment (Phase 5 foundation)
+# Massai — hosted-link deployment.
 #
-# TODO(finalize after `dsh web --help`): DSH's webserver takes an explicit
-# --host (0.0.0.0 is rejected) and --port; wire them below once the exact flags
-# are confirmed from the CI "Dump web server flags" step.
+# `dsh web` = `dsh --profile web`, which takes:
+#   --host <ip>    one concrete IPv4/IPv6 literal (0.0.0.0 is rejected)
+#   --port <port>  listen port (0 = OS-assigned)
+# We bind the container's own address (`hostname -i`) and $PORT.
 
 FROM node:24-slim
 
@@ -19,8 +20,7 @@ COPY scripts ./scripts
 
 RUN corepack pnpm install --no-frozen-lockfile
 
-# Placeholder: finalize with `--host "$(hostname -i)" --port "$PORT"`.
 ENV PORT=3080
 EXPOSE 3080
 
-CMD ["node", "--import", "tsx/esm", "apps/cli/src/bin.ts", "web"]
+CMD ["sh", "-c", 'exec node --import tsx/esm apps/cli/src/bin.ts web --host "$(hostname -i)" --port "${PORT:-3080}"']
