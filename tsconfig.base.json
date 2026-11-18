@@ -52,6 +52,7 @@
       "@deepseek-ai/dsh-tool-sync": ["./packages/experimental/tool-sync/src/index.ts"],
       "@deepseek-ai/dsh-account-connect": ["./packages/experimental/account-connect/src/index.ts"],
       "@deepseek-ai/dsh-tool-sqlite": ["./packages/experimental/tool-sqlite/src/index.ts"],
+      "@deepseek-ai/dsh-tool-http": ["./packages/experimental/tool-http/src/index.ts"],
       "@deepseek-ai/dsh-experimental-session-titles-bundle": ["./packages/experimental/session-titles-bundle/src/index.ts"],
       "@deepseek-ai/dsh-client-product-analytics": ["./packages/client/product-analytics/src/index.ts"],
       "@deepseek-ai/dsh-client-product-analytics/types": ["./packages/client/product-analytics/src/events.ts"],

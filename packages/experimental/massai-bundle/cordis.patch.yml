@@ -33,6 +33,11 @@
     - id: tool-sqlite
       name: "@deepseek-ai/dsh-tool-sqlite"
 
+# Generic HTTP requests (optional vault-credential auth).
+- insert:
+    - id: tool-http
+      name: "@deepseek-ai/dsh-tool-http"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
