@@ -38,6 +38,11 @@
     - id: tool-http
       name: "@deepseek-ai/dsh-tool-http"
 
+# Per-user credentials (hosted-link foundation: each visitor's own DeepSeek key).
+- insert:
+    - id: user-credentials
+      name: "@deepseek-ai/dsh-user-credentials"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
