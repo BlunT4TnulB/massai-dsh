@@ -82,3 +82,28 @@ jobs:
 
       - name: Run deepseek-auth tests (incl. per-user isolation)
         run: pnpm exec vitest run packages/account/deepseek-auth
+
+  # Build the hosted-link image on a big runner (Render's 512MB builder OOMs on
+  # the client build) and push it to GHCR; Render pulls the prebuilt image.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: typecheck
+    if: github.event_name != 'pull_request'
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        run: |
+          docker build -t ghcr.io/blunt4tnulb/massai:latest .
+          docker push ghcr.io/blunt4tnulb/massai:latest
