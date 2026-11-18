@@ -51,9 +51,15 @@ plus more.
 - ⏳ `packages/experimental/dsh-tool-cai` — expose `cai` as a harness tool
 
 ### Phase 3 — Core changes (fork real value)
-- Repurpose/revamp the agent loop and tooling toward the `cai` autonomy model.
-- Improve the web UI (the user's "could be improved" list — collect specifics).
-- DeepSeek-only defaults; make Anthropic/OpenAI optional adapters, never required.
+- ✅ **Auto-failover shipped end-to-end** (retry-policy `fallbackModel` → llm-retry
+  returns it → agent-loop honors it): a retryable v4-pro failure auto-retries on
+  `deepseek-flash`. Upstream DSH retries only the same model.
+- ✅ Lockfile regenerated + committed; CI back on `--frozen-lockfile`.
+- ⏳ Default Massai config: `v4-pro` with `fallbackModel: deepseek-flash` once the
+  provider entry id for `retryPolicy` is confirmed.
+- ⏳ Repurpose/revamp the agent loop and tooling toward the `cai` autonomy model.
+- ⏳ Improve the web UI (the user's "could be improved" list — collect specifics).
+- ⏳ DeepSeek-only defaults; make Anthropic/OpenAI optional adapters, never required.
 
 ### Phase 4 — Mobile
 - Rebuild the native Android shell from `native/system` with the revamp baked in.
