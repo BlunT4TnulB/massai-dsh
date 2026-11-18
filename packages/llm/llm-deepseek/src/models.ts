@@ -9,6 +9,7 @@ export const DEFAULT_MODELS: DeepSeekCatalogModel[] = [
   {
     id: 'deepseek-flash',
     name: 'DeepSeek-V4.1-Flash',
+    description: 'Fast, cheap DeepSeek tier for routine, latency-sensitive, or high-volume work; strongest value per token.',
     contextWindow: OFFICIAL_CONTEXT_WINDOW,
     inputModalities: ['text', 'image'],
     systemPromptUpdate: 'in-history',

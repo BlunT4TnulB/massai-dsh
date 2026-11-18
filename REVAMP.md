@@ -33,10 +33,11 @@ plus more.
 - Full source cloned to `/workspaces/deepseek-harness` (364 MB).
 
 ### Phase 1 — Extension wins (no core changes, survive updates)
-- Custom bundle of the 7 installed experimental bundles + the 3 skills.
-- Custom **agent presets** (a "Scanner Desk" preset, a "cheap/auto" preset with Flash).
-- Branding/theme/locale customization.
-- Model routing via `cordis.patch.yml` (Flash default, V4-Pro opt-in) + gateway fallback.
+- ✅ Flash model surfaced: added the missing `description` to `deepseek-flash` in
+  `packages/llm/llm-deepseek/src/models.ts` (it was known but invisible in the picker).
+- ✅ `packages/experimental/revamp-bundle` created — cost-aware `agent-default-model` patch.
+- ✅ `dsh-revamp` + `model-routing` skills added (5 skills live).
+- ⏳ Custom agent presets, branding/theme, and a bundle-of-7-bundles wrapper.
 
 ### Phase 2 — Custom plugins (own packages)
 - `dsh-plugin-secrets-vault` — encrypted secrets + account connectors (Drive/GitHub/Postgres).
