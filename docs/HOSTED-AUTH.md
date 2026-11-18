@@ -67,6 +67,21 @@ to a per-user `CredentialKey('<userId>/deepseek-api-key')` — write it in the
 (`readRecord`). The open seam is plumbing the **session's user id** into those
 resolution points.
 
+## Exact injection point (the last seam)
+
+`packages/llm/llm-deepseek-api-key/src/index.ts` builds the request and calls auth:
+
+```ts
+return await ctx.deepseekAuth.authorize({
+  consumer: settingsNs, accepts: ['api-key'], billing: 'api-key', destination: { url: endpoint },
+  apiKeyHeaders: ['x-api-key'],
+})
+```
+
+Add `userId` here once a per-session user id is available. The remaining plumbing is
+the **source of that userId** (the host must know "this request is user X") — the
+session/account boundary — plus the sign-in UI in `apps/web`.
+
 ## Status
 
 ⏳ This is the flagship Phase 5 build. The auth *flow* exists; the per-user
