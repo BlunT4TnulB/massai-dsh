@@ -1,6 +1,6 @@
 # Render blueprint — Massai hosted link.
-# The image is built in GitHub Actions (7GB RAM; Render's builder OOMs on the
-# client build) and pushed to GHCR; Render just pulls it.
+# The image is built in GitHub Actions (7GB RAM) and pushed to GHCR; Render pulls it.
+# The app reads $PORT (Render sets it) and binds 0.0.0.0 in hosted mode.
 services:
   - type: web
     name: massai
@@ -9,6 +9,3 @@ services:
       url: ghcr.io/blunt4tnulb/massai:latest
     plan: free
     healthCheckPath: /
-    envVars:
-      - key: PORT
-        value: "3080"
