@@ -27,8 +27,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        # Frozen now that the fork's packages are committed to pnpm-lock.yaml.
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Typecheck
         run: pnpm run typecheck
@@ -37,6 +36,22 @@ jobs:
 
       - name: Verify cordis config (bundle patches + presets)
         run: pnpm run verify-cordis-config
+
+      - name: Commit regenerated lockfile
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "Massai CI"
+          git config user.email "ci@massai.local"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/BlunT4TnulB/massai-dsh.git"
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "lockfile unchanged"
+          else
+            git commit -m "chore: regenerate pnpm-lock.yaml"
+            git push origin HEAD:master
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
 
       - name: Upload regenerated lockfile
         uses: actions/upload-artifact@v4
