@@ -224,12 +224,12 @@ export class DeepSeekAuth extends Service {
       kind: 'api-key', endpoint, reference,
       configured: async () => userCredentials === undefined
         ? credentialRefConfigured(ctx, reference)
-        : await userCredentials.resolveFor(userId) !== undefined,
+        : await userCredentials.resolveFor(userId!) !== undefined,
       resolve: async (signal) => {
         signal?.throwIfAborted()
         let raw: string | undefined
         if (userCredentials !== undefined) {
-          raw = await userCredentials.resolveFor(userId)
+          raw = await userCredentials.resolveFor(userId!)
         }
         raw ??= await resolveCredentialRef(ctx, reference)
         if (raw === undefined) return undefined
