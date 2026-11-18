@@ -23,8 +23,22 @@ The `massai-bundle` lives at `packages/experimental/massai-bundle` (built to `li
 Install it into a DSH profile via the plugin manager, or list it in a profile's
 bundle set, then restart DSH. It adds:
 - `massai` (default) + `cheap` agent presets
-- `cai`, `sync`, `route_model`, `connect_account`, `list_accounts` tools
+- `cai`, `sync`, `route_model`, `connect_account`, `list_accounts`, `db_exec`, `db_query`, `http_request` tools
 - DeepSeek-V4-Pro default (Flash variant documented)
+
+## Full Massai setup (recommended bundle set)
+For the complete experience, install `massai-bundle` **plus** the experimental bundles it
+complements (all official, installable via the plugin manager):
+
+| Bundle | What it adds |
+| --- | --- |
+| `@deepseek-ai/dsh-experimental-agent-team-profile` | multi-agent teams |
+| `@deepseek-ai/dsh-experimental-forge-bundle` | git worktrees + change requests |
+| `@deepseek-ai/dsh-experimental-session-search` | search past sessions |
+| `@deepseek-ai/dsh-experimental-terminal-bundle` | persistent shells |
+| `@deepseek-ai/dsh-experimental-plugin-market-bundle` | discover/install plugins |
+| `@deepseek-ai/dsh-experimental-inspector-profile` | raw session-log inspection |
+| `@deepseek-ai/dsh-subagent-claude-code` | Claude Code as a subagent (optional) |
 
 ## What CI already verifies
 `.github/workflows/revamp-ci.yml` runs `pnpm install` + `typecheck` +
