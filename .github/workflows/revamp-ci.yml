@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PUSH_TOKEN }}
 
       - uses: pnpm/action-setup@v5.0.0
         with:
@@ -45,7 +47,6 @@ jobs:
         run: |
           git config user.name "Massai CI"
           git config user.email "ci@massai.local"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/BlunT4TnulB/massai-dsh.git"
           git add pnpm-lock.yaml
           if git diff --cached --quiet; then
             echo "lockfile unchanged"
@@ -53,8 +54,6 @@ jobs:
             git commit -m "chore: regenerate pnpm-lock.yaml"
             git push origin HEAD:master
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
 
       - name: Upload regenerated lockfile
         uses: actions/upload-artifact@v4
