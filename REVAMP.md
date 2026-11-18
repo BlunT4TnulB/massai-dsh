@@ -59,8 +59,22 @@ plus more.
 - Rebuild the native Android shell from `native/system` with the revamp baked in.
 - Branded APK; iOS parity via `apps/*` where Apple tooling allows.
 
-### Phase 5 — Distribute
-- Private first (me + my buddy), then public (store accounts, onboarding, ToS/privacy).
+### Phase 5 — Distribute (BOTH paths)
+
+1. **Installable app** — branded APK (Android) + iOS via TestFlight/App Store
+   (iOS needs a Mac + Apple Developer account for signing).
+2. **Hosted link (for iPhone / anyone)** — self-host the DSH web GUI as a
+   multi-tenant service: each visitor signs in with their **own DeepSeek account**
+   (own key, own cost), with per-user sessions/workspace isolation. This is the
+   "send a link to my iPhone buddies" path and the highest-leverage distribution
+   for non-Android users.
+3. Private first (me + my buddy), then public (onboarding, data isolation,
+   ToS/privacy, store accounts).
+
+⚠️ Note: DSH is local-first today (one profile/home per install). A hosted
+multi-tenant instance is a real architecture change — per-user DeepSeek OAuth
+routing + per-user storage on the server — but the DeepSeek login pieces are
+reusable, and `apps/web` already exposes the browser surface.
 
 ## Building (to verify on first real build)
 
