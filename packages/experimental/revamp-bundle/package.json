@@ -21,6 +21,9 @@
       ]
     }
   },
+  "dependencies": {
+    "@deepseek-ai/dsh-tool-cai": "workspace:*"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"
   }

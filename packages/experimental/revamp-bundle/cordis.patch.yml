@@ -7,6 +7,12 @@
     provider: deepseek-official
     model: deepseek-v4-pro
     reasoningEffort: high
+
+# Expose the cai DeepSeek coding agent as a model-facing tool.
+- insert:
+    - id: tool-cai
+      name: "@deepseek-ai/dsh-tool-cai"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
