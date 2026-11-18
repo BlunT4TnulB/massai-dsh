@@ -53,6 +53,20 @@ server's single key for everyone, or bleed users into each other.
 | host/session | scope sessions + workspace per user id |
 | `render.yaml` | wire `DEEPSEEK_*`/OAuth env for the server side |
 
+## Exact mechanism (verified against source)
+
+- `deepseek-auth` (`ctx.deepseekAuth`) resolves the key via **`credentialRef('DEEPSEEK_API_KEY')`** — the *CredentialRef* space (a global env-var-style name), ordered `'account'` → `'api-key'`.
+- `llm-deepseek-api-key/src/config.ts` → `apiKeyEnv: z.string().role('credential-ref').default('DEEPSEEK_API_KEY')` — the same ref, resolved **per request** via `resolveCredentialRef`.
+- The credentials seam has **two key spaces**:
+  - `CredentialRef` (`resolve(ref)`) — global, env-var-shaped
+  - `CredentialKey` (`<scope>/<id>`, via `readRecord`/`modifyRecord`) — the per-owner record space
+
+**The per-user change:** the DeepSeek key must move from the global `CredentialRef`
+to a per-user `CredentialKey('<userId>/deepseek-api-key')` — write it in the
+`api-key` flow (`modifyRecord`), read it in `deepseek-auth`/`llm-deepseek-api-key`
+(`readRecord`). The open seam is plumbing the **session's user id** into those
+resolution points.
+
 ## Status
 
 ⏳ This is the flagship Phase 5 build. The auth *flow* exists; the per-user
