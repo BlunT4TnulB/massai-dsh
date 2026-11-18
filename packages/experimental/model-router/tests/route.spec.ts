@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { route } from '../src/index.ts'
+import { route } from '@deepseek-ai/dsh-model-router'
 
 describe('route', () => {
   it('routes simple tasks to the cheap model', () => {
