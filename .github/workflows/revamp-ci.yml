@@ -27,9 +27,8 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        # --no-frozen-lockfile: the fork adds packages (revamp-bundle, tool-cai)
-        # that are not yet in pnpm-lock.yaml; CI regenerates it so typecheck runs.
-        run: pnpm install --no-frozen-lockfile
+        # Frozen now that the fork's packages are committed to pnpm-lock.yaml.
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
         run: pnpm run typecheck

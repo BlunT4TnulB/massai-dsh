@@ -9049,6 +9049,21 @@ importers:
         specifier: workspace:*
         version: link:../../session/working-directory
 
+  packages/experimental/account-connect:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:*
+        version: link:../../credentials/credentials
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
   packages/experimental/action-cards:
     dependencies:
       '@deepseek-ai/dsh-brand':
@@ -11828,6 +11843,45 @@ importers:
         specifier: workspace:~
         version: link:../../../vendor/cordis
 
+  packages/experimental/massai-bundle:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-account-connect':
+        specifier: workspace:*
+        version: link:../account-connect
+      '@deepseek-ai/dsh-agent-default-model':
+        specifier: workspace:*
+        version: link:../../core/agent-default-model
+      '@deepseek-ai/dsh-model-router':
+        specifier: workspace:*
+        version: link:../model-router
+      '@deepseek-ai/dsh-tool-cai':
+        specifier: workspace:*
+        version: link:../tool-cai
+      '@deepseek-ai/dsh-tool-http':
+        specifier: workspace:*
+        version: link:../tool-http
+      '@deepseek-ai/dsh-tool-sqlite':
+        specifier: workspace:*
+        version: link:../tool-sqlite
+      '@deepseek-ai/dsh-tool-sync':
+        specifier: workspace:*
+        version: link:../tool-sync
+
+  packages/experimental/model-router:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
   packages/experimental/personalized-recommendations:
     dependencies:
       '@deepseek-ai/dsh-action-cards':
@@ -12441,6 +12495,33 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
 
+  packages/experimental/tool-cai:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
+  packages/experimental/tool-http:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:*
+        version: link:../../credentials/credentials
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
   packages/experimental/tool-ralph:
     dependencies:
       '@deepseek-ai/schemastery':
@@ -12566,6 +12647,18 @@ importers:
         specifier: workspace:*
         version: link:../../core/tools
 
+  packages/experimental/tool-sqlite:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
   packages/experimental/tool-subagent-oar:
     dependencies:
       '@deepseek-ai/schemastery':
@@ -12599,6 +12692,18 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:*
         version: link:../../core/tools
+
+  packages/experimental/tool-sync:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:*
+        version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
 
   packages/experimental/tool-terminal:
     dependencies:
