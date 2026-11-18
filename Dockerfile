@@ -41,9 +41,10 @@ RUN pnpm run build:lib:host \
     && pnpm run build:lib:client \
     && pnpm run build:web
 
-ENV PORT=3080
+ENV PORT=3080 \
+    DSH_ALLOW_WILDCARD_HOST=1
 EXPOSE 3080
 
-# Resolve the container's first non-internal IPv4 with Node, then boot the web app.
-# Shell-form CMD (not exec-form): Render's docker runtime mishandles exec-form arrays.
-CMD exec node --import tsx/esm apps/cli/src/bin.ts web --host "$(node -e 'const n=require("os").networkInterfaces();const c=Object.values(n).flat().find(x=>x.family==="IPv4"&&!x.internal);process.stdout.write(c?c.address:"127.0.0.1")')" --port "${PORT:-3080}"
+# Bind 0.0.0.0 for the hosted link (Render's port detection requires it).
+# DSH rejects the wildcard address by default; DSH_ALLOW_WILDCARD_HOST opts in.
+CMD exec node --import tsx/esm apps/cli/src/bin.ts web --host 0.0.0.0 --port "${PORT:-3080}"
