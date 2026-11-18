@@ -1,0 +1,39 @@
+# Scanner Desk preset: a focused agent preset for the stock-dashboard project,
+# inserted by the revamp bundle. Base it on the web-app's standard preset tool set,
+# with a Scanner-Desk persona.
+- insert:
+    - id: preset-scanner-desk
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: scanner-desk
+        name: 'Scanner Desk'
+        description: 'Focused preset for the Scanner Desk stock-scanning dashboard project.'
+        order: 2
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are a coding agent working on the Scanner Desk stock-scanning dashboard
+                (Node 24 + React/Vite + Express/Drizzle, plus a Python scanner). Before acting,
+                load the scanner-desk, mission-control, and python-testing skills for project context.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
