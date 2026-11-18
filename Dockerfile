@@ -34,10 +34,11 @@ ENV DSH_CLIENT_BUILD_PROFILE=official \
     DSH_CLIENT_VERSION=0.2.2-rc.4 \
     DSH_CLIENT_COMMIT_HASH=0000000
 
-# Build the client modules + web frontend (`dsh web` serves prebuilt client bundles).
-# Order matters: Typert codegen → client compile → client bundles → web app.
-RUN node --import tsx/esm scripts/generate-typert.ts \
-    && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:lib:client \
+# Build everything the web host serves, minus the native addon it does not need.
+# Order is the orchestrator's: host libs (incl. Typert codegen) → client libs +
+# bundles → web app. `build:lib:host` manages its own TypeScript heap sizes.
+RUN pnpm run build:lib:host \
+    && pnpm run build:lib:client \
     && pnpm run build:web
 
 ENV PORT=3080
