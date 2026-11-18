@@ -27,6 +27,10 @@ RUN git init -q
 
 RUN pnpm install --no-frozen-lockfile
 
+# Build the client modules + web frontend (`dsh web` serves prebuilt client bundles).
+# Targeted build — not the full `pnpm run build`, which also wants the Rust toolchain.
+RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:lib:client && pnpm run build:web
+
 ENV PORT=3080
 EXPOSE 3080
 
