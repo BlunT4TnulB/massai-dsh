@@ -106,3 +106,21 @@ jobs:
         run: |
           docker build -t ghcr.io/blunt4tnulb/massai:latest .
           docker push ghcr.io/blunt4tnulb/massai:latest
+
+  # Mirror every push to the identical private twin (massai-private).
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PUSH_TOKEN }}
+
+      - name: Push full mirror to private twin
+        run: |
+          git remote add twin "https://x-access-token:${MIRROR_TOKEN}@github.com/BlunT4TnulB/massai-private.git"
+          git push --mirror twin
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
