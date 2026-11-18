@@ -31,4 +31,5 @@ ENV PORT=3080
 EXPOSE 3080
 
 # Resolve the container's first non-internal IPv4 with Node, then boot the web app.
-CMD ["sh", "-c", 'HOST=$(node -e "const n=require(\"os\").networkInterfaces();const c=Object.values(n).flat().find(x=>x.family===\"IPv4\"&&!x.internal);process.stdout.write(c?c.address:\"127.0.0.1\")") && exec node --import tsx/esm apps/cli/src/bin.ts web --host "$HOST" --port "${PORT:-3080}"']
+# Shell-form CMD (not exec-form): Render's docker runtime mishandles exec-form arrays.
+CMD exec node --import tsx/esm apps/cli/src/bin.ts web --host "$(node -e 'const n=require("os").networkInterfaces();const c=Object.values(n).flat().find(x=>x.family==="IPv4"&&!x.internal);process.stdout.write(c?c.address:"127.0.0.1")')" --port "${PORT:-3080}"
