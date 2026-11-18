@@ -7,9 +7,15 @@
 
 FROM node:24-slim
 
-WORKDIR /app
+# pnpm directly (corepack's download prompt fails in non-interactive builds)
+RUN npm install -g pnpm@11.28.5
 
-RUN corepack enable
+# Build tools for native postinstall scripts (node-pty via node-gyp)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.host.json tsconfig.client.json ./
 COPY vendor ./vendor
@@ -18,7 +24,7 @@ COPY apps ./apps
 COPY native ./native
 COPY scripts ./scripts
 
-RUN corepack pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 ENV PORT=3080
 EXPOSE 3080
