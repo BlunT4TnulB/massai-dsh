@@ -47,4 +47,6 @@ EXPOSE 3080
 
 # Bind 0.0.0.0 for the hosted link (Render's port detection requires it).
 # DSH rejects the wildcard address by default; DSH_ALLOW_WILDCARD_HOST opts in.
-CMD exec node --import tsx/esm apps/cli/src/bin.ts web --host 0.0.0.0 --port "${PORT:-3080}"
+# Default port 10000 matches Render's image-service default; --no-open skips the
+# browser launch (a container has no display).
+CMD echo "massai booting on ${PORT:-10000}" && exec node --import tsx/esm apps/cli/src/bin.ts web --no-open --host 0.0.0.0 --port "${PORT:-10000}"
