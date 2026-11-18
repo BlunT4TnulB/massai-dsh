@@ -43,9 +43,12 @@ plus more.
 - ⏳ Branding/theme + a bundle-of-7-bundles wrapper.
 
 ### Phase 2 — Custom plugins (own packages)
-- `dsh-plugin-secrets-vault` — encrypted secrets + account connectors (Drive/GitHub/Postgres).
-- `dsh-plugin-model-router` — cost-aware routing + failover as a first-class plugin.
-- `dsh-plugin-sync` — scheduled one-way/age-guarded sync sources.
+- 📐 Implementation spec: `packages/experimental/revamp-bundle/docs/SUPERIOR.md`
+  (model-router adapter, account-connectors, sync-sources, cai-tool — with exact
+  repo paths, service names, and conventions).
+- ⏳ `packages/llm/llm-router` — cost-aware provider adapter (flash/v4-pro/gateway/Ollama + failover)
+- ⏳ `packages/experimental/dsh-account-sync` + `dsh-sync` — connectors + scheduled sync
+- ⏳ `packages/experimental/dsh-tool-cai` — expose `cai` as a harness tool
 
 ### Phase 3 — Core changes (fork real value)
 - Repurpose/revamp the agent loop and tooling toward the `cai` autonomy model.
