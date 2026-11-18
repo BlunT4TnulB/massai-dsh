@@ -62,7 +62,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         const resp = await fetch(args.url, {
           method,
           headers,
-          body: args.body,
+          ...(args.body === undefined ? {} : { body: args.body }),
           signal: AbortSignal.timeout(timeoutMs),
         })
         const text = await resp.text()
