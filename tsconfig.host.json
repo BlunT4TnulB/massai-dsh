@@ -634,6 +634,14 @@
     { "path": "./apps/cli" },
     { "path": "./apps/plugin-market-generator" },
     { "path": "./apps/desktop-host" },
-    { "path": "./apps/desktop/tsconfig.host.json" }
+    { "path": "./apps/desktop/tsconfig.host.json" },
+    { "path": "./packages/experimental/account-connect" },
+    { "path": "./packages/experimental/massai-bundle" },
+    { "path": "./packages/experimental/model-router" },
+    { "path": "./packages/experimental/tool-cai" },
+    { "path": "./packages/experimental/tool-http" },
+    { "path": "./packages/experimental/tool-sqlite" },
+    { "path": "./packages/experimental/tool-sync" },
+    { "path": "./packages/experimental/user-credentials" },
   ]
 }
