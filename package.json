@@ -315,5 +315,10 @@
     "@deepseek-ai/dsh-experimental-forge-session": "workspace:*",
     "@deepseek-ai/dsh-action-cards": "workspace:*",
     "@deepseek-ai/dsh-tool-session-list": "workspace:*"
+  },
+  "pnpm": {
+    "neverBuiltDependencies": [
+      "lefthook"
+    ]
   }
 }
