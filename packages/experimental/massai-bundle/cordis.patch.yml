@@ -13,6 +13,11 @@
     - id: tool-cai
       name: "@deepseek-ai/dsh-tool-cai"
 
+# Expose one-way rclone sync as a model-facing tool.
+- insert:
+    - id: tool-sync
+      name: "@deepseek-ai/dsh-tool-sync"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
