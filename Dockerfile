@@ -21,6 +21,9 @@ WORKDIR /app
 # benchmarks/website/python/patches); .dockerignore excludes git + node_modules.
 COPY . .
 
+# Throwaway git repo: lefthook's postinstall needs one (harmless in the image)
+RUN git init -q
+
 RUN pnpm install --no-frozen-lockfile
 
 ENV PORT=3080
