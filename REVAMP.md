@@ -29,7 +29,7 @@ plus more.
 ## Phases
 
 ### Phase 0 — Foundation ✅
-- Fork created (`BlunT4TnulB/deepseek-harness`); `origin` + `upstream` remotes wired.
+- Fork created (`BlunT4TnulB/massai-dsh`); `origin` + `upstream` remotes wired.
 - Full source cloned to `/workspaces/deepseek-harness` (364 MB).
 
 ### Phase 1 — Extension wins (no core changes, survive updates)
