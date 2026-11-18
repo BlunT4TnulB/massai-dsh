@@ -1,0 +1,36 @@
+name: Build Massai APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-apk
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK (installable)
+        run: gradle assembleDebug -PMASSACOT_URL="$MASSACOT_URL"
+        env:
+          MASSACOT_URL: ${{ vars.MASSACOT_URL || 'http://localhost:3080' }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: massai-apk
+          path: mobile-apk/app/build/outputs/apk/debug/*.apk
