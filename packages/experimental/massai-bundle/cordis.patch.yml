@@ -18,6 +18,11 @@
     - id: tool-sync
       name: "@deepseek-ai/dsh-tool-sync"
 
+# Cost-aware model routing (decision engine + route_model tool).
+- insert:
+    - id: model-router
+      name: "@deepseek-ai/dsh-model-router"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:

@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-tool-cai": "workspace:*",
-    "@deepseek-ai/dsh-tool-sync": "workspace:*"
+    "@deepseek-ai/dsh-tool-sync": "workspace:*",
+    "@deepseek-ai/dsh-model-router": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"
