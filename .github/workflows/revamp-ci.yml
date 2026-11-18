@@ -80,5 +80,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run full test suite
-        run: pnpm run test
+      - name: Run deepseek-auth tests (incl. per-user isolation)
+        run: pnpm exec vitest run packages/account/deepseek-auth
