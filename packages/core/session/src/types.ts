@@ -137,6 +137,8 @@ export interface SessionHeader {
    * would replay history the model can no longer act on.
    */
   readonly agentPreset?: string
+  /** Signed-in user id (hosted link): the per-user credential scope. */
+  readonly userId?: string
 }
 
 /**

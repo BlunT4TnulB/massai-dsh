@@ -1279,6 +1279,7 @@ export class SessionStore extends Service {
       ...meta?.origin === undefined ? {} : { origin: meta.origin },
       ...meta?.delegationDepth === undefined ? {} : { delegationDepth: meta.delegationDepth },
       ...meta?.agentPreset === undefined ? {} : { agentPreset: meta.agentPreset },
+      ...meta?.userId === undefined ? {} : { userId: meta.userId },
     }
     const session = Session.create(sessionId, seed, header, options?.inheritedEventCount, this.projections)
     attachments.set(session, null)
