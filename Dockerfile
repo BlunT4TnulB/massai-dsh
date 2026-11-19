@@ -41,9 +41,8 @@ RUN pnpm run build:lib:host \
     && pnpm run build:lib:client \
     && pnpm run build:web
 
-ENV PORT=3080 \
-    DSH_ALLOW_WILDCARD_HOST=1
-EXPOSE 3080
+ENV DSH_ALLOW_WILDCARD_HOST=1
+EXPOSE 10000
 
 # Bind 0.0.0.0 for the hosted link (Render's port detection requires it).
 # DSH rejects the wildcard address by default; DSH_ALLOW_WILDCARD_HOST opts in.
