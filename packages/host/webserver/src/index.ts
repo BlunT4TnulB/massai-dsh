@@ -636,6 +636,30 @@ export class WebServer extends Service {
         if (abort.signal.aborted || request.socket?.destroyed) return
         if (admission.kind === 'deny') {
           res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
+          // Friendly branded welcome instead of a bare 401 on the index: the
+          // shared access link carries the token, so tell the visitor exactly that.
+          if (admission.status === 401 && req.method === 'GET' && target.pathname === '/') {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8')
+            res.end(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Massai — access link required</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:#151517;color:#f2f2f4;font-family:system-ui,-apple-system,sans-serif}
+  .card{max-width:34rem;padding:2.5rem;text-align:center}
+  h1{margin:0 0 .75rem;font-size:1.6rem}
+  p{margin:.5rem 0;color:#b9b9c0;line-height:1.55;font-weight:500}
+  code{display:inline-block;margin-top:1rem;padding:.5rem .8rem;border-radius:.4rem;
+    background:#222226;color:#7ee2a8;font-size:.95rem;word-break:break-all}
+</style></head><body><div class="card">
+  <h1>Welcome to Massai 🚀</h1>
+  <p>This page opens through a personal access link. Ask whoever shared Massai
+  with you for your link — it looks like:</p>
+  <code>massai-dsh.onrender.com/?token=…</code>
+  <p>Open that link and you're in.</p>
+</div></body></html>`)
+            return
+          }
           res.end(admission.status === 401 ? 'unauthorized' : admission.status === 503 ? 'authentication unavailable' : 'forbidden')
           return
         }
