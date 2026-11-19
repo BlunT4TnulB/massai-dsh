@@ -24,12 +24,21 @@ interface SessionMinter {
   mintSession(req: IncomingMessage, res: ServerResponse, secure: boolean, userId: string): void
 }
 
-/** Read + parse a small JSON request body. */
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+/** Read + parse a small request body (JSON or URL-encoded form). */
+async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = []
   for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-  const text = Buffer.concat(chunks).toString('utf8')
-  return text.trim() === '' ? {} : JSON.parse(text) as Record<string, unknown>
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+/** Extract the apiKey from a JSON or form-encoded body. */
+function apiKeyOf(text: string, contentType: string | undefined): string {
+  if (text.trim() === '') return ''
+  if (contentType?.includes('application/json') === true) {
+    const parsed = JSON.parse(text) as Record<string, unknown>
+    return typeof parsed.apiKey === 'string' ? parsed.apiKey.trim() : ''
+  }
+  return (new URLSearchParams(text).get('apiKey') ?? '').trim()
 }
 
 function respond(res: ServerResponse, status: number, payload: unknown): void {
@@ -43,8 +52,8 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
-        const body = await readJson(req)
-        const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : ''
+        const text = await readBody(req)
+        const apiKey = apiKeyOf(text, req.headers['content-type'])
         if (apiKey === '') { respond(res, 400, { error: 'apiKey is required' }); return }
         const userId = randomUUID()
         await ctx.credentials.modifyRecord(credentialKey(SCOPE, userId), async () => ({ kind: 'api-key', key: apiKey }))
