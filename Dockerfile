@@ -48,4 +48,6 @@ EXPOSE 10000
 # DSH rejects the wildcard address by default; DSH_ALLOW_WILDCARD_HOST opts in.
 # Run the PRE-BUILT CLI (lib/bin.js), not `tsx apps/cli/src/bin.ts`: tsx compiles
 # hundreds of plugins at boot, which exceeds Render's startup timeout.
-CMD echo "massai booting on ${PORT:-10000}" && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port "${PORT:-10000}"
+# Port 10000 is hardcoded to match EXPOSE (Render's image-service port scan reads
+# EXPOSE, not $PORT — the leftover $PORT=3080 was the mismatch).
+CMD echo "massai booting on 10000" && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000
