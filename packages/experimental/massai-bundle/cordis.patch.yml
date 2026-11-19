@@ -54,3 +54,8 @@
 #     provider: deepseek-official
 #     model: deepseek-flash
 #     reasoningEffort: low
+
+# Guided start: `?prompt=` deep links open a conversation ready to build.
+- insert:
+    - id: quickstart
+      name: "@deepseek-ai/dsh-client-ui-quickstart"

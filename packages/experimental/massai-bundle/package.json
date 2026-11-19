@@ -30,7 +30,8 @@
     "@deepseek-ai/dsh-tool-http": "workspace:*",
     "@deepseek-ai/dsh-user-credentials": "workspace:*",
     "@deepseek-ai/dsh-model-router": "workspace:*",
-    "@deepseek-ai/dsh-hosted-signin": "workspace:*"
+    "@deepseek-ai/dsh-hosted-signin": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-quickstart": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"

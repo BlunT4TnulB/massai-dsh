@@ -375,7 +375,7 @@ export class BrowserAuth {
    * @param secure - whether the receiving listener serves TLS.
    * @param userId - the per-session user id baked into the cookie.
    */
-  mintSession(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure: boolean, userId: string): void {
+  mintSession(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure: boolean, userId: string, location = './'): void {
     const authority = requestAudience(req.headers, secure)
     if (authority === undefined) {
       res.writeHead(400, { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' })
@@ -393,7 +393,7 @@ export class BrowserAuth {
     }, this.secret)
     res.writeHead(303, {
       'cache-control': 'no-store',
-      'location': './',
+      'location': location,
       'referrer-policy': 'no-referrer',
       'set-cookie': sessionCookie(
         cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000), secure,

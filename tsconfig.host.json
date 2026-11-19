@@ -637,6 +637,7 @@
     { "path": "./apps/desktop/tsconfig.host.json" },
     { "path": "./packages/experimental/account-connect" },
     { "path": "./packages/experimental/hosted-signin" },
+    { "path": "./packages/experimental/client-ui-quickstart" },
     { "path": "./packages/experimental/massai-bundle" },
     { "path": "./packages/experimental/model-router" },
     { "path": "./packages/experimental/tool-cai" },

@@ -14,6 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
+import { startPageHtml } from './start-page.ts'
 
 export const name = 'hosted-signin'
 export const inject = ['credentials', 'webServer', 'browserAuth']
@@ -37,7 +38,7 @@ function brandAsset(file: string, fallbackType: string): { body: Buffer; type: s
 
 /** The session minter the authentication-token plugin exposes. */
 interface SessionMinter {
-  mintSession(req: IncomingMessage, res: ServerResponse, secure: boolean, userId: string): void
+  mintSession(req: IncomingMessage, res: ServerResponse, secure: boolean, userId: string, location?: string): void
 }
 
 /** Read + parse a small request body (JSON or URL-encoded form). */
@@ -89,6 +90,19 @@ export function apply(ctx: Context): void {
       },
     })
   }
+  // Guided first step after sign-in: four cards, no vocabulary required.
+  ctx.webServer.register({
+    kind: 'exact', path: '/start', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(startPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
   // Owner-facing concept sheet for the Massai mark (anonymous, opt-in by URL).
   ctx.webServer.register({
     kind: 'exact', path: '/logo-preview', auth: 'anonymous',
@@ -115,7 +129,7 @@ export function apply(ctx: Context): void {
         await ctx.credentials.modifyRecord(credentialKey(SCOPE, userId), async () => ({ kind: 'api-key', key: apiKey }))
         const minter = ctx.get('browserAuth') as SessionMinter | undefined
         if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
-        minter.mintSession(req, res, ctx.webServer.protocol === 'https:', userId)
+        minter.mintSession(req, res, ctx.webServer.protocol === 'https:', userId, './start')
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }
