@@ -659,7 +659,16 @@ export class WebServer extends Service {
   button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
     font-weight:600;font-size:1rem;cursor:pointer}
   .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
+  /* Knock the printer-white background out of the mark: invert turns the black
+     strokes white, and screen blending leaves the (now black) backdrop showing
+     the page colour, so the logo floats on the dark canvas. */
+  img.mark{display:block;width:11rem;height:auto;margin:0 auto 1rem;filter:invert(1);mix-blend-mode:screen;opacity:.95}
+  .wordmark{font-size:1.5rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2f2f4}
+  .tagline{margin:.25rem 0 1.6rem;color:#8a8a92;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
 </style></head><body><div class="card">
+  <img class="mark" src="/massai-mark.jpg" alt="Massai mark">
+  <div class="wordmark">Massai</div>
+  <div class="tagline">built on DeepSeek</div>
   <h1>Welcome to Massai 🚀</h1>
   <div class="sub">Build any app you can imagine — powered by DeepSeek.</div>
   <p class="pitch">Here's the part you'll enjoy: <b>a few dollars goes a long way.</b>

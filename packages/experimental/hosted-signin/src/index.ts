@@ -8,6 +8,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
@@ -18,6 +19,19 @@ export const inject = ['credentials', 'webServer', 'browserAuth']
 
 const SCOPE = 'massai-user'
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' } as const
+const MARK_PATH = '/massai-mark.jpg'
+
+/**
+ * The Massai mark bytes, read once beside the built package. Served
+ * anonymously because the concierge page that shows it precedes sign-in.
+ */
+function massaiMark(): Buffer | undefined {
+  try {
+    return readFileSync(new URL('../assets/massai-mark.jpg', import.meta.url))
+  } catch {
+    return undefined
+  }
+}
 
 /** The session minter the authentication-token plugin exposes. */
 interface SessionMinter {
@@ -47,6 +61,20 @@ function respond(res: ServerResponse, status: number, payload: unknown): void {
 }
 
 export function apply(ctx: Context): void {
+  // Anonymous brand asset for the concierge page (see the webserver's welcome HTML).
+  ctx.webServer.register({
+    kind: 'exact', path: MARK_PATH, auth: 'anonymous',
+    handler: (req, res) => {
+      const mark = massaiMark()
+      if (mark === undefined) { res.writeHead(404); res.end(); return }
+      res.writeHead(200, {
+        'content-type': 'image/jpeg',
+        'content-length': String(mark.byteLength),
+        'cache-control': 'public, max-age=86400',
+      })
+      res.end(req.method === 'HEAD' ? undefined : mark)
+    },
+  })
   ctx.webServer.register({
     kind: 'exact', path: '/api/signin', auth: 'anonymous',
     handler: async (req, res) => {
