@@ -131,18 +131,21 @@ export function apply(ctx: Context, config: Config): void {
   const distIndex = config.distIndex
   const distRoot = dirname(distIndex)
   ctx.effect(() => ctx.webServer.registerFallback({
-    auth: (request) => {
-      const target = resolve(normalize(join(distRoot, decodeURIComponent(request.url.pathname))))
-      return target === distRoot || target === distIndex ? 'required' : 'anonymous'
-    },
+    // Hosted mode: serve the app shell anonymously so the platform's health
+    // check on `/` gets a 200; the session/API socket still requires its token.
+    auth: () => 'anonymous',
     resource: (request, peer) => {
       request.signal.throwIfAborted()
       const target = resolve(normalize(join(distRoot, decodeURIComponent(new URL(request.url).pathname))))
       if (target !== distRoot && target !== distIndex) return serveStatic(request, distRoot, distIndex)
       // WebServer admits every index request before invoking this resource.
-      const pagePeer = peer as PeerScope
+      const pagePeer = peer as PeerScope | undefined
       const render = (html: string): string => {
         request.signal.throwIfAborted()
+        if (pagePeer === undefined) {
+          // Anonymous: no session to render; return the shell with the base href.
+          return html.replace(/<head(?:\s[^>]*)?>/i, open => `${open}<base href="./">`)
+        }
         pagePeer.signal.throwIfAborted()
         return ctx.webServer.renderIndex(html, pagePeer)
           .replace(/<head(?:\s[^>]*)?>/i, open => `${open}<base href="./">`)
