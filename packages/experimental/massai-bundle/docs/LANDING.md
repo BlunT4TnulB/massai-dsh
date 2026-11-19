@@ -58,3 +58,11 @@ long way.** No jargon, no cost anxiety.
 > sidebar anytime to review, continue, or revisit anything you've built. Your
 > history is yours, stored on this service, never shared.
 
+
+## Future ideas (parked, not scheduled)
+
+- **Visitor feedback/reviews** — a section on the welcome page where people leave
+  comments or send their email; a semi-live "dashboard" for the owner to watch
+  them arrive (friendly, optional, never forced). Design notes: keep it light —
+  a smiley-rating + one-line comment + optional email, rendered into a small
+  owner dashboard (maybe a `/feedback` page or a plain file inbox).
