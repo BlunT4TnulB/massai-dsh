@@ -661,8 +661,9 @@ export class WebServer extends Service {
   button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
     font-weight:600;font-size:1rem;cursor:pointer}
   .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
-  /* The crest: ochre shield, spears, DeepSeek-blue whale as the charge. */
-  .crest{display:block;width:9.5rem;height:auto;margin:0 auto .9rem}
+  /* Door: the word alone carries it; the crest lives in the tab + app. */
+  .hero-word{font-size:3.05rem;font-weight:700;letter-spacing:.2em;text-transform:lowercase;line-height:1;color:#F2F2F4}
+  .hero-sub{margin:.55rem 0 1.5rem;color:#D9822B;font-size:.72rem;font-weight:600;letter-spacing:.32em;text-transform:uppercase}
   .wordmark{font-size:1.5rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2f2f4}
   .tagline{margin:.25rem 0 1.6rem;color:#8a8a92;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
   /* Subtle homage: DeepSeek's whale, pixel-drawn, drifting in the corner. */
@@ -670,27 +671,9 @@ export class WebServer extends Service {
     opacity:.16;pointer-events:none}
   @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
 </style></head><body><div class="card">
-  <svg class="crest" viewBox="0 0 120 120" fill="none" role="img" aria-label="Massai crest">
-    <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
-    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="7" opacity=".16"/>
-    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="3.2"/>
-    <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
-    <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
-    <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
-      fill="#151517" stroke="#C1440E" stroke-width="6"/>
-    <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
-      <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
-      <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
-      <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
-      <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
-      <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
-      <rect x="6" y="0" width="1" height="1"/>
-    </g>
-  </svg>
-  <div class="wordmark">Massai</div>
-  <div class="tagline">built on DeepSeek</div>
-  <h1>Welcome to Massai 🚀</h1>
-  <div class="sub">Build any app you can imagine — powered by DeepSeek.</div>
+  <div class="hero-word">massai</div>
+  <div class="hero-sub">built on DeepSeek</div>
+  <div class="sub">Build any app you can imagine.</div>
   <p class="pitch">Here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
   Most people build for weeks on what a single coffee costs. No subscriptions — your ideas,
   priced at cost by the friendliest model shop in AI.</p>
