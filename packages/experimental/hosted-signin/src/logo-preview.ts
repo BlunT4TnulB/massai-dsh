@@ -46,6 +46,25 @@ const SPEAR_CURSOR = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
 /** The current music mark, kept for comparison. */
 const CURRENT = `<img class="mark" src="/massai-mark.jpg" alt="current mark">`
 
+/** The crest without the halo, kept so the halo is a choice and never a regret. */
+const CREST_PLAIN = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+  <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
+  <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
+    fill="#151517" stroke="#C1440E" stroke-width="6"/>
+  <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
+    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
+    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
+    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
+    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
+    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
+    <rect x="6" y="0" width="1" height="1"/>
+  </g>
+</svg>`
+
+/** The word stripped of the crest, for when the name alone should carry it. */
+const WORDMARK = `<div class="wordmark-art">massai<span>built on DeepSeek</span></div>`
+
 /** The crest: a warrior's shield charged with the DeepSeek whale, haloed. */
 const CREST = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
   <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
@@ -86,6 +105,9 @@ export function logoPreviewHtml(): string {
   .art{height:9rem;display:flex;align-items:center;justify-content:center;color:#7ee2a8}
   .art svg{width:7.5rem;height:7.5rem}
   .art img.mark{width:7.5rem;filter:invert(1);mix-blend-mode:screen;opacity:.95}
+  .wordmark-art{display:flex;flex-direction:column;align-items:center;gap:.3rem;
+    font-size:2rem;font-weight:700;letter-spacing:.22em;text-transform:lowercase;color:#F2F2F4}
+  .wordmark-art span{font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:#D9822B;font-weight:600}
   figcaption{display:flex;flex-direction:column;gap:.3rem;margin-top:.9rem;font-size:.85rem}
   figcaption b{font-size:.95rem;letter-spacing:.04em}
   figcaption span{color:#8f8f97;line-height:1.45}
@@ -103,6 +125,8 @@ favicon to billboard. Accent shown in the current green; the same shapes work in
 Maasai ochre <code>#C1440E</code> or DeepSeek blue <code>#4D6BFE</code>.</p>
 <div class="grid">
   ${card('The Crest ★', 'Warrior shield charged with the whale — haloed, because Massai is one letter from Messiah.', CREST)}
+  ${card('The Crest (plain)', 'The same crest without the halo — the safe, sober version.', CREST_PLAIN)}
+  ${card('Wordmark only', 'The name carries it alone: lowercase, wide, quiet.', WORDMARK)}
   ${card('The Warrior', 'Shield over crossed spears — fearless builder, heritage of the name.', WARRIOR)}
   ${card('Shield-Window', 'The shield is your app: beading becomes code lines.', SHIELD_WINDOW)}
   ${card('The Compiler', 'The resonance wave resolving into braces — music that builds.', WAVE_COMPILER)}
