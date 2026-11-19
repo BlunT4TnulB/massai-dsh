@@ -6,7 +6,7 @@ long way.** No jargon, no cost anxiety.
 
 ## Hero
 
-> **Describe it. It gets built. The unknown is possible.**
+> **Into the unknown.**
 > A tool. A site. An app. A workflow. A whole product — or the thing that doesn't exist
 > yet. No templates. No ceiling. Whatever you can put into words, Massai shapes
 > with you and hands back running — powered by DeepSeek.

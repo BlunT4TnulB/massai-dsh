@@ -39,6 +39,8 @@ Warrior-calm. No hype. Short, concrete, generous — *"a few dollars goes a long
 Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
 *Aim. Throw. Ship.* · *Your ideas, mass-produced.* · *The spear and the whale.*
 
+**Headline:** *Into the unknown.* — blunt and true: point at anything, it gets built.
+
 **Brand line:** limitless by default — no templates, no ceiling.
 
 **Proof line:** *Not a mockup. Not a draft. Running software.*

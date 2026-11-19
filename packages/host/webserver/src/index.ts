@@ -27,6 +27,7 @@ import Negotiator from 'negotiator'
 import { renderIndexInjections, type IndexInjection } from './injections.ts'
 
 export { renderIndexInjections } from './injections.ts'
+import { welcomePage } from './welcome-page.ts'
 export type { IndexInjection, IndexInjectionPlacement } from './injections.ts'
 
 /** One application entry URL contributed for startup printing or browser handoff. */
@@ -638,93 +639,9 @@ export class WebServer extends Service {
           // Friendly branded welcome instead of a bare 401 on the index: the
           // shared access link carries the token, so tell the visitor exactly that.
           if (admission.status === 401 && req.method === 'GET' && target.pathname === '/') {
+            const requested = Number(target.searchParams.get('line') ?? '0')
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
-            res.end(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Massai — describe it, it gets built</title>
-<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
-<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#151517">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Massai">
-<meta property="og:title" content="Massai — describe it, it gets built">
-<meta property="og:description" content="A tool. A site. An app. A workflow. A whole product — or the thing that doesn't exist yet. Not a mockup. Not a draft. Running software.">
-<meta property="og:image" content="https://massai-dsh.onrender.com/og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Massai — describe it, it gets built">
-<meta name="twitter:description" content="Not a mockup. Not a draft. Running software.">
-<meta name="twitter:image" content="https://massai-dsh.onrender.com/og-image.png">
-<meta name="description" content="Massai — describe it, it gets built. Powered by DeepSeek.">
-<style>
-  *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:#151517;color:#f2f2f4;font-family:system-ui,-apple-system,sans-serif}
-  .card{max-width:38rem;padding:2.5rem;text-align:center}
-  h1{margin:0 0 .4rem;font-size:2rem;font-weight:700}
-  .sub{margin:.2rem 0 1.4rem;color:#b9b9c0;font-weight:500;font-size:1.05rem}
-  .pitch{margin:.4rem 0;color:#b9b9c0;line-height:1.55;font-weight:500}
-  .pitch b{color:#7ee2a8;font-weight:600}
-  .punch{margin:.9rem 0 .2rem;font-size:1.12rem;font-weight:600;color:#F2F2F4;letter-spacing:.01em}
-  .punch span{color:#D9822B}
-  a.get{margin:1.2rem 0;display:inline-block;padding:.7rem 1.2rem;border-radius:.5rem;
-    background:#0f5d3a;color:#eafff2;text-decoration:none;font-weight:600;font-size:1rem}
-  form{margin-top:1.4rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
-  input[type=text]{flex:1;min-width:16rem;padding:.7rem .9rem;border-radius:.5rem;border:1px solid #3a3a40;
-    background:#222226;color:#f2f2f4;font-size:1rem}
-  button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
-    font-weight:600;font-size:1rem;cursor:pointer}
-  .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
-  .credits{margin:1.6rem 0 .2rem;padding-top:1.1rem;border-top:1px solid #242429;color:#7d7d86;
-    font-size:.8rem;line-height:1.6;font-weight:500}
-  /* Door: the word alone carries it; the crest lives in the tab + app. */
-  .hero-word{font-size:3.05rem;font-weight:700;letter-spacing:.2em;text-transform:lowercase;line-height:1;color:#F2F2F4}
-  .hero-sub{margin:.55rem 0 1.5rem;color:#D9822B;font-size:.72rem;font-weight:600;letter-spacing:.32em;text-transform:uppercase}
-  .wordmark{font-size:1.5rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2f2f4}
-  .tagline{margin:.25rem 0 1.6rem;color:#8a8a92;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
-  /* Subtle homage: DeepSeek's whale, pixel-drawn, drifting in the corner. */
-  .whale{position:fixed;right:1.4rem;bottom:1.2rem;width:4.5rem;height:auto;color:#7ee2a8;
-    opacity:.16;pointer-events:none}
-  @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
-</style></head><body><div class="card">
-  <div class="hero-word">massai</div>
-  <div class="hero-sub">open by default</div>
-  <div class="sub">Describe it. It gets built. <b>You don't need to know a thing.</b></div>
-  <p class="pitch">A tool. A site. An app. A workflow. A whole product — or the thing that
-  doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words,
-  Massai shapes with you and hands it back running.</p>
-  <p class="punch">Not a mockup. Not a draft. <span>Running software.</span></p>
-  <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
-  Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
-  your ideas, priced at cost by the friendliest model shop in AI.</p>
-  <ul class="promises"><li>No code</li><li>No setup</li><li>No experience needed</li></ul>
-  <p class="invite">Bring the idea. We'll learn the rest together.</p>
-  <a class="get" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Get my DeepSeek key → (takes one minute)</a>
-  <form method="POST" action="/api/signin">
-    <input type="text" name="apiKey" placeholder="Paste your DeepSeek key (sk-…)" autocomplete="off" required>
-    <button type="submit">Sign in</button>
-  </form>
-  <p class="credits">Massai stands on open-source shoulders — DeepSeek's engine first among them,
-  with thanks. Fork it, branch it, build on it: that is the point.</p>
-  <p class="small">By continuing you're signing in to DeepSeek; your usage is billed to your
-  DeepSeek account at their published rates. Massai never sees or stores your payment details.</p>
-</div>
-<svg class="whale" viewBox="0 0 16 10" aria-hidden="true" role="presentation">
-  <g fill="currentColor">
-    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
-    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
-    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
-    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
-    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
-    <rect x="6" y="0" width="1" height="1"/>
-  </g>
-  <rect x="3" y="4" width="1" height="1" fill="#151517"/>
-</svg>
-</body></html>`)
+            res.end(welcomePage(Number.isFinite(requested) ? requested : 0))
             return
           }
           res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
