@@ -691,7 +691,7 @@ export class WebServer extends Service {
 </style></head><body><div class="card">
   <div class="hero-word">massai</div>
   <div class="hero-sub">built on DeepSeek</div>
-  <div class="sub">Describe it. It gets built. The unknown is possible.</div>
+  <div class="sub">Describe it. It gets built. <b>You don't need to know a thing.</b></div>
   <p class="pitch">A tool. A site. An app. A workflow. A whole product — or the thing that
   doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words,
   Massai shapes with you and hands it back running.</p>
@@ -699,6 +699,7 @@ export class WebServer extends Service {
   <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
   Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
   your ideas, priced at cost by the friendliest model shop in AI.</p>
+  <ul class="promises"><li>No code</li><li>No setup</li><li>No experience needed</li></ul>
   <p class="invite">Bring the idea. We'll learn the rest together.</p>
   <a class="get" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Get my DeepSeek key → (takes one minute)</a>
   <form method="POST" action="/api/signin">

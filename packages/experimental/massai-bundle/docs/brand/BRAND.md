@@ -33,6 +33,10 @@ Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
 
 **Proof line:** *Not a mockup. Not a draft. Running software.*
 
+**Accessibility promise (top priority):** *You don't need to know a thing.*
+A toddler could use it — prior knowledge is irrelevant. Every surface must survive
+that test: no code, no setup, no vocabulary. If a step needs explaining, the step is wrong.
+
 **Invitation (positioning):** *Bring the idea. We'll learn the rest together.*
 — flips "you don't need to know anything" from a confession into a welcome.
 
