@@ -66,3 +66,17 @@ long way.** No jargon, no cost anxiety.
   them arrive (friendly, optional, never forced). Design notes: keep it light —
   a smiley-rating + one-line comment + optional email, rendered into a small
   owner dashboard (maybe a `/feedback` page or a plain file inbox).
+
+## Future ideas (parked, not scheduled) — continued
+
+- **Guided tour of usability** — the first-run experience splits into two modes:
+  - **Newbie mode**: a warm tutorial — "tell me what you're trying to do, I'll
+    walk you there" with big clickable cards for the common needs: build an app,
+    connect a GitHub repository, open a folder/workspace, share a link.
+  - **Easy mode (experienced)**: the same cards collapsed into a compact quick-
+    actions bar so power users skip the tour but keep the shortcuts.
+  - Common-use-case cards act as *oriented prompts* — clicking "Connect GitHub"
+    runs the real handshake flow, "Open a folder" opens the workspace picker,
+    etc. No browsing, no scrolling: the tour IS the usability.
+  - DSH already ships `client-ui-creation-recommendations` (the creation
+    suggestions) — the guided tour should build on that mechanism, not replace it.
