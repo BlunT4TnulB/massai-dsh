@@ -641,7 +641,7 @@ export class WebServer extends Service {
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
             res.end(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Massai — your AI app builder</title>
+<title>Massai — describe it, it gets built</title>
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="theme-color" content="#151517">
 <style>
@@ -673,10 +673,12 @@ export class WebServer extends Service {
 </style></head><body><div class="card">
   <div class="hero-word">massai</div>
   <div class="hero-sub">built on DeepSeek</div>
-  <div class="sub">Build any app you can imagine.</div>
-  <p class="pitch">Here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
-  Most people build for weeks on what a single coffee costs. No subscriptions — your ideas,
-  priced at cost by the friendliest model shop in AI.</p>
+  <div class="sub">Describe it. It gets built.</div>
+  <p class="pitch">A tool. A site. A workflow. A whole product. Whatever you can put into
+  words, Massai shapes with you and hands back running — not a mockup, not a draft.</p>
+  <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
+  Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
+  your ideas, priced at cost by the friendliest model shop in AI.</p>
   <a class="get" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Get my DeepSeek key → (takes one minute)</a>
   <form method="POST" action="/api/signin">
     <input type="text" name="apiKey" placeholder="Paste your DeepSeek key (sk-…)" autocomplete="off" required>

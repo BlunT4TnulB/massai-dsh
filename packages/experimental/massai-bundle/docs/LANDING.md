@@ -6,9 +6,9 @@ long way.** No jargon, no cost anxiety.
 
 ## Hero
 
-> **Build any app you can imagine.**
-> Describe it in plain words — Massai designs and builds it with you.
-> Powered by DeepSeek, the smart little engine that could.
+> **Describe it. It gets built.**
+> A tool. A site. A workflow. A whole product. Whatever you can put into words,
+> Massai shapes with you and hands back running — powered by DeepSeek.
 
 ## The "feel good" pitch (why paying feels great)
 
