@@ -49,12 +49,22 @@ export function startPageHtml(): string {
   .icon{font-size:1.6rem;line-height:1}
   a.card b{font-size:1.05rem;font-weight:700;letter-spacing:.01em}
   .note{color:#8f8f97;font-size:.86rem;line-height:1.45;font-weight:500}
+  .quick{margin:1.3rem 0 0;text-align:center;color:#5f5f68;font-size:.78rem;letter-spacing:.04em}
+  .quick a{color:#8f8f97;text-decoration:none;border-bottom:1px solid #33333b;padding-bottom:1px}
+  .quick a:hover{color:#D9822B;border-color:#C1440E}
   .foot{margin-top:1.5rem;color:#6f6f77;font-size:.8rem;text-align:center;line-height:1.6}
   .foot b{color:#8f8f97}
 </style></head><body><div class="wrap">
   <h1>What would you like to <b>make?</b></h1>
   <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing.</p>
   <div class="grid">${cards}</div>
+  <p class="quick">In a hurry?
+    <a href="/?prompt=${encodeURIComponent('Build me a website for ')}">website</a> ·
+    <a href="/?prompt=${encodeURIComponent('Build me a small tool that ')}">tool</a> ·
+    <a href="/?prompt=${encodeURIComponent('Walk me through connecting my GitHub repository — step by step, one click at a time.')}">github</a> ·
+    <a href="/?prompt=${encodeURIComponent('Walk me through opening a folder of my existing work here — step by step.')}">folder</a> ·
+    <a href="/">open the app</a>
+  </p>
   <p class="foot">Bring the idea. We'll learn the rest together.<br>
   <b>Tip:</b> you can always just start typing — nothing here is a commitment.</p>
 </div></body></html>`
