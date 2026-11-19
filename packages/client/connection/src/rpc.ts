@@ -229,7 +229,7 @@ export interface HostConnectionHandle {
    * @param options - fixed principal and interaction participation (default answer).
    * @returns a new Peer distinct from every other Peer.
    */
-  createPeer(options: { readonly principal: Principal; readonly interactions?: 'answer' | 'none' }): PeerScope
+  createPeer(options: { readonly principal: Principal; readonly interactions?: 'answer' | 'none'; readonly id?: PeerId }): PeerScope
 
 
 }
