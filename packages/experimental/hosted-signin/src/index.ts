@@ -55,7 +55,8 @@ export function apply(ctx: Context): void {
         const text = await readBody(req)
         const apiKey = apiKeyOf(text, req.headers['content-type'])
         if (apiKey === '') { respond(res, 400, { error: 'apiKey is required' }); return }
-        const userId = randomUUID()
+        // The credential key's segment must start with a letter; prefix the uuid.
+        const userId = `u-${randomUUID()}`
         await ctx.credentials.modifyRecord(credentialKey(SCOPE, userId), async () => ({ kind: 'api-key', key: apiKey }))
         const minter = ctx.get('browserAuth') as SessionMinter | undefined
         if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
