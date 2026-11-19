@@ -62,7 +62,12 @@ function decodeBase64Url(value: string): Buffer | undefined {
 function processLaunchToken(owner: object): string {
   const existing = PROCESS_LAUNCH_TOKENS.get(owner)
   if (existing !== undefined) return existing
-  const created = encodeBase64Url(randomBytes(SECRET_BYTES))
+  // Hosted mode: a stable token configured by the operator (DSH_WEB_TOKEN) keeps
+  // the shared sign-in URL fixed across deploys; otherwise a random per-launch token.
+  const configured = process.env.DSH_WEB_TOKEN
+  const created = configured !== undefined && configured !== ''
+    ? configured
+    : encodeBase64Url(randomBytes(SECRET_BYTES))
   PROCESS_LAUNCH_TOKENS.set(owner, created)
   return created
 }
