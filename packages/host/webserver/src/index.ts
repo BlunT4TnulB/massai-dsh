@@ -642,6 +642,8 @@ export class WebServer extends Service {
             res.end(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — your AI app builder</title>
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<meta name="theme-color" content="#151517">
 <style>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -659,10 +661,8 @@ export class WebServer extends Service {
   button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
     font-weight:600;font-size:1rem;cursor:pointer}
   .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
-  /* Knock the printer-white background out of the mark: invert turns the black
-     strokes white, and screen blending leaves the (now black) backdrop showing
-     the page colour, so the logo floats on the dark canvas. */
-  img.mark{display:block;width:11rem;height:auto;margin:0 auto 1rem;filter:invert(1);mix-blend-mode:screen;opacity:.95}
+  /* The crest: ochre shield, spears, DeepSeek-blue whale as the charge. */
+  .crest{display:block;width:9.5rem;height:auto;margin:0 auto .9rem}
   .wordmark{font-size:1.5rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2f2f4}
   .tagline{margin:.25rem 0 1.6rem;color:#8a8a92;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
   /* Subtle homage: DeepSeek's whale, pixel-drawn, drifting in the corner. */
@@ -670,7 +670,20 @@ export class WebServer extends Service {
     opacity:.16;pointer-events:none}
   @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
 </style></head><body><div class="card">
-  <img class="mark" src="/massai-mark.jpg" alt="Massai mark">
+  <svg class="crest" viewBox="0 0 120 120" fill="none" role="img" aria-label="Massai crest">
+    <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+    <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
+    <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
+      fill="#151517" stroke="#C1440E" stroke-width="6"/>
+    <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
+      <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
+      <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
+      <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
+      <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
+      <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
+      <rect x="6" y="0" width="1" height="1"/>
+    </g>
+  </svg>
   <div class="wordmark">Massai</div>
   <div class="tagline">built on DeepSeek</div>
   <h1>Welcome to Massai 🚀</h1>

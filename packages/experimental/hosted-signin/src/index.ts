@@ -21,14 +21,15 @@ export const inject = ['credentials', 'webServer', 'browserAuth']
 const SCOPE = 'massai-user'
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' } as const
 const MARK_PATH = '/massai-mark.jpg'
+const CREST_PATH = '/massai-crest.svg'
 
 /**
- * The Massai mark bytes, read once beside the built package. Served
- * anonymously because the concierge page that shows it precedes sign-in.
+ * Read one brand asset beside the built package. Served anonymously because
+ * the concierge page that shows it precedes sign-in.
  */
-function massaiMark(): Buffer | undefined {
+function brandAsset(file: string, fallbackType: string): { body: Buffer; type: string } | undefined {
   try {
-    return readFileSync(new URL('../assets/massai-mark.jpg', import.meta.url))
+    return { body: readFileSync(new URL(`../assets/${file}`, import.meta.url)), type: fallbackType }
   } catch {
     return undefined
   }
@@ -62,20 +63,25 @@ function respond(res: ServerResponse, status: number, payload: unknown): void {
 }
 
 export function apply(ctx: Context): void {
-  // Anonymous brand asset for the concierge page (see the webserver's welcome HTML).
-  ctx.webServer.register({
-    kind: 'exact', path: MARK_PATH, auth: 'anonymous',
-    handler: (req, res) => {
-      const mark = massaiMark()
-      if (mark === undefined) { res.writeHead(404); res.end(); return }
-      res.writeHead(200, {
-        'content-type': 'image/jpeg',
-        'content-length': String(mark.byteLength),
-        'cache-control': 'public, max-age=86400',
-      })
-      res.end(req.method === 'HEAD' ? undefined : mark)
-    },
-  })
+  // Anonymous brand assets for the concierge page (see the webserver's welcome HTML).
+  for (const [path, file, type] of [
+    [MARK_PATH, 'massai-mark.jpg', 'image/jpeg'],
+    [CREST_PATH, 'massai-crest.svg', 'image/svg+xml'],
+  ] as const) {
+    ctx.webServer.register({
+      kind: 'exact', path, auth: 'anonymous',
+      handler: (req, res) => {
+        const asset = brandAsset(file, type)
+        if (asset === undefined) { res.writeHead(404); res.end(); return }
+        res.writeHead(200, {
+          'content-type': asset.type,
+          'content-length': String(asset.body.byteLength),
+          'cache-control': 'public, max-age=86400',
+        })
+        res.end(req.method === 'HEAD' ? undefined : asset.body)
+      },
+    })
+  }
   // Owner-facing concept sheet for the Massai mark (anonymous, opt-in by URL).
   ctx.webServer.register({
     kind: 'exact', path: '/logo-preview', auth: 'anonymous',
