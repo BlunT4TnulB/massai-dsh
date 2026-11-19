@@ -56,6 +56,7 @@
 #     reasoningEffort: low
 
 # Guided start: `?prompt=` deep links open a conversation ready to build.
-- insert:
-    - id: quickstart
-      name: "@deepseek-ai/dsh-client-ui-quickstart"
+# Held back until its client bundle is verified in the image; /start still works.
+# - insert:
+#     - id: quickstart
+#       name: "@deepseek-ai/dsh-client-ui-quickstart"

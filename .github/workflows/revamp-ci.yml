@@ -110,6 +110,11 @@ jobs:
       - name: Smoke-test the image (bind + /healthz)
         run: |
           docker run -d --name massai-smoke -p 10000:10000 ghcr.io/blunt4tnulb/massai:latest
+          sleep 5
+          echo "--- container status ---"
+          docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' massai-smoke || true
+          echo "--- container logs (boot) ---"
+          docker logs massai-smoke 2>&1 | tail -40 || true
           CODE=000
           for i in $(seq 1 15); do
             CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/healthz 2>/dev/null || echo 000)
