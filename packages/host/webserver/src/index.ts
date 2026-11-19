@@ -679,6 +679,8 @@ export class WebServer extends Service {
   button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
     font-weight:600;font-size:1rem;cursor:pointer}
   .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
+  .credits{margin:1.6rem 0 .2rem;padding-top:1.1rem;border-top:1px solid #242429;color:#7d7d86;
+    font-size:.8rem;line-height:1.6;font-weight:500}
   /* Door: the word alone carries it; the crest lives in the tab + app. */
   .hero-word{font-size:3.05rem;font-weight:700;letter-spacing:.2em;text-transform:lowercase;line-height:1;color:#F2F2F4}
   .hero-sub{margin:.55rem 0 1.5rem;color:#D9822B;font-size:.72rem;font-weight:600;letter-spacing:.32em;text-transform:uppercase}
@@ -690,7 +692,7 @@ export class WebServer extends Service {
   @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
 </style></head><body><div class="card">
   <div class="hero-word">massai</div>
-  <div class="hero-sub">built on DeepSeek</div>
+  <div class="hero-sub">open by default</div>
   <div class="sub">Describe it. It gets built. <b>You don't need to know a thing.</b></div>
   <p class="pitch">A tool. A site. An app. A workflow. A whole product — or the thing that
   doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words,
@@ -706,6 +708,8 @@ export class WebServer extends Service {
     <input type="text" name="apiKey" placeholder="Paste your DeepSeek key (sk-…)" autocomplete="off" required>
     <button type="submit">Sign in</button>
   </form>
+  <p class="credits">Massai stands on open-source shoulders — DeepSeek's engine first among them,
+  with thanks. Fork it, branch it, build on it: that is the point.</p>
   <p class="small">By continuing you're signing in to DeepSeek; your usage is billed to your
   DeepSeek account at their published rates. Massai never sees or stores your payment details.</p>
 </div>
