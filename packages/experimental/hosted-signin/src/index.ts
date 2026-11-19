@@ -9,7 +9,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
-import type { PeerScope } from '@deepseek-ai/dsh-client-connection'
+import type { PeerScope } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 
 export const name = 'hosted-signin'
