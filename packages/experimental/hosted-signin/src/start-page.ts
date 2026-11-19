@@ -9,8 +9,10 @@
 const CARDS = [
   { icon: '🌐', title: 'Make a website', note: 'A page for your thing — menu, portfolio, shop, anything.', prompt: 'Build me a website for ' },
   { icon: '🧰', title: 'Make a tool', note: 'Something that does one job well, made for you.', prompt: 'Build me a small tool that ' },
+  { icon: '🔗', title: 'Connect my GitHub', note: 'Point me at a repo and I will walk you through linking it.', prompt: 'Walk me through connecting my GitHub repository — step by step, one click at a time.' },
+  { icon: '📂', title: 'Open my folder', note: 'Bring in work you already have. I will show you where.', prompt: 'Walk me through opening a folder of my existing work here — step by step.' },
   { icon: '✨', title: 'Make it mine', note: 'Start from your own words — I will help fill the blanks.', prompt: 'Build me ' },
-  { icon: '📂', title: 'Just open the app', note: 'Look around first. Nothing breaks, nothing is lost.', prompt: '' },
+  { icon: '🚀', title: 'Just open the app', note: 'Look around first. Nothing breaks, nothing is lost.', prompt: '' },
 ] as const
 
 /** The guided start page HTML. */
@@ -51,7 +53,7 @@ export function startPageHtml(): string {
   .foot b{color:#8f8f97}
 </style></head><body><div class="wrap">
   <h1>What would you like to <b>make?</b></h1>
-  <p class="lead">Pick one and I will write the first words for you. You don't need to know a thing.</p>
+  <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing.</p>
   <div class="grid">${cards}</div>
   <p class="foot">Bring the idea. We'll learn the rest together.<br>
   <b>Tip:</b> you can always just start typing — nothing here is a commitment.</p>
