@@ -107,19 +107,25 @@ jobs:
           docker build -t ghcr.io/blunt4tnulb/massai:latest .
           docker push ghcr.io/blunt4tnulb/massai:latest
 
-      - name: Smoke-test the image (does /healthz return 200?)
+      - name: Smoke-test the image (bind + /healthz)
         run: |
           docker run -d --name massai-smoke -p 10000:10000 ghcr.io/blunt4tnulb/massai:latest
           CODE=000
           for i in $(seq 1 15); do
             CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/healthz 2>/dev/null || echo 000)
-            echo "healthz attempt $i: $CODE"
+            echo "healthz(loopback-mapped) attempt $i: $CODE"
             [ "$CODE" = "200" ] && break
             sleep 4
           done
-          echo "root: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/ 2>/dev/null || echo 000)"
+          # Simulate Render's scanner: hit the CONTAINER's own IP (not the -p mapping).
+          CIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' massai-smoke)
+          echo "container IP: $CIP"
+          echo "container-ip /healthz: $(curl -s -o /dev/null -w '%{http_code}' "http://$CIP:10000/healthz" 2>/dev/null || echo 000)"
+          echo "container-ip /: $(curl -s -o /dev/null -w '%{http_code}' "http://$CIP:10000/" 2>/dev/null || echo 000)"
+          echo "--- listening sockets ---"
+          docker exec massai-smoke sh -c 'cat /proc/net/tcp 2>/dev/null | head -5' || true
           echo "--- container logs ---"
-          docker logs massai-smoke 2>&1 | tail -30
+          docker logs massai-smoke 2>&1 | tail -15
           docker rm -f massai-smoke
           [ "$CODE" = "200" ] && echo "SMOKE=PASS" || { echo "SMOKE=FAIL"; exit 1; }
 
