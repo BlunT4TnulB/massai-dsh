@@ -674,9 +674,9 @@ export class WebServer extends Service {
   <div class="hero-word">massai</div>
   <div class="hero-sub">built on DeepSeek</div>
   <div class="sub">Describe it. It gets built. The unknown is possible.</div>
-  <p class="pitch">A tool. A site. A workflow. A whole product — or the thing that doesn't
-  exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words, Massai shapes
-  with you and hands back running — not a mockup, not a draft.</p>
+  <p class="pitch">A tool. A site. An app. A workflow. A whole product — or the thing that
+  doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words, Massai
+  shapes with you and hands back running — not a mockup, not a draft.</p>
   <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
   Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
   your ideas, priced at cost by the friendliest model shop in AI.</p>
