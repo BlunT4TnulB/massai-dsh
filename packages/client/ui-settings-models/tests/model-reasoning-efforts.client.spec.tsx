@@ -283,6 +283,7 @@ describe('reasoning levels in the model list', () => {
     storeCredential: vi.fn(),
     removeCredential: vi.fn(),
     writeSettings: vi.fn(),
+    signInPerUser: vi.fn(),
   }
 
   /** Render the list over local state, reporting every write. */
