@@ -6,9 +6,10 @@ long way.** No jargon, no cost anxiety.
 
 ## Hero
 
-> **Describe it. It gets built.**
-> A tool. A site. A workflow. A whole product. Whatever you can put into words,
-> Massai shapes with you and hands back running — powered by DeepSeek.
+> **Describe it. It gets built. The unknown is possible.**
+> A tool. A site. A workflow. A whole product — or the thing that doesn't exist
+> yet. No templates. No ceiling. Whatever you can put into words, Massai shapes
+> with you and hands back running — powered by DeepSeek.
 
 ## The "feel good" pitch (why paying feels great)
 

@@ -26,7 +26,10 @@ of the name.
 ## Voice
 Warrior-calm. No hype. Short, concrete, generous — *"a few dollars goes a long way."*
 
-Taglines: **Aim. Throw. Ship.** · *Your ideas, mass-produced.* · *The spear and the whale.*
+Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
+*Aim. Throw. Ship.* · *Your ideas, mass-produced.* · *The spear and the whale.*
+
+**Brand line:** limitless by default — no templates, no ceiling.
 
 ## Live preview
 `https://massai-dsh.onrender.com/logo-preview` (concept sheet, anonymous)
