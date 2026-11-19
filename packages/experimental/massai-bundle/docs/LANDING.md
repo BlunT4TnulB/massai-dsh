@@ -1,40 +1,52 @@
 # Massai landing / sign-in copy
 
-The hosted link's "spoon-fed" onboarding: zero jargon, promote DeepSeek's price,
-one action to start building. Render this on the landing + sign-in screen.
+The hosted link's "spoon-fed" onboarding. The emotional job of every line:
+**spending a little on DeepSeek feels GOOD — a tiny bit of money that goes a long,
+long way.** No jargon, no cost anxiety.
 
 ## Hero
 
 > **Build any app you can imagine.**
-> Massai is an AI coding agent that designs and builds apps from a plain-English
-> description — powered by DeepSeek.
+> Describe it in plain words — Massai designs and builds it with you.
+> Powered by DeepSeek, the smart little engine that could.
 
-## Pricing comparison (the "crazy cheap" pitch)
+## The "feel good" pitch (why paying feels great)
 
-> **The same kind of AI that powers expensive assistants — for a fraction of the cost.**
+> **Here's the part you'll actually enjoy: it barely costs anything.**
+>
+> A few dollars on DeepSeek goes a *long* way — most people build for weeks on
+> what a single coffee costs. No subscriptions. No "pro tier." Just your ideas,
+> priced at cost by the friendliest model shop in AI.
+>
+> **You're not paying a bill — you're fueling your own ideas.** And they're
+> cheaper to fuel than anything else out there.
 
-| | Cost |
+## Pricing comparison (the "a little goes a long way" table)
+
+> **The same kind of AI that powers the expensive assistants — for pocket change.**
+
+| | What your few dollars buy |
 |---|---|
-| **DeepSeek** (this) | 💸 **~10-20× cheaper** than the big names |
-| ChatGPT / Claude / Gemini | 💰 premium per-token pricing |
+| **DeepSeek** | 💸 **weeks of building** — rates ~10–20× cheaper than the big names |
+| ChatGPT / Claude / Gemini | 💰 the same money, gone in an afternoon |
 
-> DeepSeek's flagship coder is dramatically cheaper per token than the major
-> Western assistants, with comparable quality. *Check platform.deepseek.com for
-> current per-token rates.*
+> *Current per-token rates live at platform.deepseek.com — but the story is
+> always the same: DeepSeek is dramatically cheaper.*
 
-## Sign-in
+## Sign-in / top-up moment
 
-> **Continue with your DeepSeek account.**
-> By continuing, you'll sign in to DeepSeek — usage is billed to **your** DeepSeek
-> account at their published (very cheap) rates. Get a key in one minute at
-> **platform.deepseek.com/api_keys**.
-
-*(or, for the owner-pays guest mode:)*
-
-> **Just start building** — a trial allowance is provided. Bring your own DeepSeek
-> key anytime to keep going at cost.
+> **Grab a DeepSeek key — takes one minute, and $5 will carry you a long way.**
+>
+> Head to **platform.deepseek.com/api_keys**, top up a few dollars, paste your
+> key here. That's it — your key, your build, your cost (which is tiny).
+>
+> *(owner-pays guest mode:)*
+>
+> **Just start building** — a trial allowance is on us. Bring your own DeepSeek
+> key anytime to keep going for pocket change.
 
 ## Disclaimer (required on the sign-in action)
 
 > By continuing you're signing in to DeepSeek; your usage is billed to your
-> DeepSeek account. Massai doesn't see or store your payment details.
+> DeepSeek account at their published rates. Massai never sees or stores your
+> payment details.
