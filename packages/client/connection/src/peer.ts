@@ -40,6 +40,9 @@ export class Peer implements PeerScope {
     this.interactions = options.interactions ?? 'answer'
     this.scope = createScope(owner, this)
     this.ctx = this.scope.ctx
+    // Expose this peer in its own scope so session/agent code running under it
+    // can resolve the signed-in user's identity (per-user credentials).
+    this.ctx.provide('peerScope', this)
     const lifetime = new AbortController()
     this.signal = lifetime.signal
     // Runs however the scope ends: dispose() or the owner Context unloading.
