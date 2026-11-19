@@ -131,6 +131,9 @@ export class HostConnectionService extends Service implements HostConnectionHand
 
   /** Check the deployment's request-source policy without credential verification. */
   private isTrustedRequest(request: ConnectionTrustRequest): boolean {
+    // Hosted mode (behind a platform proxy): the DNS-rebinding Host fence does
+    // not apply — the proxy terminates the Host and forwards on the container IP.
+    if (process.env.DSH_ALLOW_WILDCARD_HOST === '1') return true
     const carrier = this.owner.get('webServer')
     return isTrustedApiRequest(request, this.trustedHosts, carrier?.host, carrier?.protocol ?? 'http:')
   }
