@@ -18,5 +18,14 @@
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"
+  },
+  "description": "Browser quickstart: honours ?prompt= deep links by opening a conversation ready to build.",
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ],
+      "platform": "web"
+    }
   }
 }
