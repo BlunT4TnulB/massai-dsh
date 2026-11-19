@@ -378,6 +378,9 @@ importers:
       '@deepseek-ai/dsh-experimental-liveshare':
         specifier: workspace:*
         version: link:../../packages/experimental/liveshare
+      '@deepseek-ai/dsh-experimental-massai-bundle':
+        specifier: workspace:*
+        version: link:../../packages/experimental/massai-bundle
       '@deepseek-ai/dsh-experimental-plugin-market-bundle':
         specifier: workspace:*
         version: link:../../packages/experimental/plugin-market-bundle
