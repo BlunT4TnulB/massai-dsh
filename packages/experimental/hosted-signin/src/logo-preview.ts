@@ -46,8 +46,11 @@ const SPEAR_CURSOR = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
 /** The current music mark, kept for comparison. */
 const CURRENT = `<img class="mark" src="/massai-mark.jpg" alt="current mark">`
 
-/** The crest: a warrior's shield charged with the DeepSeek whale. */
+/** The crest: a warrior's shield charged with the DeepSeek whale, haloed. */
 const CREST = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+  <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
+  <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="7" opacity=".16"/>
+  <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="3.2"/>
   <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
   <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
   <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
@@ -99,7 +102,7 @@ export function logoPreviewHtml(): string {
 favicon to billboard. Accent shown in the current green; the same shapes work in
 Maasai ochre <code>#C1440E</code> or DeepSeek blue <code>#4D6BFE</code>.</p>
 <div class="grid">
-  ${card('The Crest ★', 'A warrior shield charged with the whale — engine inside the craft.', CREST)}
+  ${card('The Crest ★', 'Warrior shield charged with the whale — haloed, because Massai is one letter from Messiah.', CREST)}
   ${card('The Warrior', 'Shield over crossed spears — fearless builder, heritage of the name.', WARRIOR)}
   ${card('Shield-Window', 'The shield is your app: beading becomes code lines.', SHIELD_WINDOW)}
   ${card('The Compiler', 'The resonance wave resolving into braces — music that builds.', WAVE_COMPILER)}

@@ -671,6 +671,9 @@ export class WebServer extends Service {
   @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
 </style></head><body><div class="card">
   <svg class="crest" viewBox="0 0 120 120" fill="none" role="img" aria-label="Massai crest">
+    <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
+    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="7" opacity=".16"/>
+    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="3.2"/>
     <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
     <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
     <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"

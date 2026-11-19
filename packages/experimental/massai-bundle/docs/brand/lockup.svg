@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" fill="none">
   <rect width="720" height="220" rx="28" fill="#151517"/>
-  <!-- crest -->
-  <g transform="translate(40 30) scale(1.33)">
+  <!-- crest with halo -->
+  <g transform="translate(40 26) scale(1.33)">
+    <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
+    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="7" opacity=".16"/>
+    <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="3.2"/>
     <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
     <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
     <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
@@ -15,7 +18,6 @@
       <rect x="6" y="0" width="1" height="1"/>
     </g>
   </g>
-  <!-- wordmark -->
   <text x="240" y="112" fill="#F2F2F4" font-family="system-ui, -apple-system, Segoe UI, sans-serif"
     font-size="62" font-weight="700" letter-spacing="9">MASSAI</text>
   <text x="243" y="146" fill="#D9822B" font-family="system-ui, -apple-system, Segoe UI, sans-serif"
