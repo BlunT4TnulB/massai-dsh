@@ -13,6 +13,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
+import { logoPreviewHtml } from './logo-preview.ts'
 
 export const name = 'hosted-signin'
 export const inject = ['credentials', 'webServer', 'browserAuth']
@@ -73,6 +74,19 @@ export function apply(ctx: Context): void {
         'cache-control': 'public, max-age=86400',
       })
       res.end(req.method === 'HEAD' ? undefined : mark)
+    },
+  })
+  // Owner-facing concept sheet for the Massai mark (anonymous, opt-in by URL).
+  ctx.webServer.register({
+    kind: 'exact', path: '/logo-preview', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(logoPreviewHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
     },
   })
   ctx.webServer.register({
