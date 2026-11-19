@@ -31,5 +31,7 @@ Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
 
 **Brand line:** limitless by default — no templates, no ceiling.
 
+**Proof line:** *Not a mockup. Not a draft. Running software.*
+
 ## Live preview
 `https://massai-dsh.onrender.com/logo-preview` (concept sheet, anonymous)

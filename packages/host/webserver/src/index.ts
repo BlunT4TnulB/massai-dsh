@@ -653,6 +653,8 @@ export class WebServer extends Service {
   .sub{margin:.2rem 0 1.4rem;color:#b9b9c0;font-weight:500;font-size:1.05rem}
   .pitch{margin:.4rem 0;color:#b9b9c0;line-height:1.55;font-weight:500}
   .pitch b{color:#7ee2a8;font-weight:600}
+  .punch{margin:.9rem 0 .2rem;font-size:1.12rem;font-weight:600;color:#F2F2F4;letter-spacing:.01em}
+  .punch span{color:#D9822B}
   a.get{margin:1.2rem 0;display:inline-block;padding:.7rem 1.2rem;border-radius:.5rem;
     background:#0f5d3a;color:#eafff2;text-decoration:none;font-weight:600;font-size:1rem}
   form{margin-top:1.4rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
@@ -675,8 +677,9 @@ export class WebServer extends Service {
   <div class="hero-sub">built on DeepSeek</div>
   <div class="sub">Describe it. It gets built. The unknown is possible.</div>
   <p class="pitch">A tool. A site. An app. A workflow. A whole product — or the thing that
-  doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words, Massai
-  shapes with you and hands back running — not a mockup, not a draft.</p>
+  doesn't exist yet. <b>No templates. No ceiling.</b> Whatever you can put into words,
+  Massai shapes with you and hands it back running.</p>
+  <p class="punch">Not a mockup. Not a draft. <span>Running software.</span></p>
   <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
   Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
   your ideas, priced at cost by the friendliest model shop in AI.</p>
