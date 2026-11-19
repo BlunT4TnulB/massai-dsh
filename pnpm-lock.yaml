@@ -11464,6 +11464,18 @@ importers:
         specifier: workspace:*
         version: link:../../session/working-directory
 
+  packages/experimental/hosted-signin:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-credentials':
+        specifier: workspace:*
+        version: link:../../credentials/credentials
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
   packages/experimental/inspector:
     dependencies:
       '@deepseek-ai/dsh-app-boot':
@@ -11854,6 +11866,9 @@ importers:
       '@deepseek-ai/dsh-agent-default-model':
         specifier: workspace:*
         version: link:../../core/agent-default-model
+      '@deepseek-ai/dsh-hosted-signin':
+        specifier: workspace:*
+        version: link:../hosted-signin
       '@deepseek-ai/dsh-model-router':
         specifier: workspace:*
         version: link:../model-router
