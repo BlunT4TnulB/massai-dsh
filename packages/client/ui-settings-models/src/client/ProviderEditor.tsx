@@ -363,6 +363,12 @@ export function ProviderEditor(props: ProviderEditorProps): ReactNode {
     if (keyValue.length > 0) {
       const stored = await operations.storeCredential(keyRef, keyValue)
       if (stored !== undefined) return stored
+      // Hosted link (BYOK): also store the key per-user so this browser's
+      // requests resolve the visitor's own key, billed to their account.
+      if (keyRef === 'DEEPSEEK_API_KEY') {
+        const perUser = await operations.signInPerUser(keyValue)
+        if (perUser !== undefined) return perUser
+      }
     }
     setKeyDraft('')
     return undefined

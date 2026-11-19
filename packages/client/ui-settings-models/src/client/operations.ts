@@ -46,6 +46,13 @@ export interface ModelsOperations {
    */
   removeCredential(ref: string): Promise<string | undefined>
   /**
+   * Store the visitor's own DeepSeek API key under their session (BYOK): the
+   * per-user credential this browser's requests use, billed to their account.
+   * @param apiKey - the raw key.
+   * @returns the refusal message, or undefined once stored.
+   */
+  signInPerUser(apiKey: string): Promise<string | undefined>
+  /**
    * Apply path operations to one settings namespace.
    * @param ns - settings namespace identity.
    * @param ops - ordered path operations against the stored section, as the
@@ -82,6 +89,20 @@ export function createModelsOperations(ctx: ClientContext): ModelsOperations {
     removeCredential: async (ref) => {
       const response = await ctx.remote.credentials.unset(ref)
       return response.ok ? undefined : response.error.message
+    },
+    signInPerUser: async (apiKey) => {
+      try {
+        const response = await fetch('/api/signin', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ apiKey }),
+        })
+        if (response.ok) return undefined
+        const payload = await response.json().catch(() => null) as { error?: string } | null
+        return payload?.error ?? `sign-in failed (HTTP ${response.status})`
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error)
+      }
     },
     writeSettings: async (ns, ops, expectedRevision) => {
       const response = await ctx.remote.settings.mutate(ns, ops, expectedRevision)
