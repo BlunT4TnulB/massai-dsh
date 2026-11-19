@@ -7,6 +7,7 @@
   "include": ["src"],
   "references": [
     { "path": "../../../vendor/cordis" },
+    { "path": "../../host/webserver" },
     { "path": "../../typert/protocol" },
     { "path": "../../credentials/credentials" }
   ]
