@@ -131,7 +131,7 @@ export interface DeepSeekAdapterOptions<Connection extends DeepSeekConnectionOpt
    * snapshot, or `undefined` when the route has no credential for it; never
    * re-read the endpoint. Model requests pass the connection's own base URL.
    */
-  resolveAuth: (connection: Connection, endpoint: string) => Promise<DeepSeekRequestAuth | undefined>
+  resolveAuth: (connection: Connection, endpoint: string, userId?: string) => Promise<DeepSeekRequestAuth | undefined>
   /**
    * The failure a model request reports when {@link resolveAuth} releases no
    * credential for the route's own endpoint; omission reports `MISSING_CREDENTIAL`.

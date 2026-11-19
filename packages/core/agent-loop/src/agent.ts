@@ -747,6 +747,7 @@ export class ReactLoopAgent implements Agent {
       messages: boundaryMessages,
       toolHistory: session.toolHistory(),
       ...header.tools !== undefined ? { tools: header.tools } : {},
+      ...session.meta?.userId === undefined ? {} : { userId: session.meta.userId },
       sessionId: this.session.id,
       signal,
     }))

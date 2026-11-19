@@ -100,7 +100,7 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
     const { messages, versions } = await prepareImages(
       options.messages, connection, options.model, this.dependencies.resolveAttachments?.(), this.imageAccess, signal,
     )
-    const auth = await this.dependencies.resolveAuth(connection, connection.baseURL)
+    const auth = await this.dependencies.resolveAuth(connection, connection.baseURL, options.userId)
     if (auth === undefined) throw this.missingCredential(connection, options.provider)
     // The request ends with its credential: a withdrawal closes the upstream response as the caller's cancellation does.
     const live = auth.revoked === undefined ? signal : AbortSignal.any([signal, auth.revoked])

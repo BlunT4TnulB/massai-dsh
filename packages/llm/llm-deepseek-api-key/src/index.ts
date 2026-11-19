@@ -46,12 +46,13 @@ export function apply(ctx: Context, config: Config): void {
    * expects; `undefined` when none is configured or `endpoint` is outside the route's deployment. An unusable key fails
    * as this route's `INVALID_CREDENTIAL`; store failures propagate.
    */
-  const resolveAuth = async (connection: ResolvedDeepSeekOptions, endpoint: string): Promise<DeepSeekRequestAuth | undefined> => {
+  const resolveAuth = async (connection: ResolvedDeepSeekOptions, endpoint: string, userId?: string): Promise<DeepSeekRequestAuth | undefined> => {
     try {
       return await ctx.deepseekAuth.authorize({
         consumer: settingsNs, accepts: ['api-key'], billing: 'api-key', destination: { url: endpoint },
         connections: { 'api-key': { baseURL: connection.baseURL, reference: connection.apiKeyEnv } },
         apiKeyHeaders: ['x-api-key'],
+        ...userId === undefined ? {} : { userId },
       })
     } catch (error) {
       if (error instanceof DeepSeekAuthError && error.code === 'INVALID_CREDENTIAL') {

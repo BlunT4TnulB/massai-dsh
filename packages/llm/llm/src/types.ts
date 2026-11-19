@@ -565,6 +565,8 @@ export interface GenerateOptions<Purpose extends string = LlmRequestPurpose> {
   /** Registered provider route selecting the adapter instance. */
   provider: string
   model: string
+  /** Signed-in user id (hosted link): the per-user credential scope for this request. */
+  userId?: string
   /** Adapter-owned reasoning effort selected for this exact model. */
   reasoningEffort?: ReasoningEffortId
   /**
