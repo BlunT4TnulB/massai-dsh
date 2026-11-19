@@ -122,6 +122,10 @@ jobs:
           echo "container IP: $CIP"
           echo "container-ip /healthz: $(curl -s -o /dev/null -w '%{http_code}' "http://$CIP:10000/healthz" 2>/dev/null || echo 000)"
           echo "container-ip /: $(curl -s -o /dev/null -w '%{http_code}' "http://$CIP:10000/" 2>/dev/null || echo 000)"
+          # The token auth must be ACTIVE: a bogus token gets 401, never the anonymous 200 fallback.
+          TOKEN_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://$CIP:10000/?token=BOGUS" 2>/dev/null || echo 000)
+          echo "container-ip /?token=BOGUS: $TOKEN_CODE"
+          [ "$TOKEN_CODE" = "401" ] || { echo "SMOKE=FAIL (token auth inactive: $TOKEN_CODE)"; exit 1; }
           echo "--- listening sockets ---"
           docker exec massai-smoke sh -c 'cat /proc/net/tcp 2>/dev/null | head -5' || true
           echo "--- container logs ---"
