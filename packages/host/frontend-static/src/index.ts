@@ -131,10 +131,10 @@ export function apply(ctx: Context, config: Config): void {
   const distIndex = config.distIndex
   const distRoot = dirname(distIndex)
   ctx.effect(() => ctx.webServer.registerFallback({
-    // Hosted mode: serve the app shell (index.html + assets) anonymously so the
-    // hosting platform's health check on `/` gets a 200. The session/API socket
-    // still requires its token (authentication-token's CONNECT_PATH handler).
-    auth: () => 'anonymous',
+    auth: (request) => {
+      const target = resolve(normalize(join(distRoot, decodeURIComponent(request.url.pathname))))
+      return target === distRoot || target === distIndex ? 'required' : 'anonymous'
+    },
     resource: (request, peer) => {
       request.signal.throwIfAborted()
       const target = resolve(normalize(join(distRoot, decodeURIComponent(new URL(request.url).pathname))))
