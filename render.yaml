@@ -8,4 +8,4 @@ services:
     image:
       url: ghcr.io/blunt4tnulb/massai:latest
     plan: free
-    healthCheckPath: /
+    healthCheckPath: /healthz

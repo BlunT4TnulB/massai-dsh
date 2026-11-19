@@ -214,6 +214,15 @@ export function apply(ctx: Context, config: Config): void {
   const appRootUrl = (): string => publicUrl ?? ctx.webServer.getOrigin()
   ctx.provide('webApp', { getAdvertisedUrl: appRootUrl } satisfies WebApp)
   ctx.plugin(FrontendStatic, { distIndex: internals.resolveDistIndex() })
+  // Health endpoint for hosting probes (Render): returns 200 without any auth,
+  // token, or SPA rendering — a stable liveness signal for the load balancer.
+  ctx.webServer.register({
+    kind: 'exact', path: '/healthz', auth: 'anonymous',
+    handler(_request, response) {
+      response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
+      response.end('ok')
+    },
+  })
   if (config.surfaceContext) {
     ctx.inject(['shellEnv'], (runtimeCtx) => {
       runtimeCtx.shellEnv.register({
