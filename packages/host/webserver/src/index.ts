@@ -641,21 +641,37 @@ export class WebServer extends Service {
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
             res.end(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Massai — access link required</title>
+<title>Massai — your AI app builder</title>
 <style>
+  *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
     background:#151517;color:#f2f2f4;font-family:system-ui,-apple-system,sans-serif}
-  .card{max-width:34rem;padding:2.5rem;text-align:center}
-  h1{margin:0 0 .75rem;font-size:1.6rem}
-  p{margin:.5rem 0;color:#b9b9c0;line-height:1.55;font-weight:500}
-  code{display:inline-block;margin-top:1rem;padding:.5rem .8rem;border-radius:.4rem;
-    background:#222226;color:#7ee2a8;font-size:.95rem;word-break:break-all}
+  .card{max-width:38rem;padding:2.5rem;text-align:center}
+  h1{margin:0 0 .4rem;font-size:2rem;font-weight:700}
+  .sub{margin:.2rem 0 1.4rem;color:#b9b9c0;font-weight:500;font-size:1.05rem}
+  .pitch{margin:.4rem 0;color:#b9b9c0;line-height:1.55;font-weight:500}
+  .pitch b{color:#7ee2a8;font-weight:600}
+  a.get{margin:1.2rem 0;display:inline-block;padding:.7rem 1.2rem;border-radius:.5rem;
+    background:#0f5d3a;color:#eafff2;text-decoration:none;font-weight:600;font-size:1rem}
+  form{margin-top:1.4rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+  input[type=text]{flex:1;min-width:16rem;padding:.7rem .9rem;border-radius:.5rem;border:1px solid #3a3a40;
+    background:#222226;color:#f2f2f4;font-size:1rem}
+  button{padding:.7rem 1.4rem;border-radius:.5rem;border:none;background:#2f6fed;color:#fff;
+    font-weight:600;font-size:1rem;cursor:pointer}
+  .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
 </style></head><body><div class="card">
   <h1>Welcome to Massai 🚀</h1>
-  <p>This page opens through a personal access link. Ask whoever shared Massai
-  with you for your link — it looks like:</p>
-  <code>massai-dsh.onrender.com/?token=…</code>
-  <p>Open that link and you're in.</p>
+  <div class="sub">Build any app you can imagine — powered by DeepSeek.</div>
+  <p class="pitch">Here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
+  Most people build for weeks on what a single coffee costs. No subscriptions — your ideas,
+  priced at cost by the friendliest model shop in AI.</p>
+  <a class="get" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Get my DeepSeek key → (takes one minute)</a>
+  <form method="POST" action="/api/signin">
+    <input type="text" name="apiKey" placeholder="Paste your DeepSeek key (sk-…)" autocomplete="off" required>
+    <button type="submit">Sign in</button>
+  </form>
+  <p class="small">By continuing you're signing in to DeepSeek; your usage is billed to your
+  DeepSeek account at their published rates. Massai never sees or stores your payment details.</p>
 </div></body></html>`)
             return
           }

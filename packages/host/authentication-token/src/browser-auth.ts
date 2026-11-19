@@ -367,6 +367,42 @@ export class BrowserAuth {
   }
 
   /**
+   * Mint a fresh browser-session cookie carrying a caller-chosen user id and
+   * redirect to the clean `./` — the concierge sign-in path: the caller stored
+   * per-user credentials under `userId` first, then hands the visitor the session.
+   * @param req - trusted request carrying the Host.
+   * @param res - response owned to completion (303 + cookie, or 400).
+   * @param secure - whether the receiving listener serves TLS.
+   * @param userId - the per-session user id baked into the cookie.
+   */
+  mintSession(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure: boolean, userId: string): void {
+    const authority = requestAudience(req.headers, secure)
+    if (authority === undefined) {
+      res.writeHead(400, { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' })
+      res.end('missing Host authority\n')
+      return
+    }
+    const issuedAt = Date.now()
+    const expiresAt = issuedAt + this.maxAgeMilliseconds
+    const value = encodeCookie({
+      version: COOKIE_PAYLOAD_VERSION,
+      authority,
+      issuedAt,
+      expiresAt,
+      userId,
+    }, this.secret)
+    res.writeHead(303, {
+      'cache-control': 'no-store',
+      'location': './',
+      'referrer-policy': 'no-referrer',
+      'set-cookie': sessionCookie(
+        cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000), secure,
+      ),
+    })
+    res.end()
+  }
+
+  /**
    * The per-session user id of a valid browser cookie (hosted link): the stable
    * identity that per-user credentials are stored under.
    * @param request - request headers carrying Host and Cookie.

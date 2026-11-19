@@ -124,6 +124,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
   createPeer(options: {
     readonly principal: Principal
     readonly interactions?: ConnectionInteractions
+    readonly id?: PeerId
   }): PeerScope {
     if (this.disposed) throw new Error('connection: cannot create a Peer after disposal')
     return new Peer(this.ctx, options)

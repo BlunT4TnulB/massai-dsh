@@ -4,6 +4,7 @@ import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-credentials'
 import { CONNECT_PATH } from '@deepseek-ai/dsh-client-connection'
 import type { ConnectionTrustRequest, PeerScope } from '@deepseek-ai/dsh-client-connection'
+import type { PeerId } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { BrowserAuth } from './browser-auth.ts'
 
@@ -30,6 +31,8 @@ export const Config: z<Config> = z.object({
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
   const auth = await BrowserAuth.create(ctx[Context.root], ctx.credentials, config.cookieMaxAgeDays)
+  // Expose the session minter for the hosted sign-in route (dsh-hosted-signin).
+  ctx.provide('browserAuth', auth)
   const defaultPeer = ctx.connection.createPeer({ principal: { kind: 'owner' } })
   const apiPeers = new Map<PeerScope['id'], PeerScope>()
   // Per-session peers (hosted link): each browser session's cookie carries a
@@ -39,7 +42,9 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   const peerFor = (userId: string): PeerScope => {
     const existing = sessionPeers.get(userId)
     if (existing !== undefined) return existing
-    const created = ctx.connection.createPeer({ principal: { kind: 'owner' } })
+    // The session's peer id IS its user id, so per-user credentials (stored
+    // under the user id) resolve through the same identity the agent sees.
+    const created = ctx.connection.createPeer({ principal: { kind: 'owner' }, id: userId as PeerId })
     sessionPeers.set(userId, created)
     created.signal.addEventListener('abort', () => { sessionPeers.delete(userId) }, { once: true })
     return created

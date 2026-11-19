@@ -1,22 +1,28 @@
 /**
- * Hosted-link BYOK sign-in: one HTTP route that stores a visitor's DeepSeek
- * API key under their session peer id, so every later request from that session
- * resolves their own key (see dsh-user-credentials + deepseek-auth per-user).
+ * Hosted-link concierge sign-in: one HTTP route that stores a visitor's DeepSeek
+ * API key under a fresh per-session user id and mints their browser session,
+ * so every later request from that session resolves their own key
+ * (see dsh-user-credentials + deepseek-auth per-user).
  *
  * @module @deepseek-ai/dsh-hosted-signin
  */
 
+import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
-import type { PeerScope } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 
 export const name = 'hosted-signin'
-export const inject = ['credentials', 'webServer']
+export const inject = ['credentials', 'webServer', 'browserAuth']
 
 const SCOPE = 'massai-user'
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' } as const
+
+/** The session minter the authentication-token plugin exposes. */
+interface SessionMinter {
+  mintSession(req: IncomingMessage, res: ServerResponse, secure: boolean, userId: string): void
+}
 
 /** Read + parse a small JSON request body. */
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -33,16 +39,18 @@ function respond(res: ServerResponse, status: number, payload: unknown): void {
 
 export function apply(ctx: Context): void {
   ctx.webServer.register({
-    kind: 'exact', path: '/api/signin', auth: 'required',
-    handler: async (req: IncomingMessage, res: ServerResponse, peer?: PeerScope) => {
+    kind: 'exact', path: '/api/signin', auth: 'anonymous',
+    handler: async (req, res) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
-      if (peer === undefined) { respond(res, 401, { error: 'unauthorized' }); return }
       try {
         const body = await readJson(req)
         const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : ''
         if (apiKey === '') { respond(res, 400, { error: 'apiKey is required' }); return }
-        await ctx.credentials.modifyRecord(credentialKey(SCOPE, peer.id), async () => ({ kind: 'api-key', key: apiKey }))
-        respond(res, 200, { ok: true })
+        const userId = randomUUID()
+        await ctx.credentials.modifyRecord(credentialKey(SCOPE, userId), async () => ({ kind: 'api-key', key: apiKey }))
+        const minter = ctx.get('browserAuth') as SessionMinter | undefined
+        if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
+        minter.mintSession(req, res, ctx.webServer.protocol === 'https:', userId)
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }
