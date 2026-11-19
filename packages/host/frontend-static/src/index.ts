@@ -131,9 +131,11 @@ export function apply(ctx: Context, config: Config): void {
   const distIndex = config.distIndex
   const distRoot = dirname(distIndex)
   ctx.effect(() => ctx.webServer.registerFallback({
-    // Hosted mode: serve the app shell anonymously so the platform's health
-    // check on `/` gets a 200; the session/API socket still requires its token.
-    auth: () => 'anonymous',
+    // The authenticated index must render WITH its peer (renderIndex injects the
+    // client plugin entries + boot data); anonymous admission would strip the
+    // injections and the page would boot without plugins. The health check hits
+    // the exact /healthz route (anonymous), not this seat.
+    auth: () => 'required',
     resource: (request, peer) => {
       request.signal.throwIfAborted()
       const target = resolve(normalize(join(distRoot, decodeURIComponent(new URL(request.url).pathname))))
