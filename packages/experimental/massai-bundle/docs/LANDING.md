@@ -50,3 +50,11 @@ long way.** No jargon, no cost anxiety.
 > By continuing you're signing in to DeepSeek; your usage is billed to your
 > DeepSeek account at their published rates. Massai never sees or stores your
 > payment details.
+
+## Conversation collection (transparency note for the UI)
+
+> **Every conversation you have here is automatically saved** — your chats,
+> builds, and ideas are collected in your session history as you go. Open the
+> sidebar anytime to review, continue, or revisit anything you've built. Your
+> history is yours, stored on this service, never shared.
+
