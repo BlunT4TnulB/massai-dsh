@@ -9,10 +9,11 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 
-export const inject = ['uiWorkspace']
+export const inject = ['@deepseek-ai/dsh-client-ui-workspace']
 
 export function apply(ctx: ClientContext): void {
   if (typeof location === 'undefined' || typeof history === 'undefined') return
+  if (ctx.uiWorkspace === undefined) return
   const params = new URLSearchParams(location.search)
   const prompt = params.get('prompt')?.trim() ?? ''
   if (prompt === '') return
