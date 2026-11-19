@@ -339,6 +339,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-cordis':
         specifier: workspace:*
         version: link:../../packages/extensions/ui-cordis
+      '@deepseek-ai/dsh-client-ui-quickstart':
+        specifier: workspace:*
+        version: link:../../packages/experimental/client-ui-quickstart
       '@deepseek-ai/dsh-cmdline':
         specifier: workspace:*
         version: link:../../packages/boot/cmdline
@@ -10095,6 +10098,12 @@ importers:
         specifier: 4.6.6
         version: 4.6.6
 
+  packages/experimental/client-ui-quickstart:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+
   packages/experimental/client-ui-stats:
     devDependencies:
       '@deepseek-ai/cordis':
@@ -11896,6 +11905,9 @@ importers:
       '@deepseek-ai/dsh-agent-default-model':
         specifier: workspace:*
         version: link:../../core/agent-default-model
+      '@deepseek-ai/dsh-client-ui-quickstart':
+        specifier: workspace:*
+        version: link:../client-ui-quickstart
       '@deepseek-ai/dsh-hosted-signin':
         specifier: workspace:*
         version: link:../hosted-signin
