@@ -9,6 +9,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { PeerScope } from '@deepseek-ai/dsh-client-connection'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 
 export const name = 'hosted-signin'
 export const inject = ['credentials', 'webServer']
@@ -32,7 +34,7 @@ function respond(res: ServerResponse, status: number, payload: unknown): void {
 export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/signin', auth: 'required',
-    handler: async (req, res, peer) => {
+    handler: async (req: IncomingMessage, res: ServerResponse, peer?: PeerScope) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       if (peer === undefined) { respond(res, 401, { error: 'unauthorized' }); return }
       try {
