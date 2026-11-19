@@ -699,6 +699,7 @@ export class WebServer extends Service {
   <p class="pitch">And here's the part you'll enjoy: <b>a few dollars goes a long way.</b>
   Most people build for weeks on what a single coffee costs. No subscriptions, no seats —
   your ideas, priced at cost by the friendliest model shop in AI.</p>
+  <p class="invite">Bring the idea. We'll learn the rest together.</p>
   <a class="get" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">Get my DeepSeek key → (takes one minute)</a>
   <form method="POST" action="/api/signin">
     <input type="text" name="apiKey" placeholder="Paste your DeepSeek key (sk-…)" autocomplete="off" required>

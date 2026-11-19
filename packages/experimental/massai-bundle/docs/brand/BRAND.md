@@ -33,5 +33,8 @@ Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
 
 **Proof line:** *Not a mockup. Not a draft. Running software.*
 
+**Invitation (positioning):** *Bring the idea. We'll learn the rest together.*
+— flips "you don't need to know anything" from a confession into a welcome.
+
 ## Live preview
 `https://massai-dsh.onrender.com/logo-preview` (concept sheet, anonymous)
