@@ -635,11 +635,10 @@ export class WebServer extends Service {
         const admission = this.authorize(request, responder.auth)
         if (abort.signal.aborted || request.socket?.destroyed) return
         if (admission.kind === 'deny') {
-          res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
           // Friendly branded welcome instead of a bare 401 on the index: the
           // shared access link carries the token, so tell the visitor exactly that.
           if (admission.status === 401 && req.method === 'GET' && target.pathname === '/') {
-            res.setHeader('Content-Type', 'text/html; charset=utf-8')
+            res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
             res.end(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — access link required</title>
@@ -660,6 +659,7 @@ export class WebServer extends Service {
 </div></body></html>`)
             return
           }
+          res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
           res.end(admission.status === 401 ? 'unauthorized' : admission.status === 503 ? 'authentication unavailable' : 'forbidden')
           return
         }
