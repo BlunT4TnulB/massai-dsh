@@ -665,6 +665,10 @@ export class WebServer extends Service {
   img.mark{display:block;width:11rem;height:auto;margin:0 auto 1rem;filter:invert(1);mix-blend-mode:screen;opacity:.95}
   .wordmark{font-size:1.5rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2f2f4}
   .tagline{margin:.25rem 0 1.6rem;color:#8a8a92;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+  /* Subtle homage: DeepSeek's whale, pixel-drawn, drifting in the corner. */
+  .whale{position:fixed;right:1.4rem;bottom:1.2rem;width:4.5rem;height:auto;color:#7ee2a8;
+    opacity:.16;pointer-events:none}
+  @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}}
 </style></head><body><div class="card">
   <img class="mark" src="/massai-mark.jpg" alt="Massai mark">
   <div class="wordmark">Massai</div>
@@ -681,7 +685,19 @@ export class WebServer extends Service {
   </form>
   <p class="small">By continuing you're signing in to DeepSeek; your usage is billed to your
   DeepSeek account at their published rates. Massai never sees or stores your payment details.</p>
-</div></body></html>`)
+</div>
+<svg class="whale" viewBox="0 0 16 10" aria-hidden="true" role="presentation">
+  <g fill="currentColor">
+    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
+    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
+    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
+    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
+    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
+    <rect x="6" y="0" width="1" height="1"/>
+  </g>
+  <rect x="3" y="4" width="1" height="1" fill="#151517"/>
+</svg>
+</body></html>`)
             return
           }
           res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
