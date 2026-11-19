@@ -39,7 +39,12 @@ Warrior-calm. No hype. Short, concrete, generous — *"a few dollars goes a long
 Taglines: **Describe it. It gets built.** · *The unknown is possible.* ·
 *Aim. Throw. Ship.* · *Your ideas, mass-produced.* · *The spear and the whale.*
 
-**Headline:** *Into the unknown.* — blunt and true: point at anything, it gets built.
+**Headline:** the door rotates ten one-liners at random per visit — *Into the unknown.* ·
+Point at it. It gets built. · Describe it. It exists. · Say it. Ship it. · From sentence to
+software. · Ideas in. Software out. · Build the thing that doesn't exist. · Unknown in.
+Running out. · You think it. It runs. · Bring a wish. Leave with it running.
+
+Bench warmers (unused): *No plan required.* · *Start with nothing. End with something running.*
 
 **Brand line:** limitless by default — no templates, no ceiling.
 

@@ -17,8 +17,6 @@ const HEADLINES = [
   'Unknown in. Running out.',
   'You think it. It runs.',
   'Bring a wish. Leave with it running.',
-  'No plan required.',
-  'Start with nothing. End with something running.',
 ] as const
 
 /** Proof-line candidates, cycled alongside the headline. */
@@ -38,14 +36,15 @@ export const LINE_COUNT = HEADLINES.length
 
 /**
  * Render the door for one line index.
- * @param line - requested index (wraps into range); undefined picks the flagship line.
+ * @param line - test override (wraps into range); omitted picks a fresh line per load.
  * @returns the complete HTML document.
  */
 export function welcomePage(line?: number): string {
-  const index = ((line ?? 0) % LINE_COUNT + LINE_COUNT) % LINE_COUNT
+  const index = line === undefined
+    ? Math.floor(Math.random() * LINE_COUNT)
+    : ((line % LINE_COUNT) + LINE_COUNT) % LINE_COUNT
   const headline = HEADLINES[index] ?? HEADLINES[0]
   const [proof, payoff] = PROOFS[index % PROOFS.length] ?? PROOFS[0]
-  const next = (index + 1) % LINE_COUNT
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — into the unknown</title>
@@ -96,9 +95,6 @@ export function welcomePage(line?: number): string {
   .credits{margin:1.6rem 0 .2rem;padding-top:1.1rem;border-top:1px solid #242429;color:#7d7d86;
     font-size:.8rem;line-height:1.6;font-weight:500}
   .small{margin-top:1rem;color:#8a8a92;font-size:.85rem;font-weight:500;line-height:1.5}
-  a.shuffle{display:inline-block;margin-top:1.6rem;color:#5e5e67;font-size:.75rem;
-    text-decoration:none;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
-  a.shuffle:hover{color:#D9822B}
   .whale{position:fixed;right:1.4rem;bottom:1.2rem;width:4.5rem;height:auto;color:#7ee2a8;
     opacity:.16;pointer-events:none}
   @media(max-width:32rem){.whale{right:.8rem;bottom:.6rem;width:3rem;opacity:.12}
@@ -122,7 +118,6 @@ export function welcomePage(line?: number): string {
   with thanks. Fork it, branch it, build on it: that is the point.</p>
   <p class="small">By continuing you're signing in to DeepSeek; your usage is billed to your
   DeepSeek account at their published rates. Massai never sees or stores your payment details.</p>
-  <a class="shuffle" href="/?line=${next}">another one →</a>
 </div>
 <svg class="whale" viewBox="0 0 16 10" aria-hidden="true" role="presentation">
   <g fill="currentColor">

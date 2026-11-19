@@ -639,9 +639,10 @@ export class WebServer extends Service {
           // Friendly branded welcome instead of a bare 401 on the index: the
           // shared access link carries the token, so tell the visitor exactly that.
           if (admission.status === 401 && req.method === 'GET' && target.pathname === '/') {
-            const requested = Number(target.searchParams.get('line') ?? '0')
+            const override = target.searchParams.get('line')
+            const requested = override === null ? undefined : Number(override)
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
-            res.end(welcomePage(Number.isFinite(requested) ? requested : 0))
+            res.end(welcomePage(requested !== undefined && Number.isFinite(requested) ? requested : undefined))
             return
           }
           res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
