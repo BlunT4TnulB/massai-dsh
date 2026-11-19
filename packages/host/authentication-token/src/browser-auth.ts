@@ -1,6 +1,6 @@
 /** Browser-session authentication for the Host Connection carrier. */
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { PeerId } from '@deepseek-ai/dsh-typert-protocol'
 import { CONNECT_PATH } from '@deepseek-ai/dsh-client-connection'
 import type { ConnectionInteractions } from './types.ts'
@@ -32,6 +32,8 @@ interface BrowserCookiePayload {
   readonly authority: string
   readonly issuedAt: number
   readonly expiresAt: number
+  /** Per-session user id (hosted link): the per-user credential scope. */
+  readonly userId?: string
 }
 
 interface ApiCookiePayload extends Omit<BrowserCookiePayload, 'version'> {
@@ -281,6 +283,7 @@ export class BrowserAuth {
           authority,
           issuedAt,
           expiresAt,
+          userId: randomUUID(),
         }, this.secret)
         res.writeHead(303, {
           'cache-control': 'no-store',
@@ -361,6 +364,18 @@ export class BrowserAuth {
    */
   isAuthenticated(request: ConnectionTrustRequest, secure = false): boolean {
     return this.authenticate(request, secure)?.version === COOKIE_PAYLOAD_VERSION
+  }
+
+  /**
+   * The per-session user id of a valid browser cookie (hosted link): the stable
+   * identity that per-user credentials are stored under.
+   * @param request - request headers carrying Host and Cookie.
+   * @param secure - whether the receiving listener uses TLS.
+   * @returns the session's user id, or undefined for invalid, expired, or API cookies.
+   */
+  sessionUserId(request: ConnectionTrustRequest, secure = false): string | undefined {
+    const payload = this.authenticate(request, secure)
+    return payload?.version === COOKIE_PAYLOAD_VERSION ? payload.userId : undefined
   }
 
   /**

@@ -30,12 +30,26 @@ export const Config: z<Config> = z.object({
  */
 export async function apply(ctx: Context, config: Config): Promise<void> {
   const auth = await BrowserAuth.create(ctx[Context.root], ctx.credentials, config.cookieMaxAgeDays)
-  const peer = ctx.connection.createPeer({ principal: { kind: 'owner' } })
+  const defaultPeer = ctx.connection.createPeer({ principal: { kind: 'owner' } })
   const apiPeers = new Map<PeerScope['id'], PeerScope>()
+  // Per-session peers (hosted link): each browser session's cookie carries a
+  // user id, and every session gets its own peer so per-user credentials never
+  // collide across visitors.
+  const sessionPeers = new Map<string, PeerScope>()
+  const peerFor = (userId: string): PeerScope => {
+    const existing = sessionPeers.get(userId)
+    if (existing !== undefined) return existing
+    const created = ctx.connection.createPeer({ principal: { kind: 'owner' } })
+    sessionPeers.set(userId, created)
+    created.signal.addEventListener('abort', () => { sessionPeers.delete(userId) }, { once: true })
+    return created
+  }
   ctx.connection.authentication.register({
     authenticate(request) {
       const secure = ctx.get('webServer')?.protocol === 'https:'
-      if (auth.isAuthenticated(request, secure)) return peer
+      const userId = auth.sessionUserId(request, secure)
+      if (userId !== undefined) return peerFor(userId)
+      if (auth.isAuthenticated(request, secure)) return defaultPeer
       const id = auth.authenticateApi(request, secure)
       return id === undefined ? undefined : apiPeers.get(id)
     },
