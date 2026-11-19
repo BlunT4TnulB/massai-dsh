@@ -46,6 +46,22 @@ const SPEAR_CURSOR = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
 /** The current music mark, kept for comparison. */
 const CURRENT = `<img class="mark" src="/massai-mark.jpg" alt="current mark">`
 
+/** The crest: a warrior's shield charged with the DeepSeek whale. */
+const CREST = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+  <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+  <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
+  <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
+    fill="#151517" stroke="#C1440E" stroke-width="6"/>
+  <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
+    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
+    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
+    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
+    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
+    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
+    <rect x="6" y="0" width="1" height="1"/>
+  </g>
+</svg>`
+
 /** The concept sheet HTML. */
 export function logoPreviewHtml(): string {
   const card = (title: string, note: string, art: string): string => `
@@ -71,6 +87,11 @@ export function logoPreviewHtml(): string {
   figcaption b{font-size:.95rem;letter-spacing:.04em}
   figcaption span{color:#8f8f97;line-height:1.45}
   .alt{color:#8f8f97;font-size:.85rem;margin-top:2rem;max-width:46rem;line-height:1.6}
+  .palette{display:flex;flex-wrap:wrap;gap:.9rem;align-items:center;margin-top:1.8rem;
+    font-size:.82rem;color:#9a9aa2}
+  .palette b{color:#f2f2f4;letter-spacing:.06em;text-transform:uppercase;font-size:.72rem}
+  .palette span{display:inline-flex;align-items:center;gap:.4rem}
+  .palette i{width:1rem;height:1rem;border-radius:.25rem;display:inline-block;border:1px solid #33333b}
   code{background:#22222a;padding:.15rem .35rem;border-radius:.3rem;color:#c9c9d1}
 </style></head><body>
 <h1>Massai — mark concepts</h1>
@@ -78,11 +99,19 @@ export function logoPreviewHtml(): string {
 favicon to billboard. Accent shown in the current green; the same shapes work in
 Maasai ochre <code>#C1440E</code> or DeepSeek blue <code>#4D6BFE</code>.</p>
 <div class="grid">
+  ${card('The Crest ★', 'A warrior shield charged with the whale — engine inside the craft.', CREST)}
   ${card('The Warrior', 'Shield over crossed spears — fearless builder, heritage of the name.', WARRIOR)}
   ${card('Shield-Window', 'The shield is your app: beading becomes code lines.', SHIELD_WINDOW)}
   ${card('The Compiler', 'The resonance wave resolving into braces — music that builds.', WAVE_COMPILER)}
   ${card('Spear-Cursor', 'A spear whose tip is your pointer — you aim, the AI throws.', SPEAR_CURSOR)}
   ${card('Current mark', 'The music-wunda mark you patched — wave + resonance.', CURRENT)}
+</div>
+<div class="palette"><b>Palette</b>
+  <span><i style="background:#151517"></i>Canvas #151517</span>
+  <span><i style="background:#C1440E"></i>Maasai ochre #C1440E</span>
+  <span><i style="background:#D9822B"></i>Acacia gold #D9822B</span>
+  <span><i style="background:#F2F2F4"></i>Bone #F2F2F4</span>
+  <span><i style="background:#4D6BFE"></i>Whale blue #4D6BFE</span>
 </div>
 <p class="alt">My pick: <b>The Warrior</b> for the icon (reads at 16px, unmistakably a
 shield) with <b>The Compiler</b> as an optional secondary motif for the wordmark.
