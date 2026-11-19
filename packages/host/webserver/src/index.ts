@@ -643,7 +643,23 @@ export class WebServer extends Service {
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — describe it, it gets built</title>
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#151517">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Massai">
+<meta property="og:title" content="Massai — describe it, it gets built">
+<meta property="og:description" content="A tool. A site. An app. A workflow. A whole product — or the thing that doesn't exist yet. Not a mockup. Not a draft. Running software.">
+<meta property="og:image" content="https://massai-dsh.onrender.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Massai — describe it, it gets built">
+<meta name="twitter:description" content="Not a mockup. Not a draft. Running software.">
+<meta name="twitter:image" content="https://massai-dsh.onrender.com/og-image.png">
+<meta name="description" content="Massai — describe it, it gets built. Powered by DeepSeek.">
 <style>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;

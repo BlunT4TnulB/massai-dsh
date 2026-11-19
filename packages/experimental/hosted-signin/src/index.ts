@@ -67,6 +67,13 @@ export function apply(ctx: Context): void {
   for (const [path, file, type] of [
     [MARK_PATH, 'massai-mark.jpg', 'image/jpeg'],
     [CREST_PATH, 'massai-crest.svg', 'image/svg+xml'],
+    ['/favicon-16.png', 'icons/favicon-16.png', 'image/png'],
+    ['/favicon-32.png', 'icons/favicon-32.png', 'image/png'],
+    ['/favicon-48.png', 'icons/favicon-48.png', 'image/png'],
+    ['/apple-touch-icon.png', 'icons/massai-180.png', 'image/png'],
+    ['/icon-192.png', 'icons/massai-192.png', 'image/png'],
+    ['/icon-512.png', 'icons/massai-512.png', 'image/png'],
+    ['/og-image.png', 'icons/og-image.png', 'image/png'],
   ] as const) {
     ctx.webServer.register({
       kind: 'exact', path, auth: 'anonymous',
