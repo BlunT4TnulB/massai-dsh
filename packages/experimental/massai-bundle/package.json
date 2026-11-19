@@ -29,7 +29,8 @@
     "@deepseek-ai/dsh-tool-sqlite": "workspace:*",
     "@deepseek-ai/dsh-tool-http": "workspace:*",
     "@deepseek-ai/dsh-user-credentials": "workspace:*",
-    "@deepseek-ai/dsh-model-router": "workspace:*"
+    "@deepseek-ai/dsh-model-router": "workspace:*",
+    "@deepseek-ai/dsh-hosted-signin": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"

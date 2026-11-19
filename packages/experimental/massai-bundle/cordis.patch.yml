@@ -43,6 +43,11 @@
     - id: user-credentials
       name: "@deepseek-ai/dsh-user-credentials"
 
+# Hosted-link BYOK sign-in (POST /api/signin stores the visitor's key).
+- insert:
+    - id: hosted-signin
+      name: "@deepseek-ai/dsh-hosted-signin"
+
 # - id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
