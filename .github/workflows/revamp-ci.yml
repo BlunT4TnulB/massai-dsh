@@ -107,6 +107,22 @@ jobs:
           docker build -t ghcr.io/blunt4tnulb/massai:latest .
           docker push ghcr.io/blunt4tnulb/massai:latest
 
+      - name: Smoke-test the image (does /healthz return 200?)
+        run: |
+          docker run -d --name massai-smoke -e PORT=3080 -p 3080:3080 ghcr.io/blunt4tnulb/massai:latest
+          CODE=000
+          for i in $(seq 1 15); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3080/healthz 2>/dev/null || echo 000)
+            echo "healthz attempt $i: $CODE"
+            [ "$CODE" = "200" ] && break
+            sleep 4
+          done
+          echo "root: $(curl -s -o /dev/null -w '%{http_code}' http://localhost:3080/ 2>/dev/null || echo 000)"
+          echo "--- container logs ---"
+          docker logs massai-smoke 2>&1 | tail -30
+          docker rm -f massai-smoke
+          [ "$CODE" = "200" ] && echo "SMOKE=PASS" || { echo "SMOKE=FAIL"; exit 1; }
+
   # Mirror every push to the identical private twin (massai-private).
   mirror:
     runs-on: ubuntu-latest
