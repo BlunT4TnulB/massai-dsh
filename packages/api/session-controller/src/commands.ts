@@ -118,7 +118,7 @@ async function captionImage(
     const stream = ctx.llm.stream({
       provider,
       model,
-      messages: [createUserMessage({ content: [{ type: 'image', attachment: image }, { type: 'text', text: CAPTION_PROMPT }] })],
+      messages: [createUserMessage({ content: [{ type: 'image', attachment: image }, { type: 'text', text: CAPTION_PROMPT }], source: { kind: 'user' } })],
     })
     for await (const chunk of stream) {
       if (chunk.type === 'text-delta') text += chunk.text
