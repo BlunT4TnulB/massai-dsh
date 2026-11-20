@@ -345,7 +345,7 @@ effect out of one — and knowing when it actually saves money.</p>
     { id: 'qwen2.5-coder:7b',   ram: 10, disk: '4.7 GB', coding: 4, chat: 4, vision: 0, ctx: '16k', note: 'the all-round coding pick' },
     { id: 'qwen2.5-coder:14b',  ram: 18, disk: '9 GB',   coding: 5, chat: 4, vision: 0, ctx: '32k', note: 'near-cloud on routine code, needs real RAM' },
     { id: 'qwen2.5-coder:32b',  ram: 32, disk: '20 GB',  coding: 5, chat: 5, vision: 0, ctx: '32k', note: 'the personal-hardware ceiling' },
-    { id: 'llama3.2:3b',        ram: 6,  disk: '2.0 GB', coding: 2, chat: 4, vision: 0, ctx: '8k',  note: 'friendlier for conversation than code' },
+    { id: 'llama3.2:3b',        ram: 6,  disk: '2.0 GB', coding: 2, chat: 5, vision: 0, ctx: '8k',  note: 'friendlier for conversation than code, and fine for light edits' },
     { id: 'moondream',          ram: 4,  disk: '1.7 GB', coding: 1, chat: 2, vision: 5, ctx: '4k',  note: 'reads images: screenshots, photos, diagrams' },
   ]
   const dev = document.getElementById('bDevice')
@@ -361,12 +361,16 @@ effect out of one — and knowing when it actually saves money.</p>
     // Usable memory: phones and laptops must leave room for the system; a GPU
     // changes which model can be held off the CPU entirely.
     const headroom = machine === 'server' ? totalRam - 4 : totalRam - Math.min(4, Math.max(2, totalRam * 0.25))
-    const budget = Math.max(headroom, vram > 0 ? vram * 1.5 : 0)
+    // A GPU's memory must also hold the context cache, so only count 1.2x its
+    // size: a 24 GB card is not a 32 GB card, and pretending otherwise is how
+    // people end up with a model that swaps.
+    const budget = Math.max(headroom, vram > 0 ? vram * 1.2 : 0)
     const weight = (m) => want === 'images' ? m.vision : want === 'chat' ? m.chat : want === 'offline' ? Math.max(m.coding, m.chat) : m.coding
     const fits = MODELS.filter(m => m.ram <= budget && (want !== 'images' || m.vision > 0))
     const pool = fits.length > 0 ? fits : [MODELS[0]]
-    // Best fit first; ties break toward the smaller download.
-    pool.sort((a, b) => (weight(b) - weight(a)) || (a.ram - b.ram))
+    // Best fit first. On a tie, take the largest model the machine can hold —
+    // more parameters is more quality, and the budget already enforces the fit.
+    pool.sort((a, b) => (weight(b) - weight(a)) || (b.ram - a.ram))
     const best = pool[0]
     const fallback = pool.find(m => m !== best)
     const tight = best.ram >= budget
