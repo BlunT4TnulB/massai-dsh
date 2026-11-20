@@ -63,7 +63,7 @@ const CREST_PLAIN = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
 </svg>`
 
 /** The word stripped of the crest, for when the name alone should carry it. */
-const WORDMARK = `<div class="wordmark-art">massai<span>built on DeepSeek</span></div>`
+const WORDMARK = `<div class="wordmark-art">Massai<span>powered by DeepSeek</span></div>`
 
 /** The crest: a warrior's shield charged with the DeepSeek whale, haloed. */
 const CREST = `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
@@ -106,7 +106,7 @@ export function logoPreviewHtml(): string {
   .art svg{width:7.5rem;height:7.5rem}
   .art img.mark{width:7.5rem;filter:invert(1);mix-blend-mode:screen;opacity:.95}
   .wordmark-art{display:flex;flex-direction:column;align-items:center;gap:.3rem;
-    font-size:2rem;font-weight:700;letter-spacing:.22em;text-transform:lowercase;color:#F2F2F4}
+    font-size:2rem;font-weight:700;letter-spacing:.18em;color:#F2F2F4}
   .wordmark-art span{font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:#D9822B;font-weight:600}
   figcaption{display:flex;flex-direction:column;gap:.3rem;margin-top:.9rem;font-size:.85rem}
   figcaption b{font-size:.95rem;letter-spacing:.04em}

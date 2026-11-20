@@ -79,7 +79,8 @@ export function welcomePage(line?: number): string {
   .bar .flag{color:#D9822B;letter-spacing:.14em;font-size:.66rem}
   .card{padding:1.6rem 1.7rem 1.5rem}
   h1{margin:.2rem 0 .35rem;font-size:1.85rem;line-height:1.1;font-weight:700;letter-spacing:-.015em}
-  .brandline{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.35rem}
+  .brandline{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem}
+  .crest-sm{width:2.05rem;height:auto;flex:none}
   .word{font-size:1.1rem;font-weight:700;letter-spacing:.22em}
   .sub{color:#9a9aa3;font-size:.92rem;line-height:1.55;font-weight:500;margin:0 0 1.1rem}
   /* the notice block — reads like a disclaimer, says what is actually needed */
@@ -131,7 +132,21 @@ export function welcomePage(line?: number): string {
     <span class="flag">open by default</span>
   </div>
   <div class="card">
-    <div class="brandline"><span class="word">Massai</span></div>
+    <div class="brandline">
+      <svg class="crest-sm" viewBox="0 0 120 132" aria-hidden="true">
+        <ellipse cx="60" cy="10" rx="21" ry="5.6" fill="none" stroke="#C9A227" stroke-width="3"/>
+        <path d="M16 100L104 22M104 100L16 22" stroke="#C1440E" stroke-width="3.2" stroke-linecap="round" opacity=".55"/>
+        <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
+          fill="#151517" stroke="#C1440E" stroke-width="4.5"/>
+        <g fill="#4D6BFE" transform="translate(35 48) scale(2.6)">
+          <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
+          <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
+          <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
+          <rect x="13" y="1" width="1" height="2"/>
+        </g>
+      </svg>
+      <span class="word">Massai</span>
+    </div>
     <h1 id="door-title">${headline}</h1>
     <p class="sub">Point at what you want — a tool, a site, an app, a workflow, a thing that
     doesn't exist yet. A child could be walked through this.</p>
@@ -178,10 +193,10 @@ export function welcomePage(line?: number): string {
 
     <div class="foot">
       <p class="ask">Tell us what you're building — <a href="/feedback">we read every note</a>.</p>
-      <p class="fine">By continuing you're signing in to DeepSeek; usage is billed to your
-      DeepSeek account at their published rates. Massai stands on open-source shoulders —
-      DeepSeek's engine first among them, with thanks. Fork it, branch it, build on it:
-      that is the point.</p>
+      <p class="fine"><b>Massai is the workshop. DeepSeek is the engine inside it</b> — you bring
+      the key, they bill the usage at their published rates, and we never see your card.
+      Massai stands on open-source shoulders, DeepSeek first among them, with thanks.
+      Fork it, branch it, build on it: that is the point.</p>
     </div>
   </div>
 </div>
