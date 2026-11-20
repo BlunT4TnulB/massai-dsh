@@ -12,7 +12,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
 /** One durable memory record, matching the shape `session-memory` writes. */
 export interface MemoryRecord {

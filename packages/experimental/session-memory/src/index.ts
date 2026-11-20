@@ -191,7 +191,6 @@ async function distill(
 export function apply(ctx: Context, config: Config = {}): void {
   if (config.enabled === false) return
   const minTurns = config.minTurns ?? 6
-  const recallEntries = config.recallEntries ?? 3
   const recallChars = config.recallChars ?? 1_200
   /** Agents that already received their recall block. */
   const recalled = new Set<string>()
