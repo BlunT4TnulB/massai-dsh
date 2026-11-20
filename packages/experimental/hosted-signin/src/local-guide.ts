@@ -93,6 +93,21 @@ const PLATFORMS: readonly Platform[] = [
   },
 ]
 
+
+/** Which model to grab, with measured coverage and an honest recommendation. */
+const PICKS: ReadonlyArray<{ model: string; file: string; ram: string; fits: string; line: string; tag: string }> = [
+  { model: 'qwen2.5-coder:1.5b', file: '~1.1 GB', ram: '6 GB', fits: '~76% of calls by size',
+    line: 'phones and very old laptops; questions and tiny edits', tag: '' },
+  { model: 'qwen2.5-coder:3b', file: '~2.0 GB', ram: '8 GB', fits: '~90% of calls by size',
+    line: 'the smallest that fits nine in ten calls — but misses more often on real edits', tag: '' },
+  { model: 'qwen2.5-coder:7b', file: '~4.7 GB', ram: '16 GB', fits: '~97% of calls by size',
+    line: 'the best success per dollar for coding; this is the one to start with', tag: 'recommended' },
+  { model: 'qwen2.5-coder:14b', file: '~9 GB', ram: '32 GB', fits: '~99% of calls by size',
+    line: 'when 7B keeps drifting on multi-file work and you have the RAM', tag: '' },
+  { model: 'qwen2.5-coder:32b', file: '~20 GB', ram: '64 GB', fits: '~99% of calls by size',
+    line: 'the personal-hardware ceiling; near-cloud on routine code', tag: 'ceiling' },
+]
+
 /** Hardware ladder from a spare phone to a server room. */
 const LADDER: ReadonlyArray<readonly [string, string, string, string]> = [
   ['Old phone (8 GB)', '1B–3B at 4-bit', 'runs, slowly', 'short questions, drafting, offline notes'],
@@ -128,6 +143,10 @@ const TROUBLE: ReadonlyArray<readonly [string, string]> = [
 export function localGuidePageHtml(): string {
   const hardware = HARDWARE.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
   const ladder = LADDER.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
+  const picks = PICKS.map(pick => `<tr>
+    <td class="mono">${pick.model}${pick.tag === '' ? '' : ` <span class="tag ${pick.tag === 'recommended' ? 'rec' : ''}">${pick.tag}</span>`}</td>
+    <td>${pick.file}</td><td>${pick.ram}</td><td>${pick.fits}</td><td>${pick.line}</td>
+  </tr>`).join('')
   const scenarios = SCENARIOS.map(s => `<div class="scenario">
     <h3>${s.title}</h3><p>${s.body}</p><p class="verdict">${s.verdict}</p>
   </div>`).join('')
@@ -186,6 +205,10 @@ export function localGuidePageHtml(): string {
   .copy{padding:.3rem .55rem;border-radius:.35rem;border:1px solid #31313a;background:#1f1f27;color:#9a9aa3;
     font-size:.7rem;font-weight:600;cursor:pointer}
   .copy:hover{border-color:#C1440E;color:#F2F2F4}
+  .tag{display:inline-block;margin-left:.3rem;padding:.1rem .4rem;border-radius:.3rem;font-size:.62rem;
+    letter-spacing:.1em;text-transform:uppercase;font-weight:700;border:1px solid #31313a;color:#9a9aa3}
+  .tag.rec{border-color:#C1440E;color:#D9822B;background:#241a15}
+  td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem}
 </style></head><body><main>
 <h1>Running an agent on your own machine</h1>
 <p class="lede">A local model is free per message, works offline, and keeps your prompts private.
@@ -200,6 +223,15 @@ effect out of one — and knowing when it actually saves money.</p>
   long agent loops. Do not stack a model on the machine already running the agent.</p>
 </section>
 
+
+<section><h2>Which model? (the short answer)</h2>
+  <table><thead><tr><th>model</th><th>file</th><th>RAM</th><th>fits</th><th>use it for</th></tr></thead>
+  <tbody>${picks}</tbody></table>
+  <p class="note"><b>Start with 7B.</b> Here is the honest split: by size, the <b>3B</b> already covers about
+  90% of everyday calls — its context fits. But fitting is not the same as succeeding: on real edits a 7B
+  finishes noticeably more often, so per dollar of your time it wins. Take the 3B when memory is tight
+  (older laptop, phone), the 7B when it fits, and the 14B/32B only when the 7B visibly struggles.</p>
+</section>
 
 <section><h2>Get a working unit — pick your machine</h2>
   <div class="tabs" id="tabs">${PLATFORMS.map((p, i) => `<button class="tab${i === 0 ? ' on' : ''}" data-tab="${String(i)}">${p.label}</button>`).join('')}</div>
