@@ -14,6 +14,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import z from '@deepseek-ai/schemastery'
+import { choose, loadState, observe, saveState, summarize, type Features } from './learning.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 export const name = 'model-router'
@@ -183,6 +184,10 @@ export function route(task: string, config: Config = {}): RouteResult {
 
 export function apply(ctx: Context, config: Config = {}): void {
   const mode = config.mode ?? 'auto'
+  // Learned statistics, loaded once and kept in memory; every observed step is
+  // persisted so the router keeps improving across restarts.
+  const learner = loadState()
+  const previous = new Map<string, { features: Features; model: string }>()
   if (mode !== 'off') {
     // The per-step seam: the agent has already chosen a route for this step, and
     // `agent.model.select` records a switch that the harness announces to the
@@ -190,7 +195,23 @@ export function apply(ctx: Context, config: Config = {}): void {
     ctx.on('agent/pre-step', async ({ agent, messages, modelSelection }, next): Promise<PreStepDecision> => {
       try {
         if (modelSelection?.model !== undefined) {
-          const decision = decide({ model: modelSelection.model, messages: messages as never })
+          const signals = signalsOf({ messages: messages as never }, config)
+          const features: Features = {
+            size: signals.promptTokens < 10_000 ? 0 : signals.promptTokens < 30_000 ? 1 : signals.promptTokens < (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS) ? 2 : 3,
+            keyword: signals.keyword !== undefined,
+            struggling: signals.errorStreak >= (config.errorStreak ?? DEFAULT_ERROR_STREAK),
+          }
+          // The tail of the history is the outcome of the PREVIOUS step.
+          const last = previous.get(agent.id)
+          if (last !== undefined) {
+            observe(learner, last.features, last.model, { failed: signals.errorStreak > 0 })
+            saveState(learner)
+          }
+          previous.set(agent.id, { features, model: modelSelection.model })
+          const learned = choose(learner, features, [config.cheapModel ?? DEFAULT_CHEAP_MODEL, config.qualityModel ?? DEFAULT_QUALITY_MODEL])
+          const decision = learned !== undefined
+            ? { model: learned.arm, reason: learned.reason }
+            : decide({ model: modelSelection.model, messages: messages as never })
           const wantsCheaper = decision.model.includes('flash') && !modelSelection.model.includes('flash')
           if (mode === 'escalate-only' && wantsCheaper) return next()
           if (decision.model !== modelSelection.model) {
@@ -232,5 +253,30 @@ export function apply(ctx: Context, config: Config = {}): void {
     },
   })
 
+  const stats = defineTool({
+    name: 'model_routing_stats',
+    description: 'Report what the model router has learned: for each kind of step, how often the cheap and quality models finished without a tool error.',
+    parameters: {},
+    output: {
+      schema: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          steps: { type: 'number', required: true },
+          lines: { type: 'array', items: { type: 'string' }, required: true },
+        },
+      },
+      render: (_args, value) => [{
+        type: 'text',
+        text: value.lines.length === 0
+          ? `No routing evidence yet (${String(value.steps)} observed steps).`
+          : `${String(value.steps)} observed steps:\n${value.lines.join('\n')}`,
+      }],
+    },
+    async execute() {
+      return { steps: learner.steps, lines: summarize(learner) }
+    },
+  })
+
   ctx.tools.register(tool)
+  ctx.tools.register(stats)
 }
