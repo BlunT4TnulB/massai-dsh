@@ -209,7 +209,7 @@ export function apply(ctx: Context, config: Config = {}): void {
           // The tail of the history is the outcome of the PREVIOUS step.
           const last = previous.get(agent.id)
           if (last !== undefined) {
-            observe(learner, last.features, last.model, { failed: signals.errorStreak > 0 })
+            observe(learner, last.features, last.model, { failed: signals.errorStreak > 0 }, last.model.includes('flash') ? 1 : 2)
             saveState(learner)
           }
           previous.set(agent.id, { features, model: modelSelection.model })

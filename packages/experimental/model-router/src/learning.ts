@@ -23,6 +23,8 @@ export interface ArmStats {
   trials: number
   /** Decisions whose following step completed without a tool error. */
   wins: number
+  /** Relative price of this arm (1 = cheapest tier), used to weigh value per dollar. */
+  price?: number
 }
 
 /** Everything learned for one signal bucket. */
@@ -109,7 +111,10 @@ export function saveState(state: LearnerState, path: string = statePath()): void
 }
 
 /**
- * UCB1 score for one arm, with an optimistic prior for untried arms.
+ * UCB1 score for one arm, with an optimistic prior for untried arms and a price
+ * divisor so a win on the cheap tier is worth more than the same win on the
+ * expensive one. Without this the learner is indifferent between a free success
+ * and one that costs double — the exact waste it exists to remove.
  * @param arm - the arm's stats.
  * @param total - decisions made across every arm in the bucket.
  * @returns a score where higher is better.
@@ -117,7 +122,8 @@ export function saveState(state: LearnerState, path: string = statePath()): void
 function ucb(arm: ArmStats | undefined, total: number): number {
   if (arm === undefined || arm.trials === 0) return Number.POSITIVE_INFINITY
   const mean = arm.wins / arm.trials
-  return mean + EXPLORATION * Math.sqrt(Math.log(Math.max(total, 1)) / arm.trials)
+  const value = mean / Math.max(arm.price ?? 1, 0.01)
+  return value + EXPLORATION * Math.sqrt(Math.log(Math.max(total, 1)) / arm.trials)
 }
 
 /**
@@ -128,10 +134,11 @@ function ucb(arm: ArmStats | undefined, total: number): number {
  * @param outcome - how the step ended.
  * @returns the mutated state.
  */
-export function observe(state: LearnerState, features: Features, arm: string, outcome: Outcome): LearnerState {
+export function observe(state: LearnerState, features: Features, arm: string, outcome: Outcome, price = 1): LearnerState {
   const key = bucketKey(features)
   const bucket = state.buckets[key] ?? {}
   const stats = bucket[arm] ?? { trials: 0, wins: 0 }
+  stats.price = price
   stats.trials += 1
   if (!outcome.failed) stats.wins += 1
   bucket[arm] = stats
