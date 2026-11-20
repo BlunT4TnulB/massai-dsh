@@ -209,6 +209,14 @@ export function localGuidePageHtml(): string {
     letter-spacing:.1em;text-transform:uppercase;font-weight:700;border:1px solid #31313a;color:#9a9aa3}
   .tag.rec{border-color:#C1440E;color:#D9822B;background:#241a15}
   td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem}
+  .suggest{margin-top:1rem;border:1px solid #2f2a22;border-radius:.7rem;background:#1b1710;padding:.9rem 1rem}
+  .suggesthead{margin:0;color:#a9a9b3;font-size:.84rem}
+  .suggestpick{margin:.25rem 0 0;font-size:1.15rem;font-weight:700;color:#D9822B}
+  .suggestmeta{margin:.2rem 0 0;color:#9a9aa3;font-size:.82rem}
+  .suggestcmd{margin:.6rem 0 0}
+  .suggestcmd code{background:#0b0b0e;border:1px solid #31313a;padding:.4rem .6rem;border-radius:.4rem;font-size:.82rem;color:#d8d8e0}
+  .suggestwarn{margin:.5rem 0 0;color:#f0b46a;font-size:.8rem}
+  .suggestalt{margin:.45rem 0 0;color:#8a8a93;font-size:.8rem}
 </style></head><body><main>
 <h1>Running an agent on your own machine</h1>
 <p class="lede">A local model is free per message, works offline, and keeps your prompts private.
@@ -223,6 +231,35 @@ effect out of one — and knowing when it actually saves money.</p>
   long agent loops. Do not stack a model on the machine already running the agent.</p>
 </section>
 
+
+
+<section><h2>Build your own suggestion</h2>
+  <p class="note" style="margin-top:0">There is no single right answer. Tell this box about your machine and
+  what you want to do, and it will pick the model <em>for you</em> — the table above is only one person's data.</p>
+  <div class="calc">
+    <div><label for="bDevice">Machine</label><select id="bDevice">
+      <option value="phone">phone</option>
+      <option value="laptop" selected>laptop</option>
+      <option value="desktop">desktop</option>
+      <option value="server">server</option>
+    </select></div>
+    <div><label for="bRam">RAM (GB)</label><select id="bRam">
+      <option>4</option><option>6</option><option>8</option><option>12</option>
+      <option selected>16</option><option>24</option><option>32</option><option>64</option><option>128</option>
+    </select></div>
+    <div><label for="bGpu">GPU memory</label><select id="bGpu">
+      <option value="0" selected>none</option><option value="8">8 GB</option>
+      <option value="12">12 GB</option><option value="16">16 GB</option><option value="24">24 GB</option>
+    </select></div>
+    <div><label for="bUse">Mostly for</label><select id="bUse">
+      <option value="coding" selected>writing and fixing code</option>
+      <option value="chat">questions and drafting</option>
+      <option value="images">reading screenshots and photos</option>
+      <option value="offline">anything, offline</option>
+    </select></div>
+  </div>
+  <div class="suggest" id="bOut"></div>
+</section>
 
 <section><h2>Which model? (the short answer)</h2>
   <table><thead><tr><th>model</th><th>file</th><th>RAM</th><th>fits</th><th>use it for</th></tr></thead>
@@ -298,6 +335,55 @@ effect out of one — and knowing when it actually saves money.</p>
 </section>
 
 <p class="foot"><a href="/guide">← The getting-started guide</a> &nbsp;·&nbsp; <a href="/">The door</a></p>
+
+<script>
+(() => {
+  // The builder's catalogue: what each model needs and what it is good at.
+  const MODELS = [
+    { id: 'qwen2.5-coder:1.5b', ram: 4,  disk: '1.1 GB', coding: 2, chat: 3, vision: 0, ctx: '4k',  note: 'runs almost anywhere, struggles with real edits' },
+    { id: 'qwen2.5-coder:3b',   ram: 6,  disk: '2.0 GB', coding: 3, chat: 3, vision: 0, ctx: '8k',  note: 'the smallest that handles simple coding well' },
+    { id: 'qwen2.5-coder:7b',   ram: 10, disk: '4.7 GB', coding: 4, chat: 4, vision: 0, ctx: '16k', note: 'the all-round coding pick' },
+    { id: 'qwen2.5-coder:14b',  ram: 18, disk: '9 GB',   coding: 5, chat: 4, vision: 0, ctx: '32k', note: 'near-cloud on routine code, needs real RAM' },
+    { id: 'qwen2.5-coder:32b',  ram: 32, disk: '20 GB',  coding: 5, chat: 5, vision: 0, ctx: '32k', note: 'the personal-hardware ceiling' },
+    { id: 'llama3.2:3b',        ram: 6,  disk: '2.0 GB', coding: 2, chat: 4, vision: 0, ctx: '8k',  note: 'friendlier for conversation than code' },
+    { id: 'moondream',          ram: 4,  disk: '1.7 GB', coding: 1, chat: 2, vision: 5, ctx: '4k',  note: 'reads images: screenshots, photos, diagrams' },
+  ]
+  const dev = document.getElementById('bDevice')
+  const ram = document.getElementById('bRam')
+  const gpu = document.getElementById('bGpu')
+  const use = document.getElementById('bUse')
+  const out = document.getElementById('bOut')
+  const recommend = () => {
+    const machine = dev.value
+    const totalRam = Number(ram.value)
+    const vram = Number(gpu.value)
+    const want = use.value
+    // Usable memory: phones and laptops must leave room for the system; a GPU
+    // changes which model can be held off the CPU entirely.
+    const headroom = machine === 'server' ? totalRam - 4 : totalRam - Math.min(4, Math.max(2, totalRam * 0.25))
+    const budget = Math.max(headroom, vram > 0 ? vram * 1.5 : 0)
+    const weight = (m) => want === 'images' ? m.vision : want === 'chat' ? m.chat : want === 'offline' ? Math.max(m.coding, m.chat) : m.coding
+    const fits = MODELS.filter(m => m.ram <= budget && (want !== 'images' || m.vision > 0))
+    const pool = fits.length > 0 ? fits : [MODELS[0]]
+    // Best fit first; ties break toward the smaller download.
+    pool.sort((a, b) => (weight(b) - weight(a)) || (a.ram - b.ram))
+    const best = pool[0]
+    const fallback = pool.find(m => m !== best)
+    const tight = best.ram >= budget
+    out.innerHTML =
+      '<p class="suggesthead">For a ' + machine + ' with ' + totalRam + ' GB RAM' +
+      (vram > 0 ? ' and ' + vram + ' GB GPU' : '') + ', doing ' + use.options[use.selectedIndex].text + ':</p>' +
+      '<p class="suggestpick">' + best.id + '</p>' +
+      '<p class="suggestmeta">' + best.disk + ' download · needs ~' + best.ram + ' GB · ' + best.ctx + ' context — ' + best.note + '</p>' +
+      '<p class="suggestcmd"><code>ollama pull ' + best.id + '</code></p>' +
+      (tight ? '<p class="suggestwarn">Tight fit: close other apps while it runs, or pick the smaller option below.</p>' : '') +
+      (fallback ? '<p class="suggestalt">If that is too heavy: <b>' + fallback.id + '</b> (' + fallback.disk + ', ' + fallback.note + ')</p>' : '') +
+      (fits.length === 0 ? '<p class="suggestwarn">Nothing in the catalogue fits comfortably — free some memory or use the cloud tier.</p>' : '')
+  }
+  for (const control of [dev, ram, gpu, use]) { control.addEventListener('change', recommend) }
+  recommend()
+})()
+</script>
 <script>
 (() => {
   // platform tabs + copy buttons
