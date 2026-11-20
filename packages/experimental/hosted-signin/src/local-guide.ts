@@ -217,6 +217,9 @@ export function localGuidePageHtml(): string {
   .suggestcmd code{background:#0b0b0e;border:1px solid #31313a;padding:.4rem .6rem;border-radius:.4rem;font-size:.82rem;color:#d8d8e0}
   .suggestwarn{margin:.5rem 0 0;color:#f0b46a;font-size:.8rem}
   .suggestalt{margin:.45rem 0 0;color:#8a8a93;font-size:.8rem}
+  .help{margin:.35rem 0 0;font-size:.72rem;color:#6f6f78;line-height:1.55}
+  .suggeststeps{margin:.7rem 0 0;padding-left:1.1rem;font-size:.82rem;color:#c2c2cb;line-height:1.7}
+  .suggeststeps code{background:#0b0b0e;border:1px solid #31313a;padding:.18rem .4rem;border-radius:.35rem;font-size:.78rem}
 </style></head><body><main>
 <h1>Running an agent on your own machine</h1>
 <p class="lede">A local model is free per message, works offline, and keeps your prompts private.
@@ -234,30 +237,79 @@ effect out of one — and knowing when it actually saves money.</p>
 
 
 <section><h2>Build your own suggestion</h2>
-  <p class="note" style="margin-top:0">There is no single right answer. Tell this box about your machine and
-  what you want to do, and it will pick the model <em>for you</em> — the table above is only one person's data.</p>
+  <p class="note" style="margin-top:0">There is no single right answer. Answer four questions about <em>your</em>
+  computer and this box picks the model for you. Every choice is explained in plain words — you should not
+  need to know anything before you click.</p>
+
   <div class="calc">
-    <div><label for="bDevice">Machine</label><select id="bDevice">
-      <option value="phone">phone</option>
-      <option value="laptop" selected>laptop</option>
-      <option value="desktop">desktop</option>
-      <option value="server">server</option>
-    </select></div>
-    <div><label for="bRam">RAM (GB)</label><select id="bRam">
-      <option>4</option><option>6</option><option>8</option><option>12</option>
-      <option selected>16</option><option>24</option><option>32</option><option>64</option><option>128</option>
-    </select></div>
-    <div><label for="bGpu">GPU memory</label><select id="bGpu">
-      <option value="0" selected>none</option><option value="8">8 GB</option>
-      <option value="12">12 GB</option><option value="16">16 GB</option><option value="24">24 GB</option>
-    </select></div>
-    <div><label for="bUse">Mostly for</label><select id="bUse">
-      <option value="coding" selected>writing and fixing code</option>
-      <option value="chat">questions and drafting</option>
-      <option value="images">reading screenshots and photos</option>
-      <option value="offline">anything, offline</option>
-    </select></div>
+    <div>
+      <label for="bDevice">1. What kind of computer is it?</label>
+      <select id="bDevice">
+        <option value="phone">A phone or tablet</option>
+        <option value="laptop" selected>A laptop</option>
+        <option value="desktop">A desktop computer</option>
+        <option value="server">A server or always-on machine</option>
+      </select>
+      <p class="help q" data-for="bDevice">Not sure? Laptops have a battery and fold; desktops do not.
+        A server is a machine left running all day that other devices use.</p>
+    </div>
+    <div>
+      <label for="bRam">2. How much memory (RAM) does it have?</label>
+      <select id="bRam">
+        <option value="4">4 GB — a very old or cheap machine</option>
+        <option value="6">6 GB — an older laptop</option>
+        <option value="8">8 GB — a basic modern laptop or good phone</option>
+        <option value="12">12 GB — a recent mid-range laptop</option>
+        <option value="16" selected>16 GB — most modern laptops and Macs</option>
+        <option value="24">24 GB — a strong laptop or small desktop</option>
+        <option value="32">32 GB — a workstation</option>
+        <option value="64">64 GB — a serious workstation</option>
+        <option value="128">128 GB or more — a server</option>
+      </select>
+      <p class="help q" data-for="bRam">Memory (RAM) is not storage. It is the working space a program needs
+        while running. On Windows: Settings → System → About. On a Mac: Apple menu → About This Mac.
+        On Linux: <code>free -h</code>.</p>
+    </div>
+    <div>
+      <label for="bGpu">3. Does it have a graphics card (GPU)?</label>
+      <select id="bGpu">
+        <option value="0" selected>I don't know — or it has none</option>
+        <option value="8">Yes, about 8 GB (e.g. RTX 3060)</option>
+        <option value="12">Yes, about 12 GB (e.g. RTX 4070)</option>
+        <option value="16">Yes, about 16 GB (e.g. RTX 4080, 5070 Ti)</option>
+        <option value="24">Yes, about 24 GB (e.g. RTX 3090, 4090)</option>
+        <option value="48">Yes, 48 GB or more (workstation card)</option>
+      </select>
+      <p class="help q" data-for="bGpu">A GPU makes a model much faster; it does not change what the model can do.
+        If you are unsure, choose "I don't know" — the suggestion will still work, just slower.
+        Apple silicon Macs count as having a GPU, but please pick "none" here; the memory question already covers them.</p>
+    </div>
+    <div>
+      <label for="bUse">4. What will you mostly use it for?</label>
+      <select id="bUse">
+        <option value="coding" selected>Writing and fixing code</option>
+        <option value="chat">Answering questions and drafting text</option>
+        <option value="images">Reading screenshots, photos and diagrams</option>
+        <option value="offline">Anything, without internet</option>
+        <option value="batch">Running the same task over many files</option>
+      </select>
+      <p class="help q" data-for="bUse">"Reading screenshots" needs a special model that can see pictures.
+        "Running the same task over many files" favours a smaller, faster model over a smarter, slower one.</p>
+    </div>
+    <div>
+      <label for="bDisk">5. How much disk space can you spare?</label>
+      <select id="bDisk">
+        <option value="3">Up to 3 GB</option>
+        <option value="6">Up to 6 GB</option>
+        <option value="12" selected>Up to 12 GB</option>
+        <option value="30">Up to 30 GB</option>
+        <option value="100">Plenty (100 GB or more)</option>
+      </select>
+      <p class="help q" data-for="bDisk">Models are saved as files. A 7B model is about 4.7 GB — roughly one
+        high-resolution movie. Unused models can be deleted at any time to get the space back.</p>
+    </div>
   </div>
+
   <div class="suggest" id="bOut"></div>
 </section>
 
@@ -338,53 +390,80 @@ effect out of one — and knowing when it actually saves money.</p>
 
 <script>
 (() => {
-  // The builder's catalogue: what each model needs and what it is good at.
+  // The builder's catalogue. ram = memory the model needs to run comfortably;
+  // disk = the download in GB; the numbers are what each one is genuinely good at.
   const MODELS = [
-    { id: 'qwen2.5-coder:1.5b', ram: 4,  disk: '1.1 GB', coding: 2, chat: 3, vision: 0, ctx: '4k',  note: 'runs almost anywhere, struggles with real edits' },
-    { id: 'qwen2.5-coder:3b',   ram: 6,  disk: '2.0 GB', coding: 3, chat: 3, vision: 0, ctx: '8k',  note: 'the smallest that handles simple coding well' },
-    { id: 'qwen2.5-coder:7b',   ram: 10, disk: '4.7 GB', coding: 4, chat: 4, vision: 0, ctx: '16k', note: 'the all-round coding pick' },
-    { id: 'qwen2.5-coder:14b',  ram: 18, disk: '9 GB',   coding: 5, chat: 4, vision: 0, ctx: '32k', note: 'near-cloud on routine code, needs real RAM' },
-    { id: 'qwen2.5-coder:32b',  ram: 32, disk: '20 GB',  coding: 5, chat: 5, vision: 0, ctx: '32k', note: 'the personal-hardware ceiling' },
-    { id: 'llama3.2:3b',        ram: 6,  disk: '2.0 GB', coding: 2, chat: 5, vision: 0, ctx: '8k',  note: 'friendlier for conversation than code, and fine for light edits' },
-    { id: 'moondream',          ram: 4,  disk: '1.7 GB', coding: 1, chat: 2, vision: 5, ctx: '4k',  note: 'reads images: screenshots, photos, diagrams' },
+    { id: 'qwen2.5-coder:1.5b', ram: 4,  disk: 1.1, coding: 2, chat: 3, vision: 0, ctx: '4k',  note: 'runs almost anywhere, struggles with real edits' },
+    { id: 'qwen2.5-coder:3b',   ram: 6,  disk: 2.0, coding: 3, chat: 3, vision: 0, ctx: '8k',  note: 'the smallest that handles simple coding well' },
+    { id: 'qwen2.5-coder:7b',   ram: 10, disk: 4.7, coding: 4, chat: 3, vision: 0, ctx: '16k', note: 'the all-round coding pick' },
+    { id: 'qwen2.5-coder:14b',  ram: 18, disk: 9,   coding: 5, chat: 3, vision: 0, ctx: '32k', note: 'near-cloud on routine code, needs real memory' },
+    { id: 'qwen2.5-coder:32b',  ram: 32, disk: 20,  coding: 5, chat: 4, vision: 0, ctx: '32k', note: 'the personal-hardware ceiling' },
+    { id: 'llama3.2:3b',        ram: 6,  disk: 2.0, coding: 2, chat: 5, vision: 0, ctx: '8k',  note: 'friendlier for conversation than code' },
+    { id: 'moondream',          ram: 4,  disk: 1.7, coding: 1, chat: 2, vision: 5, ctx: '4k',  note: 'reads pictures: screenshots, photos, diagrams' },
   ]
-  const dev = document.getElementById('bDevice')
-  const ram = document.getElementById('bRam')
-  const gpu = document.getElementById('bGpu')
-  const use = document.getElementById('bUse')
-  const out = document.getElementById('bOut')
+  const el = (id) => document.getElementById(id)
+  const dev = el('bDevice'), ram = el('bRam'), gpu = el('bGpu'), use = el('bUse'), disk = el('bDisk'), out = el('bOut')
+
+  const speed = (machine, vram) => {
+    if (machine === 'phone') return 'slow — a few words per second, and the phone gets warm'
+    if (vram > 0) return 'fast — comfortable for real work'
+    if (machine === 'laptop') return 'okay — usable, a little slow on long replies'
+    return 'okay — usable, faster with a graphics card'
+  }
+
   const recommend = () => {
     const machine = dev.value
     const totalRam = Number(ram.value)
     const vram = Number(gpu.value)
     const want = use.value
-    // Usable memory: phones and laptops must leave room for the system; a GPU
-    // changes which model can be held off the CPU entirely.
-    const headroom = machine === 'server' ? totalRam - 4 : totalRam - Math.min(4, Math.max(2, totalRam * 0.25))
-    // A GPU's memory must also hold the context cache, so only count 1.2x its
-    // size: a 24 GB card is not a 32 GB card, and pretending otherwise is how
-    // people end up with a model that swaps.
-    const budget = Math.max(headroom, vram > 0 ? vram * 1.2 : 0)
-    const weight = (m) => want === 'images' ? m.vision : want === 'chat' ? m.chat : want === 'offline' ? Math.max(m.coding, m.chat) : m.coding
-    const fits = MODELS.filter(m => m.ram <= budget && (want !== 'images' || m.vision > 0))
-    const pool = fits.length > 0 ? fits : [MODELS[0]]
-    // Best fit first. On a tie, take the largest model the machine can hold —
-    // more parameters is more quality, and the budget already enforces the fit.
+    const diskLimit = Number(disk.value)
+
+    // Memory the model may use: leave the system room, and count a GPU at 1.2x
+    // because its memory must also hold the context cache.
+    const systemReserve = machine === 'server' ? 4 : Math.min(4, Math.max(2, totalRam * 0.25))
+    const budget = Math.max(totalRam - systemReserve, vram > 0 ? vram * 1.2 : 0)
+
+    const weight = (m) => {
+      if (want === 'images') return m.vision
+      if (want === 'chat') return m.chat
+      if (want === 'offline') return Math.max(m.coding, m.chat)
+      if (want === 'batch') return m.ram <= 10 ? 4 : 2   // small model, repeated many times
+      return m.coding
+    }
+
+    const fitsAll = MODELS.filter(m => m.ram <= budget && m.disk <= diskLimit && (want !== 'images' || m.vision > 0))
+    const fitsMemory = MODELS.filter(m => m.ram <= budget && (want !== 'images' || m.vision > 0))
+    const pool = fitsAll.length > 0 ? fitsAll : (fitsMemory.length > 0 ? [fitsMemory[0]] : [MODELS[0]])
     pool.sort((a, b) => (weight(b) - weight(a)) || (b.ram - a.ram))
     const best = pool[0]
-    const fallback = pool.find(m => m !== best)
-    const tight = best.ram >= budget
+    const smaller = pool.find(m => m !== best && m.ram < best.ram)
+    const diskShort = fitsMemory.length > 0 && fitsAll.length === 0
+
+    const steps = [
+      'Install the model runner: <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>',
+      'Open a terminal and run <code>ollama pull ' + best.id + '</code>',
+      'Check it answers: <code>ollama run ' + best.id + ' "Say ready"</code>',
+    ].map(step => '<li>' + step + '</li>').join('')
+
     out.innerHTML =
-      '<p class="suggesthead">For a ' + machine + ' with ' + totalRam + ' GB RAM' +
-      (vram > 0 ? ' and ' + vram + ' GB GPU' : '') + ', doing ' + use.options[use.selectedIndex].text + ':</p>' +
+      '<p class="suggesthead">For ' + dev.options[dev.selectedIndex].text.toLowerCase() +
+      ', with ' + ram.options[ram.selectedIndex].text.split(' —')[0] + ' of memory' +
+      (vram > 0 ? ' and ' + gpu.options[gpu.selectedIndex].text.toLowerCase() : ' and no graphics card') +
+      ', used for ' + use.options[use.selectedIndex].text.toLowerCase() + ':</p>' +
       '<p class="suggestpick">' + best.id + '</p>' +
-      '<p class="suggestmeta">' + best.disk + ' download · needs ~' + best.ram + ' GB · ' + best.ctx + ' context — ' + best.note + '</p>' +
-      '<p class="suggestcmd"><code>ollama pull ' + best.id + '</code></p>' +
-      (tight ? '<p class="suggestwarn">Tight fit: close other apps while it runs, or pick the smaller option below.</p>' : '') +
-      (fallback ? '<p class="suggestalt">If that is too heavy: <b>' + fallback.id + '</b> (' + fallback.disk + ', ' + fallback.note + ')</p>' : '') +
-      (fits.length === 0 ? '<p class="suggestwarn">Nothing in the catalogue fits comfortably — free some memory or use the cloud tier.</p>' : '')
+      '<p class="suggestmeta">' + best.disk.toFixed(1) + ' GB download · needs about ' + best.ram +
+        ' GB of memory · ' + best.ctx + ' of context — ' + best.note + '</p>' +
+      '<p class="suggestmeta">Expected speed: ' + speed(machine, vram) + '.</p>' +
+      (diskShort ? '<p class="suggestwarn">It needs more disk space than you selected. Free some space, or take the smaller option below.</p>' : '') +
+      '<p class="suggesthead" style="margin-top:.8rem">How to get it running (three steps):</p>' +
+      '<ol class="suggeststeps">' + steps + '</ol>' +
+      (smaller ? '<p class="suggestalt">If it feels heavy or slow, try <b>' + smaller.id + '</b> (' +
+        smaller.disk.toFixed(1) + ' GB, ' + smaller.note + ') — you can delete a model any time with <code>ollama rm</code>.</p>' : '') +
+      '<p class="suggestalt">This is a suggestion from your answers, not a test result. If the first reply takes ' +
+        'longer than a minute, take the smaller model — or connect this machine to Massai so the hard steps ' +
+        'go to DeepSeek instead.</p>'
   }
-  for (const control of [dev, ram, gpu, use]) { control.addEventListener('change', recommend) }
+  for (const control of [dev, ram, gpu, use, disk]) control.addEventListener('change', recommend)
   recommend()
 })()
 </script>
