@@ -207,15 +207,15 @@ const MODEL_GUIDE = [
   {
     id: 'deepseek-flash',
     title: 'deepseek-flash',
-    subtitle: 'the workhorse',
+    subtitle: 'the closer',
     tone: 'good',
-    good: ['Single-file edits', 'Copy and layout changes', 'Quick questions', 'Iterating on something that already works'],
-    avoid: ['Architecture across many files', 'Hard debugging with long logs', 'Specs that need planning first'],
+    good: ['Single-file edits', 'Copy and layout changes', 'Quick questions', 'Iterating on something that already works', 'Shipping — it finishes what it starts'],
+    avoid: ['Architecture across many files', 'Hard debugging with long logs', 'Specs that need planning before any code'],
   },
   {
     id: 'deepseek-v4-pro',
     title: 'deepseek-v4-pro',
-    subtitle: 'the deep thinker',
+    subtitle: 'the strategist',
     tone: 'warn',
     good: ['Multi-file refactors', 'Design decisions and trade-offs', 'Gnarly bugs and long stack traces', 'Anything you would otherwise re-explain three times'],
     avoid: ['One-line tweaks', 'Repeating a step that already worked', 'Exploration where flash is enough'],
@@ -251,10 +251,11 @@ export function modelsPageHtml(): string {
   return chrome('Models', `
 <section><h2>The short version</h2>
   <p class="note" style="font-size:.9rem;color:#c9c9d2;margin:0">
-  <b>Start on flash.</b> It handles most building — you have probably noticed you forget which model you are on.
-  Move up to <b>v4-pro</b> when the task spans many files, when a bug keeps winning, or when the plan matters more
-  than the typing. Move back down as soon as it is done; the expensive model is for the hard sentence,
-  not the whole conversation.</p>
+  <b>Start on flash.</b> Not because it is the lesser model — because it is the one that closes.
+  Most building is one clear change at a time, and flash does that at a fraction of the price, so you
+  notice the bill far less than you notice the work getting done. Reach for <b>v4-pro</b> when the task
+  spans many files, when a bug keeps winning, or when the plan matters more than the typing — then drop
+  back down. The expensive model is for the hard sentence, not the whole conversation.</p>
 </section>
 <section><h2>What each one is for</h2><div style="display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))">
   ${cards}
