@@ -18,6 +18,7 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
+import { complete, enqueue, nextJob, relayStatus } from './worker-relay.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
@@ -218,6 +219,56 @@ export function apply(ctx: Context): void {
         'cache-control': 'no-store',
       })
       res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Relay: the worker polls for work here (long-poll, so it passes NAT).
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/workers/next', auth: 'anonymous',
+    handler: async (req, res) => {
+      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
+      const job = await nextJob()
+      if (job === undefined) { res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); return }
+      respond(res, 200, { id: job.id, body: job.body })
+    },
+  })
+  // Relay: the worker posts its answer here.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/workers/answer', auth: 'anonymous',
+    handler: async (req, res) => {
+      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const raw = await readBody(req)
+        const payload = JSON.parse(raw === '' ? '{}' : raw) as { id?: unknown; error?: unknown; body?: unknown }
+        const id = typeof payload.id === 'string' ? payload.id : ''
+        const error = typeof payload.error === 'string' ? payload.error : undefined
+        if (id === '') { respond(res, 400, { error: 'id is required' }); return }
+        const delivered = error !== undefined && error !== ''
+          ? complete(id, { ok: false, error })
+          : complete(id, { ok: true, body: payload.body ?? {} })
+        respond(res, delivered ? 200 : 409, { ok: delivered, relay: relayStatus() })
+      } catch (admissionError) {
+        respond(res, 400, { error: admissionError instanceof Error ? admissionError.message : String(admissionError) })
+      }
+    },
+  })
+  // Relay: an OpenAI-compatible endpoint answered by whichever worker is connected.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/local/v1/chat/completions', auth: 'anonymous',
+    handler: async (req, res) => {
+      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const raw = await readBody(req)
+        const body: unknown = raw === '' ? {} : JSON.parse(raw)
+        const answer = await enqueue(body)
+        respond(res, 200, answer)
+      } catch (relayError) {
+        respond(res, 503, { error: relayError instanceof Error ? relayError.message : String(relayError) })
+      }
     },
   })
   // Local agents: machines report in here so they appear inside Massai.
