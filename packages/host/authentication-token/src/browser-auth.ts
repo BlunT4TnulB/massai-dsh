@@ -357,6 +357,33 @@ export class BrowserAuth {
   }
 
   /**
+   * Mint a browser-session cookie for a caller-chosen user id WITHOUT ending the
+   * response, so a JSON API can set the session and answer its own body.
+   * @param req - trusted request carrying the Host.
+   * @param res - response whose Set-Cookie the caller will send.
+   * @param secure - whether the receiving listener serves TLS.
+   * @param userId - the per-session user id baked into the cookie.
+   * @returns false when no Host authority could be read (no cookie written).
+   */
+  mintSessionCookie(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure: boolean, userId: string): boolean {
+    const authority = requestAudience(req.headers, secure)
+    if (authority === undefined) return false
+    const issuedAt = Date.now()
+    const expiresAt = issuedAt + this.maxAgeMilliseconds
+    const value = encodeCookie({
+      version: COOKIE_PAYLOAD_VERSION,
+      authority,
+      issuedAt,
+      expiresAt,
+      userId,
+    }, this.secret)
+    res.setHeader('set-cookie', sessionCookie(
+      cookieName(authority), value, expiresAt, Math.floor(this.maxAgeMilliseconds / 1000), secure,
+    ))
+    return true
+  }
+
+  /**
    * Verify the authority-bound browser cookie on a Host request.
    * @param request - request headers carrying Host and Cookie.
    * @param secure - whether the receiving listener uses TLS, including its default port.

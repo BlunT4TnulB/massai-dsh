@@ -34,6 +34,8 @@ const DEEPSEEK_TOPUP = 'https://platform.deepseek.com/top_up'
  * @returns the complete HTML document.
  */
 export function welcomePage(line?: number): string {
+  const publishableKey = process.env.CLERK_PUBLISHABLE_KEY ?? ''
+  const clerkReady = publishableKey !== '' && (process.env.CLERK_SECRET_KEY ?? '') !== ''
   const index = line === undefined
     ? Math.floor(Math.random() * LINE_COUNT)
     : ((line % LINE_COUNT) + LINE_COUNT) % LINE_COUNT
@@ -97,6 +99,15 @@ export function welcomePage(line?: number): string {
   a.route.primary{background:#0f5d3a;border-color:#17724a}
   a.route.primary:hover{background:#127148}
   a.route.primary small{color:#a9e7c4}
+  /* social sign-in (Clerk) */
+  .social{margin:.2rem 0 .9rem}
+  .socialhead{text-align:center;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;
+    color:#82828b;font-weight:600;margin-bottom:.55rem}
+  .socialrow{display:flex;gap:.5rem;flex-wrap:wrap}
+  .socialbtn{flex:1;min-width:6rem;padding:.58rem .5rem;border-radius:.5rem;border:1px solid #31313a;
+    background:#1f1f27;color:#EDEDF1;font-weight:600;font-size:.86rem;cursor:pointer}
+  .socialbtn:hover{border-color:#C1440E;background:#23232c}
+  .socialnote{margin-top:.5rem;text-align:center;color:#6f6f78;font-size:.72rem}
   /* manual paste */
   .manual{border-top:1px solid #26262d;padding-top:.9rem;margin-top:.2rem}
   .manual label{display:block;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#82828b;font-weight:600;margin-bottom:.45rem}
@@ -146,6 +157,16 @@ export function welcomePage(line?: number): string {
         <span class="glyph">💳</span> Add a few dollars of credit <small>a little goes a long way</small></a>
     </div>
 
+    ${clerkReady ? `<div class="social">
+      <div class="socialhead">or continue with</div>
+      <div class="socialrow">
+        <button class="socialbtn" type="button" data-clerk>Google</button>
+        <button class="socialbtn" type="button" data-clerk>GitHub</button>
+        <button class="socialbtn" type="button" data-clerk>Apple</button>
+      </div>
+      <div class="socialnote">Sign-in is handled by Clerk; your DeepSeek key stays yours.</div>
+    </div>` : ''}
+
     <div class="manual">
       <label for="apiKey">Already have a key? Paste it here</label>
       <form method="POST" action="/api/signin">
@@ -163,5 +184,38 @@ export function welcomePage(line?: number): string {
     </div>
   </div>
 </div>
+${clerkReady ? `<script>
+(() => {
+  const pk = ${JSON.stringify(publishableKey)}
+  const script = document.createElement('script')
+  script.src = '/api/__clerk/npm/@clerk/clerk-js@5/dist/clerk.browser.js'
+  script.async = true
+  script.onload = async () => {
+    try {
+      const clerk = window.Clerk
+      if (!clerk) return
+      await clerk.load({ publishableKey: pk, proxyUrl: '/api/__clerk' })
+      const exchange = async () => {
+        const token = await clerk.session?.getToken()
+        if (!token) return false
+        const response = await fetch('/api/clerk/signin', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+        if (response.ok) { location.href = '/start'; return true }
+        return false
+      }
+      if (clerk.session && await exchange()) return
+      for (const button of document.querySelectorAll('[data-clerk]')) {
+        button.addEventListener('click', () => {
+          clerk.redirectToSignIn({ redirectUrl: location.origin + '/' })
+        })
+      }
+    } catch { /* Clerk unavailable: the manual key field still works */ }
+  }
+  document.body.append(script)
+})()
+</script>` : ''}
 </body></html>`
 }

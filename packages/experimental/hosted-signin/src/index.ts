@@ -15,6 +15,7 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
+import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
 import { startPageHtml } from './start-page.ts'
 import { feedbackPageHtml, recentNotes, recentPageHtml, saveNote, thanksPageHtml } from './feedback.ts'
@@ -109,6 +110,80 @@ export function apply(ctx: Context): void {
       },
     })
   }
+  // Clerk session exchange: the browser hands us its Clerk JWT, we verify it
+  // against the instance JWKS and mint our own session keyed to the Clerk user.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/clerk/signin', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const host = frontendApiOf(process.env.CLERK_PUBLISHABLE_KEY)
+      if (host === undefined) { respond(res, 501, { error: 'clerk is not configured' }); return }
+      try {
+        const fields = await readFields(req)
+        const token = (fields.get('token') ?? '').trim()
+        if (token === '') { respond(res, 400, { error: 'token is required' }); return }
+        const session = await verifyClerkSession(token, host)
+        if (session === undefined) { respond(res, 401, { error: 'invalid session token' }); return }
+        const minter = ctx.get('browserAuth') as
+          { mintSessionCookie(req: IncomingMessage, res: ServerResponse, secure: boolean, userId: string): boolean } | undefined
+        if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
+        const userId = `c-${session.userId}`
+        if (!minter.mintSessionCookie(req, res, ctx.webServer.protocol === 'https:', userId)) {
+          respond(res, 400, { error: 'missing Host authority' }); return
+        }
+        respond(res, 200, { ok: true, userId })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+  // Clerk Frontend API proxy: lets Clerk's cookies live on this origin. Needs the
+  // instance secret key; without it the route reports that it is unconfigured.
+  ctx.webServer.register({
+    kind: 'prefix', path: '/api/__clerk', auth: 'anonymous',
+    handler: async (req, res) => {
+      const host = frontendApiOf(process.env.CLERK_PUBLISHABLE_KEY)
+      const secret = process.env.CLERK_SECRET_KEY
+      if (host === undefined || secret === undefined || secret === '') {
+        respond(res, 501, { error: 'clerk proxy is not configured' })
+        return
+      }
+      try {
+        const url = new URL(req.url ?? '/', `https://${host}`)
+        const target = `https://${host}${url.pathname.replace(/^\/api\/__clerk/, '')}${url.search}`
+        const chunks: Buffer[] = []
+        for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+        const headers = new Headers()
+        for (const [name, value] of Object.entries(req.headers)) {
+          if (value === undefined) continue
+          if (['host', 'content-length', 'connection', 'accept-encoding'].includes(name)) continue
+          headers.set(name, Array.isArray(value) ? value.join(', ') : value)
+        }
+        headers.set('Clerk-Proxy-Url', `https://${req.headers.host ?? 'localhost'}/api/__clerk`)
+        headers.set('Clerk-Secret-Key', secret)
+        const upstream = await fetch(target, {
+          method: req.method ?? 'GET',
+          headers,
+          ...chunks.length === 0 ? {} : { body: Buffer.concat(chunks) },
+        })
+        const body = Buffer.from(await upstream.arrayBuffer())
+        const out: Record<string, string> = {}
+        upstream.headers.forEach((value, name) => {
+          if (['content-encoding', 'transfer-encoding', 'connection', 'keep-alive', 'content-length'].includes(name)) return
+          out[name] = value
+        })
+        const cookies = upstream.headers.getSetCookie?.() ?? []
+        res.writeHead(upstream.status, {
+          ...out,
+          'content-length': String(body.byteLength),
+          ...cookies.length === 0 ? {} : { 'set-cookie': cookies },
+        })
+        res.end(req.method === 'HEAD' ? undefined : body)
+      } catch (error) {
+        respond(res, 502, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
   // Owner console: presence-only status, notes wall, session census, quick links.
   ctx.webServer.register({
     kind: 'exact', path: '/admin', auth: 'required',
