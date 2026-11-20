@@ -69,7 +69,7 @@ export interface Signals {
 }
 
 /** Flatten one message's content into searchable text. */
-function textOf(message: { content?: unknown }): string {
+function textOf(message: { content?: unknown; role?: string }): string {
   const content = (message as { content?: unknown }).content
   if (typeof content === 'string') return content
   if (Array.isArray(content)) {
@@ -90,7 +90,7 @@ function textOf(message: { content?: unknown }): string {
  * @param config - router configuration.
  * @returns measured signals.
  */
-export function signalsOf(options: { messages?: ReadonlyArray<{ content?: unknown }>; system?: string }, config: Config = {}): Signals {
+export function signalsOf(options: { messages?: ReadonlyArray<{ content?: unknown; role?: string }>; system?: string }, config: Config = {}): Signals {
   const keywords = config.escalateKeywords ?? DEFAULT_ESCALATE_KEYWORDS
   const messages = options.messages ?? []
   const chars = messages.reduce((sum, message) => sum + textOf(message).length, 0)
@@ -122,7 +122,7 @@ export function signalsOf(options: { messages?: ReadonlyArray<{ content?: unknow
  * @param config - router configuration.
  * @returns the chosen model and why.
  */
-export function decide(options: { messages?: ReadonlyArray<{ content?: unknown }>; system?: string; model: string }, config: Config = {}): RouteResult {
+export function decide(options: { messages?: ReadonlyArray<{ content?: unknown; role?: string }>; system?: string; model: string }, config: Config = {}): RouteResult {
   const cheap = config.cheapModel ?? DEFAULT_CHEAP_MODEL
   const quality = config.qualityModel ?? DEFAULT_QUALITY_MODEL
   const ceiling = config.ceilingTokens ?? DEFAULT_CEILING_TOKENS
@@ -169,11 +169,10 @@ export function apply(ctx: Context, config: Config = {}): void {
           const wantsCheaper = decision.model.includes('flash') && !modelSelection.model.includes('flash')
           if (mode === 'escalate-only' && wantsCheaper) return next()
           if (decision.model !== modelSelection.model) {
-            ;(agent as Agent).model.select({
-              provider: modelSelection.provider,
-              model: decision.model,
-              reasoningEffort: modelSelection.reasoningEffort,
-            })
+            const selection = modelSelection.reasoningEffort === undefined
+              ? { provider: modelSelection.provider, model: decision.model }
+              : { provider: modelSelection.provider, model: decision.model, reasoningEffort: modelSelection.reasoningEffort }
+            ;(agent as Agent).model.select(selection)
             ctx.logger?.info?.('model-router', '%s -> %s: %s', modelSelection.model, decision.model, decision.reason)
           }
         }
