@@ -130,7 +130,7 @@
 - insert:
     - id: llm-gemini
       name: '@deepseek-ai/dsh-llm-pi-ai'
-      disabled: !!js !process.env.GEMINI_API_KEY
+      disabled: !!js process.env.GEMINI_API_KEY === undefined
       config:
         providers:
           gemini:
@@ -145,7 +145,7 @@
                 maxTokens: 8192
     - id: llm-claude
       name: '@deepseek-ai/dsh-llm-pi-ai'
-      disabled: !!js !process.env.ANTHROPIC_API_KEY
+      disabled: !!js process.env.ANTHROPIC_API_KEY === undefined
       config:
         providers:
           claude:
@@ -160,7 +160,7 @@
                 maxTokens: 8192
     - id: llm-chatgpt
       name: '@deepseek-ai/dsh-llm-pi-ai'
-      disabled: !!js !process.env.OPENAI_API_KEY
+      disabled: !!js process.env.OPENAI_API_KEY === undefined
       config:
         providers:
           chatgpt:
