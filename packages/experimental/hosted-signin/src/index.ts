@@ -17,6 +17,7 @@ import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
+import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
@@ -211,6 +212,48 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/admin', auth: 'required',
     handler: (req, res) => {
       const html = Buffer.from(adminPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Local agents: machines report in here so they appear inside Massai.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/workers/heartbeat', auth: 'anonymous',
+    handler: async (req, res) => {
+      // Answer 404 unless the shared token matches: a scanner cannot learn the
+      // route exists, and a missing configuration looks like a plain miss.
+      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const fields = await readFields(req)
+        const name = (fields.get('name') ?? '').trim().slice(0, 80)
+        const model = (fields.get('model') ?? '').trim().slice(0, 80)
+        if (name === '' || model === '') { respond(res, 400, { error: 'name and model are required' }); return }
+        const latency = Number(fields.get('latencyMs') ?? '')
+        recordWorker({
+          name,
+          model,
+          endpoint: (fields.get('endpoint') ?? '').trim().slice(0, 200),
+          ...(Number.isFinite(latency) && latency > 0 ? { latencyMs: latency } : {}),
+          ...(fields.get('note') === null || (fields.get('note') ?? '') === '' ? {} : { note: (fields.get('note') ?? '').slice(0, 200) }),
+          ...(fields.get('served') === null ? {} : { served: Number(fields.get('served') ?? 0) }),
+        })
+        respond(res, 200, { ok: true, workers: listWorkers().length })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+  // The owner's view of every machine that has reported in.
+  ctx.webServer.register({
+    kind: 'exact', path: '/workers', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(workersPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
