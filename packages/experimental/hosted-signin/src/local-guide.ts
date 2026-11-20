@@ -38,6 +38,15 @@ const SCENARIOS: ReadonlyArray<{ title: string; body: string; verdict: string }>
   },
 ]
 
+/** Hardware ladder from a spare phone to a server room. */
+const LADDER: ReadonlyArray<readonly [string, string, string, string]> = [
+  ['Old phone (8 GB)', '1B–3B at 4-bit', 'runs, slowly', 'short questions, drafting, offline notes'],
+  ['Laptop, 16 GB RAM', '7B–8B at 4-bit', 'usable', 'real coding help, single files, explanations'],
+  ['24 GB GPU or 32 GB Mac', '14B–30B at 4-bit', 'good', 'the practical ceiling for personal use: multi-file work'],
+  ['Workstation, 64–128 GB', 'up to 70B at 4-bit', 'capable', 'near-cloud quality on routine code, needs a fan you can hear'],
+  ['Server (multi-GPU)', '100B+ or a rented flagship', 'frontier-class', 'what the cloud is doing when you press send'],
+]
+
 /** The usage-advice habits that matter more than the model. */
 const HABITS: readonly string[] = [
   'Small steps: "add a contact form to index.html" beats "build me a site".',
@@ -63,6 +72,7 @@ const TROUBLE: ReadonlyArray<readonly [string, string]> = [
  */
 export function localGuidePageHtml(): string {
   const hardware = HARDWARE.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
+  const ladder = LADDER.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
   const scenarios = SCENARIOS.map(s => `<div class="scenario">
     <h3>${s.title}</h3><p>${s.body}</p><p class="verdict">${s.verdict}</p>
   </div>`).join('')
@@ -116,6 +126,15 @@ effect out of one — and knowing when it actually saves money.</p>
   <p class="note"><b>Rule of thumb:</b> model size in RAM, plus ~2 GB for the system, plus room
   for the agent. Apple silicon is the best value per watt; a CPU-only 7B works but feels slow in
   long agent loops. Do not stack a model on the machine already running the agent.</p>
+</section>
+
+<section><h2>The ladder: a spare phone to a server room</h2>
+  <table><thead><tr><th>you have</th><th>you can run</th><th>how it feels</th><th>honest use</th></tr></thead>
+  <tbody>${ladder}</tbody></table>
+  <p class="note"><b>The 30B ceiling is real.</b> A 30B model at 4-bit needs about 18 GB, which fits a
+  single 24 GB GPU or a 32 GB Mac — and that is where personal hardware tops out before the cost and
+  noise stop making sense. Above that you are comparing a workstation to a datacentre, and renting
+  wins for almost everyone.</p>
 </section>
 
 <section><h2>What it saves, by scenario</h2>${scenarios}</section>
