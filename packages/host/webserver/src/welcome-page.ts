@@ -164,7 +164,7 @@ export function welcomePage(line?: number): string {
         <button class="socialbtn" type="button" data-clerk>GitHub</button>
         <button class="socialbtn" type="button" data-clerk>Apple</button>
       </div>
-      <div class="socialnote">Sign-in is handled by Clerk; your DeepSeek key stays yours.</div>
+      <div class="socialnote" id="clerk-note">Sign-in is handled by Clerk; your DeepSeek key stays yours.</div>
     </div>` : ''}
 
     <div class="manual">
@@ -187,32 +187,45 @@ export function welcomePage(line?: number): string {
 ${clerkReady ? `<script>
 (() => {
   const pk = ${JSON.stringify(publishableKey)}
+  const note = document.getElementById('clerk-note')
+  const fail = (message) => { if (note) { note.textContent = message; note.style.color = '#f0b46a' } }
+  // The publishable key encodes the instance's Frontend API host.
+  let host = ''
+  try {
+    const body = pk.replace(/^pk_(test|live)_/, '').replace(/-/g, '+').replace(/_/g, '/')
+    host = atob(body + '='.repeat((4 - body.length % 4) % 4)).replace(/\$+$/, '').trim()
+  } catch { /* fall through to the failure path */ }
+  if (!host) { fail('Sign-in is unavailable right now — paste a key below.'); return }
   const script = document.createElement('script')
-  script.src = '/api/__clerk/npm/@clerk/clerk-js@5/dist/clerk.browser.js'
+  script.src = 'https://' + host + '/npm/@clerk/clerk-js@5/dist/clerk.browser.js'
   script.async = true
+  script.onerror = () => fail('Sign-in could not load — paste a key below.')
   script.onload = async () => {
     try {
       const clerk = window.Clerk
-      if (!clerk) return
-      await clerk.load({ publishableKey: pk, proxyUrl: '/api/__clerk' })
+      await clerk.load({ publishableKey: pk })
+      let exchanged = false
       const exchange = async () => {
+        if (exchanged) return
         const token = await clerk.session?.getToken()
-        if (!token) return false
+        if (!token) return
         const response = await fetch('/api/clerk/signin', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ token }),
         })
-        if (response.ok) { location.href = '/start'; return true }
-        return false
+        if (response.ok) { exchanged = true; location.href = '/start'; return }
+        fail('Sign-in could not be completed — paste a key below.')
       }
-      if (clerk.session && await exchange()) return
+      if (clerk.session) { await exchange(); return }
+      clerk.addListener((resources) => { if (resources.session) void exchange() })
       for (const button of document.querySelectorAll('[data-clerk]')) {
         button.addEventListener('click', () => {
-          clerk.redirectToSignIn({ redirectUrl: location.origin + '/' })
+          try { clerk.openSignIn() } catch { fail('Sign-in could not open — paste a key below.') }
         })
       }
-    } catch { /* Clerk unavailable: the manual key field still works */ }
+      if (note) note.textContent = 'Sign-in is handled by Clerk; your DeepSeek key stays yours.'
+    } catch { fail('Sign-in could not start — paste a key below.') }
   }
   document.body.append(script)
 })()
