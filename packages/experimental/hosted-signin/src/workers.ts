@@ -167,8 +167,8 @@ export function workersPageHtml(relay?: { queued: number; inFlight: number; poll
       const response = await fetch('/api/workers/test', { method: 'POST' })
       const body = await response.json()
       out.textContent = body.ok
-        ? `answered in ${Math.round(body.milliseconds / 100) / 10}s: "${String(body.answer).slice(0, 80)}"`
-        : `failed: ${body.error}`
+        ? 'answered in ' + String(Math.round(body.milliseconds / 100) / 10) + 's: "' + String(body.answer).slice(0, 80) + '"'
+        : 'failed: ' + String(body.error)
       out.style.color = body.ok ? '#7ee2a8' : '#f0b46a'
     } catch (error) {
       out.textContent = 'request failed'
