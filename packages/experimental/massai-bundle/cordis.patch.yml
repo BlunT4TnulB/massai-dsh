@@ -114,3 +114,11 @@
                 name: Any connected machine
                 contextWindow: 32768
                 maxTokens: 4096
+
+# Bring your DeepSeek website history in: upload the deepseek_data-*.zip export
+# and its recent conversations become sessions here, with titles, questions,
+# reasoning, web-search cards and answers preserved. This is the one place
+# DeepSeek's own chat app feeds us rather than the other way round.
+- insert:
+    - id: deepseek-chat-import
+      name: '@deepseek-ai/dsh-deepseek-chat-import'
