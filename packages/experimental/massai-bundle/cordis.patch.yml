@@ -22,6 +22,11 @@
 - insert:
     - id: model-router
       name: "@deepseek-ai/dsh-model-router"
+      config:
+        mode: auto
+        cheapModel: deepseek-flash
+        qualityModel: deepseek-v4-pro
+        ceilingTokens: 45000
 
 # Account connectors (store/list credentials in the vault).
 - insert:
