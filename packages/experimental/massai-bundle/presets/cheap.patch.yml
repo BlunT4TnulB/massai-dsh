@@ -19,6 +19,7 @@
             name: '@deepseek-ai/dsh-time-context'
           - id: tool-bash
             name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js "process.env.DSH_ALLOW_WILDCARD_HOST === '1'"
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
           - id: tool-fs-search
