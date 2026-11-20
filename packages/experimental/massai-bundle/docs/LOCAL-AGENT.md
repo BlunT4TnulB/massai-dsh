@@ -36,6 +36,24 @@ Then:
 ./tools/massai-local.sh --wire-dsh   # adds "Massai Local (free)" to the agent
 ```
 
+## Prefer clicking to typing?
+
+The same instructions live on the site, with a button per kind of machine
+(macOS / Windows / Linux / Android) and a copy button on every command:
+**`/local`** on the Massai address. Each step ends with a one-line check — if it
+prints a reply containing "ready", the model is on the machine and working.
+
+## Show the machine up inside Massai
+
+```bash
+./tools/massai-worker.sh --hub https://massai-dsh.onrender.com \
+  --token <DSH_WORKER_TOKEN> --name workshop-pc
+```
+
+The machine then appears on the hub's **Local agents** page with its model, its
+measured reply speed, and a green dot while it is alive. Only that is sent —
+never prompts, files, or history.
+
 Restart the agent and the model picker will list **Massai Local (free)**.
 
 ---
