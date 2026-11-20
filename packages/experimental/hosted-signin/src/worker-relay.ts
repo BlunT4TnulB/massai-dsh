@@ -37,8 +37,10 @@ let lastPollAt = 0
 /** How recently a worker must have polled to count as connected. */
 const CONNECTED_WINDOW_MS = 90_000
 
-/** How long a caller waits for a worker answer. */
+/** How long a caller waits for a worker answer once a worker has picked the job up. */
 const JOB_TIMEOUT_MS = 180_000
+/** How long a queued job waits to be picked up before it is declared workerless. */
+const PICKUP_TIMEOUT_MS = 10_000
 /** How long a worker poll is held open before answering "nothing yet". */
 const POLL_HOLD_MS = 25_000
 
@@ -60,12 +62,15 @@ export function workerConnected(): boolean {
 export function enqueue(body: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const id = randomUUID()
+    // Two-phase timeout: a job nobody picks up means no worker is listening, and
+    // the caller should hear that in seconds, not minutes. Once a worker takes
+    // it, the real work may legitimately be slow.
     const timer = setTimeout(() => {
       waiting.delete(id)
       const index = queue.findIndex(job => job.id === id)
       if (index >= 0) queue.splice(index, 1)
       reject(new Error('no local worker answered in time'))
-    }, JOB_TIMEOUT_MS)
+    }, PICKUP_TIMEOUT_MS)
     const job: RelayJob = {
       id,
       body,
@@ -80,9 +85,26 @@ export function enqueue(body: unknown): Promise<unknown> {
     }
     waiting.set(id, job)
     const poller = pollers.shift()
-    if (poller !== undefined) poller(job)
-    else queue.push(job)
+    if (poller !== undefined) {
+      markPicked(job)
+      poller(job)
+    } else {
+      queue.push(job)
+    }
   })
+}
+
+/**
+ * Take the next job for a polling worker, waiting briefly for one.
+ * @returns the job, or undefined when none arrived.
+ */
+/** Re-arm a job's timer for the answering phase once a worker takes it. */
+function markPicked(job: RelayJob): void {
+  clearTimeout(job.timer)
+  job.timer = setTimeout(() => {
+    waiting.delete(job.id)
+    job.settle({ ok: false, error: 'the worker did not finish in time' })
+  }, JOB_TIMEOUT_MS)
 }
 
 /**
@@ -91,8 +113,11 @@ export function enqueue(body: unknown): Promise<unknown> {
  */
 export function nextJob(): Promise<RelayJob | undefined> {
   lastPollAt = Date.now()
-  const job = queue.shift()
-  if (job !== undefined) return Promise.resolve(job)
+  const queued = queue.shift()
+  if (queued !== undefined) {
+    markPicked(queued)
+    return Promise.resolve(queued)
+  }
   return new Promise((resolve) => {
     const finish = (value: RelayJob | undefined): void => {
       clearTimeout(timer)
