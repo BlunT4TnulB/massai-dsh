@@ -95,3 +95,22 @@
 - insert:
     - id: quickstart
       name: "@deepseek-ai/dsh-client-ui-quickstart"
+
+# The worker pool: local models on your own machines, reached through the hub's
+# relay. Selectable by hand — a provider whose machine is asleep must never be
+# picked automatically, or a request would wait for a worker that isn't there.
+- insert:
+    - id: llm-worker
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      config:
+        providers:
+          massai-worker:
+            displayName: Worker pool (local machines)
+            apiKeyEnv: DSH_WORKER_TOKEN
+            api: openai-completions
+            baseURL: https://massai-dsh.onrender.com/api/local/v1
+            models:
+              - id: auto
+                name: Any connected machine
+                contextWindow: 32768
+                maxTokens: 4096
