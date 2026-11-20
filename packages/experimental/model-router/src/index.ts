@@ -53,6 +53,8 @@ export interface Config {
   localModel?: string
   /** New-turn size under which local work is attempted first. */
   localMaxTokens?: number
+  /** Prompts a guest session may send; 0 disables the cap. */
+  guestPromptLimit?: number
 }
 
 export const Config: z<Config> = z.object({
@@ -67,6 +69,7 @@ export const Config: z<Config> = z.object({
   localProvider: z.string(),
   localModel: z.string(),
   localMaxTokens: z.number(),
+  guestPromptLimit: z.number(),
 })
 
 /** One candidate route with its relative price (1 = cheap cloud tier). */
@@ -269,6 +272,18 @@ export function apply(ctx: Context, config: Config = {}): void {
         const localProvider = config.localProvider ?? ''
         const steerable = modelSelection?.provider === routeProvider
           || (localProvider !== '' && modelSelection?.provider === localProvider)
+        // Guests get a taste, not a free tier: past the cap the step is rejected
+        // so a preview cannot quietly spend the deployment's key forever.
+        const guestLimit = config.guestPromptLimit ?? 0
+        const sessionUserId = (agent.session.header as { userId?: string }).userId ?? ''
+        if (guestLimit > 0 && sessionUserId.startsWith('guest-')) {
+          let prompts = 0
+          for (let seq = 0; seq < agent.session.seq; seq += 1) {
+            const record = agent.session.eventAt(seq as never) as { type?: string } | undefined
+            if (record?.type === 'user/message') prompts += 1
+          }
+          if (prompts > guestLimit) return { kind: 'reject' }
+        }
         if (modelSelection?.model !== undefined && steerable) {
           const signals = signalsOf({ messages: messages as never }, config)
           const features: Features = {

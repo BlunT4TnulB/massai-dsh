@@ -359,20 +359,6 @@ export function apply(ctx: Context): void {
       }
     },
   })
-  // Guests get a taste, not a free tier: once the cap is reached the step is
-  // rejected with a message that points at the way to continue.
-  ctx.on('agent/pre-step', async ({ agent }, next) => {
-    try {
-      const userId = (agent.session.header as { userId?: string }).userId ?? ''
-      if (userId.startsWith('guest-') && promptCount(agent.session as never) > GUEST_PROMPT_LIMIT) {
-        return { kind: 'reject' } as never
-      }
-    } catch {
-      /* the limiter must never break a step */
-    }
-    return next()
-  })
-
   // Try-before-you-key: a guest session that spends the owner's key, capped.
   ctx.webServer.register({
     kind: 'exact', path: '/api/preview', auth: 'anonymous',

@@ -50,6 +50,7 @@
         qualityModel: deepseek-v4-pro
         visionModel: deepseek-flash
         routeProvider: deepseek-official
+        guestPromptLimit: 12
         ceilingTokens: 45000
 
 # Account connectors (store/list credentials in the vault).
