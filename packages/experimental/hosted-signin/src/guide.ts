@@ -132,7 +132,7 @@ ${steps}
 paste it on this site → type what you want. Everything else is optional.</div>
 
 <p class="foot">Want an agent that runs on your own computer (free per message, works offline)?
-That is the optional advanced path — details live in the repository's LOCAL-AGENT guide.
+That is the optional advanced path — <a href="/local">see the local models guide</a>.
 <br><br><a href="/">← Back to the door</a></p>
 </main></body></html>`
 }
