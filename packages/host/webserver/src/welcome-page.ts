@@ -214,24 +214,29 @@ ${clerkReady ? `<script>
   }
   step('key: ' + pk.slice(0, 12) + '…')
   const fail = (message) => { if (note) { note.textContent = message; note.style.color = '#f0b46a' } }
-  // The publishable key encodes the instance's Frontend API host.
+  // The publishable key encodes the instance's Frontend API host. Split on the
+  // trailing "$" rather than a regex: the escape was eaten by the template
+  // literal once already, and a malformed host meant the script never loaded.
   let host = ''
   try {
     const body = pk.replace(/^pk_(test|live)_/, '').replace(/-/g, '+').replace(/_/g, '/')
-    host = atob(body + '='.repeat((4 - body.length % 4) % 4)).replace(/\$+$/, '').trim()
+    const decoded = atob(body + '='.repeat((4 - body.length % 4) % 4))
+    host = decoded.split('$')[0].trim()
   } catch { /* fall through to the failure path */ }
   step('host: ' + host)
-  if (!host) { fail('Sign-in is unavailable right now — paste a key below.'); return }
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) { fail('Sign-in is unavailable right now — paste a key below.'); return }
   const script = document.createElement('script')
   script.src = 'https://' + host + '/npm/@clerk/clerk-js@5/dist/clerk.browser.js'
   script.async = true
+  // Clerk's loader reads the key from this attribute; load() then needs no options.
+  script.setAttribute('data-clerk-publishable-key', pk)
   step('loading clerk-js…')
   script.onerror = () => { step('clerk-js FAILED to load'); fail('Sign-in could not load — paste a key below.') }
   script.onload = async () => {
     try {
       const clerk = window.Clerk
       step('clerk-js loaded: ' + (typeof clerk))
-      await clerk.load({ publishableKey: pk })
+      await clerk.load()
       step('load ok · session: ' + (clerk.session ? 'yes' : 'no'))
       let exchanged = false
       const exchange = async () => {
