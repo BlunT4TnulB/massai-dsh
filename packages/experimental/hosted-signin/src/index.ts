@@ -17,6 +17,7 @@ import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
+import { memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus } from './worker-relay.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
@@ -271,6 +272,37 @@ export function apply(ctx: Context): void {
       }
     },
   })
+  // What the agent has learned, in the open.
+  ctx.webServer.register({
+    kind: 'exact', path: '/memory', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(memoryPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Owner-triggered relay check: send one real prompt through a connected worker.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/workers/test', auth: 'required',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const started = Date.now()
+        const answer = await enqueue({
+          model: 'auto',
+          messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
+        }) as { choices?: Array<{ message?: { content?: string } }> }
+        const text = answer.choices?.[0]?.message?.content ?? ''
+        respond(res, 200, { ok: true, answer: text, milliseconds: Date.now() - started })
+      } catch (error) {
+        respond(res, 503, { ok: false, error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
   // Local agents: machines report in here so they appear inside Massai.
   ctx.webServer.register({
     kind: 'exact', path: '/api/workers/heartbeat', auth: 'anonymous',
@@ -304,7 +336,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/workers', auth: 'required',
     handler: (req, res) => {
-      const html = Buffer.from(workersPageHtml())
+      const html = Buffer.from(workersPageHtml(relayStatus()))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),

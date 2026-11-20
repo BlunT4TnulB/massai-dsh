@@ -75,7 +75,7 @@ export function workerTokenAccepted(presented: string | undefined): boolean {
  * Render the owner's view of every registered machine.
  * @returns the page HTML.
  */
-export function workersPageHtml(): string {
+export function workersPageHtml(relay?: { queued: number; inFlight: number; pollers: number }): string {
   const list = listWorkers()
   const configured = (process.env.DSH_WORKER_TOKEN ?? '') !== ''
   const rows = list.map((worker) => {
@@ -117,6 +117,9 @@ export function workersPageHtml(): string {
     color:#d8d8e0;overflow-wrap:anywhere;display:inline-block}
   .howto{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:.55rem;font-size:.86rem;color:#c2c2cb}
   .var{color:#D9822B}
+  .btn2{padding:.5rem .85rem;border-radius:.45rem;border:1px solid #C1440E;background:#241a15;color:#F2F2F4;
+    font-size:.82rem;font-weight:600;cursor:pointer}
+  .btn2:disabled{opacity:.55;cursor:default}
   a{color:#7ee2a8;text-decoration:none}
 </style></head><body><main>
 <header><h1>Local agents</h1><span class="flag">open by default</span></header>
@@ -127,6 +130,14 @@ export function workersPageHtml(): string {
   <p class="note">A machine is online while its heartbeat is younger than 5 minutes.
   On each computer run <code>./tools/massai-worker.sh</code> — it reports the local
   model, its speed, and stays out of the way.</p>
+</section>
+<section><h2>Is a worker talking to us?</h2>
+  <p class="note" style="margin-top:0">A worker that is connected can answer model requests for this hub.
+  <b data-relay>${relay === undefined ? '' : `${String(relay.pollers)} polling · ${String(relay.inFlight)} waiting · ${String(relay.queued)} queued`}</b></p>
+  <button id="relay-test" class="btn2" type="button">Send a test prompt through the worker</button>
+  <span id="relay-out" class="note" style="margin-left:.6rem"></span>
+  <p class="note">The test asks the worker's local model to reply "ready". It proves the whole path:
+  hub → your machine → its model → back.</p>
 </section>
 <section><h2>Add a machine</h2>
   <p class="note" style="margin-top:0">On the computer that runs the local model, run these two commands.
@@ -144,6 +155,29 @@ export function workersPageHtml(): string {
   machine's network — it is not claimed here.</p>
   <p class="note"><a href="/admin">Back to the owner console →</a></p>
 </section>
+<script>
+(() => {
+  const button = document.getElementById('relay-test')
+  const out = document.getElementById('relay-out')
+  if (button === null || out === null) return
+  button.addEventListener('click', async () => {
+    button.disabled = true
+    out.textContent = 'sending… (a cold worker can take a minute)'
+    try {
+      const response = await fetch('/api/workers/test', { method: 'POST' })
+      const body = await response.json()
+      out.textContent = body.ok
+        ? `answered in ${Math.round(body.milliseconds / 100) / 10}s: "${String(body.answer).slice(0, 80)}"`
+        : `failed: ${body.error}`
+      out.style.color = body.ok ? '#7ee2a8' : '#f0b46a'
+    } catch (error) {
+      out.textContent = 'request failed'
+      out.style.color = '#f0b46a'
+    }
+    button.disabled = false
+  })
+})()
+</script>
 </main></body></html>`
 }
 
