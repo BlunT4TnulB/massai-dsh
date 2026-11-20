@@ -38,6 +38,12 @@ const pollers: Array<{ name: string; resolve: (job: RelayJob | undefined) => voi
 const served = new Map<string, number>()
 /** Rotates so an untargeted job does not always land on the same machine. */
 let pickCursor = 0
+/** Consecutive failures per machine. */
+const failures = new Map<string, number>()
+/** Machines resting after repeated failures. */
+const resting = new Map<string, number>()
+/** How long a machine rests after a failure. */
+const REST_MS = 120_000
 /** When a worker last asked for work (ms since epoch). */
 let lastPollAt = 0
 /** How recently a worker must have polled to count as connected. */
@@ -95,9 +101,11 @@ export function enqueue(body: unknown, target?: string): Promise<unknown> {
     // targeted job only goes to the machine it names.
     // Untargeted work rotates through the waiting machines; a named job goes to
     // exactly the machine it asks for.
+    const available = pollers.map((poller, index) => ({ poller, index }))
+      .filter(entry => restingFor(entry.poller.name) === 0)
     const eligible = job.target === undefined
-      ? (pollers.length > 0 ? pickCursor % pollers.length : -1)
-      : pollers.findIndex(candidate => candidate.name === job.target)
+      ? (available.length > 0 ? available[pickCursor % available.length]?.index ?? -1 : -1)
+      : pollers.findIndex(candidate => candidate.name === job.target && restingFor(candidate.name) === 0)
     if (eligible >= 0) {
       pickCursor += 1
       const [poller] = pollers.splice(eligible, 1)
@@ -131,6 +139,8 @@ function markPicked(job: RelayJob): void {
 export function nextJob(workerName = ''): Promise<RelayJob | undefined> {
   lastPollAt = Date.now()
   const name = workerName.trim()
+  // A machine that just failed repeatedly gets no work until it rests.
+  if (name !== '' && restingFor(name) > 0) return Promise.resolve(undefined)
   // A named worker may only take untargeted jobs or jobs aimed at it.
   const index = queue.findIndex(job => job.target === undefined || job.target === name)
   const queued = index >= 0 ? queue.splice(index, 1)[0] : undefined
@@ -162,7 +172,17 @@ export function complete(id: string, result: { ok: true; body: unknown } | { ok:
   const job = waiting.get(id)
   if (job === undefined) return false
   const name = workerName.trim()
-  if (name !== '') served.set(name, (served.get(name) ?? 0) + 1)
+  if (name !== '') {
+    if (result.ok) {
+      failures.delete(name)
+      served.set(name, (served.get(name) ?? 0) + 1)
+    } else {
+      // A machine that cannot answer is rested, so the pool stops handing it work.
+      const count = (failures.get(name) ?? 0) + 1
+      failures.set(name, count)
+      if (count >= 2) resting.set(name, Date.now() + REST_MS)
+    }
+  }
   job.settle(result)
   return true
 }

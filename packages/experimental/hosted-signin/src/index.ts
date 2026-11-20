@@ -17,7 +17,7 @@ import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
-import { memoryPageHtml } from './memory-page.ts'
+import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
@@ -302,6 +302,25 @@ export function apply(ctx: Context): void {
         'cache-control': 'no-store',
       })
       res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Forget one learned record. A memory you cannot remove is a liability.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/memory/forget', auth: 'required',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const raw = await readBody(req)
+        const payload = JSON.parse(raw === '' ? '{}' : raw) as { project?: unknown; at?: unknown; session?: unknown }
+        if (typeof payload.project !== 'string' || typeof payload.at !== 'number' || typeof payload.session !== 'string') {
+          respond(res, 400, { error: 'project, at and session are required' })
+          return
+        }
+        const result = forgetRecord(payload.project, payload.at, payload.session)
+        respond(res, result === undefined ? 404 : 200, result === undefined ? { error: 'not found' } : result)
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
   // Owner-triggered relay check: send one real prompt through a connected worker.

@@ -8,7 +8,7 @@
  * @module @deepseek-ai/dsh-hosted-signin/memory-page
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -68,6 +68,33 @@ function esc(value: string): string {
 }
 
 /**
+ * Remove one record from a project's memory file.
+ * @param project - project file stem (the value shown by the page).
+ * @param at - record timestamp identifying it.
+ * @param session - session id, to disambiguate records written the same ms.
+ * @returns how many records remain, or undefined when nothing matched.
+ */
+export function forgetRecord(project: string, at: number, session: string): { remaining: number } | undefined {
+  const path = join(memoryDir(), `${project.replace(/[^a-z0-9-]/gi, '')}.jsonl`)
+  if (!existsSync(path)) return undefined
+  const kept: string[] = []
+  let removed = false
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.trim() === '') continue
+    try {
+      const record = JSON.parse(line) as MemoryRecord
+      if (!removed && record.at === at && record.session === session) { removed = true; continue }
+    } catch { /* keep unreadable lines */ }
+    kept.push(line)
+  }
+  if (!removed) return undefined
+  const temporary = `${path}.${String(process.pid)}.tmp`
+  writeFileSync(temporary, kept.length === 0 ? '' : `${kept.join('\n')}\n`, 'utf8')
+  renameSync(temporary, path)
+  return { remaining: kept.length }
+}
+
+/**
  * Render the memory page.
  * @returns the page HTML.
  */
@@ -87,7 +114,10 @@ export function memoryPageHtml(): string {
           const tone = match[1]?.toUpperCase() === 'PITFALLS' ? 'warn' : match[1]?.toUpperCase() === 'NEXT' ? 'good' : 'muted'
           return `<p class="line"><span class="tag ${tone}">${esc(String(match[1]))}</span> ${esc(match[2] ?? '')}</p>`
         }).join('')
-        return `<div class="card"><div class="meta">${when} · session ${esc(record.session.slice(0, 22))}</div>${sections}</div>`
+        return `<div class="card" data-project="${esc(group.project)}" data-at="${String(record.at)}" data-session="${esc(record.session)}">
+          <div class="meta">${when} · session ${esc(record.session.slice(0, 22))}
+            <button class="forget" type="button" title="Forget this record">forget</button>
+          </div>${sections}</div>`
       }).join('')
       return `<section><h2>${esc(group.project)} <span class="count">${String(group.records.length)}</span></h2>${cards}</section>`
     }).join('')
@@ -117,6 +147,9 @@ export function memoryPageHtml(): string {
   .tag.warn{border-color:#5a3a1a;color:#f0b46a}
   .tag.good{border-color:#1f4a33;color:#7ee2a8}
   .empty{color:#7d7d86;font-size:.86rem;line-height:1.6}
+  .forget{margin-left:.5rem;padding:.05rem .4rem;border-radius:.25rem;border:1px solid #3a3a44;background:#1f1f27;
+    color:#8a8a93;font-size:.62rem;letter-spacing:.06em;cursor:pointer}
+  .forget:hover{border-color:#C1440E;color:#F2F2F4}
   a{color:#7ee2a8;text-decoration:none}
   .foot{margin-top:1.2rem;font-size:.8rem;color:#6f6f78}
 </style></head><body><main>
@@ -126,6 +159,34 @@ This is what a new session in that project will be told, before you type a word 
 by editing the files under <code>${esc(memoryDir())}</code>.</p>
 ${body}
 <p class="foot"><a href="/admin">← Owner console</a> &nbsp;·&nbsp; <a href="/workers">Local agents</a></p>
+<script>
+(() => {
+  for (const button of document.querySelectorAll('.forget')) {
+    button.addEventListener('click', async () => {
+      const card = button.closest('.card')
+      if (card === null) return
+      button.disabled = true
+      const response = await fetch('/api/memory/forget', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          project: card.dataset.project,
+          at: Number(card.dataset.at),
+          session: card.dataset.session,
+        }),
+      })
+      if (response.ok) {
+        card.style.opacity = '.35'
+        button.textContent = 'forgotten'
+        setTimeout(() => card.remove(), 350)
+      } else {
+        button.textContent = 'failed'
+        button.disabled = false
+      }
+    })
+  }
+})()
+</script>
 </main></body></html>`
 }
 
