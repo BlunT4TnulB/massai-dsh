@@ -19,7 +19,7 @@ import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
-import { complete, enqueue, nextJob, relayStatus } from './worker-relay.ts'
+import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
@@ -72,6 +72,16 @@ async function readFields(req: IncomingMessage): Promise<Map<string, string>> {
   }
   for (const [key, value] of new URLSearchParams(text)) fields.set(key, value)
   return fields
+}
+
+/** The worker token from `x-worker-token` or a standard `Authorization: Bearer`. */
+function workerTokenOf(req: IncomingMessage): string | undefined {
+  const direct = req.headers['x-worker-token']
+  if (typeof direct === 'string') return direct
+  const authorization = req.headers.authorization
+  if (typeof authorization !== 'string') return undefined
+  const match = /^Bearer\s+(.+)$/i.exec(authorization.trim())
+  return match?.[1]
 }
 
 /** Extract the apiKey from a JSON or form-encoded body. */
@@ -226,7 +236,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/workers/next', auth: 'anonymous',
     handler: async (req, res) => {
-      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      const token = workerTokenOf(req)
       if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
       const job = await nextJob()
       if (job === undefined) { res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); return }
@@ -237,7 +247,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/workers/answer', auth: 'anonymous',
     handler: async (req, res) => {
-      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      const token = workerTokenOf(req)
       if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
@@ -259,9 +269,13 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/local/v1/chat/completions', auth: 'anonymous',
     handler: async (req, res) => {
-      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      const token = workerTokenOf(req)
       if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      if (!workerConnected()) {
+        respond(res, 503, { error: 'no local worker is connected right now' })
+        return
+      }
       try {
         const raw = await readBody(req)
         const body: unknown = raw === '' ? {} : JSON.parse(raw)
@@ -309,7 +323,7 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       // Answer 404 unless the shared token matches: a scanner cannot learn the
       // route exists, and a missing configuration looks like a plain miss.
-      const token = typeof req.headers['x-worker-token'] === 'string' ? req.headers['x-worker-token'] : undefined
+      const token = workerTokenOf(req)
       if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {

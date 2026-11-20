@@ -32,6 +32,10 @@ const queue: RelayJob[] = []
 const waiting = new Map<string, RelayJob>()
 /** Long-poll waiters: resolve with a job when one arrives. */
 const pollers: Array<(job: RelayJob | undefined) => void> = []
+/** When a worker last asked for work (ms since epoch). */
+let lastPollAt = 0
+/** How recently a worker must have polled to count as connected. */
+const CONNECTED_WINDOW_MS = 90_000
 
 /** How long a caller waits for a worker answer. */
 const JOB_TIMEOUT_MS = 180_000
@@ -44,6 +48,15 @@ const POLL_HOLD_MS = 25_000
  * @returns the worker's response body.
  * @throws when no worker answers before the timeout.
  */
+/**
+ * Whether any worker is connected right now: it is polling, or it polled
+ * recently enough that its next poll is imminent.
+ * @returns true when a worker is available to answer.
+ */
+export function workerConnected(): boolean {
+  return pollers.length > 0 || Date.now() - lastPollAt < CONNECTED_WINDOW_MS
+}
+
 export function enqueue(body: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const id = randomUUID()
@@ -77,6 +90,7 @@ export function enqueue(body: unknown): Promise<unknown> {
  * @returns the job, or undefined when none arrived.
  */
 export function nextJob(): Promise<RelayJob | undefined> {
+  lastPollAt = Date.now()
   const job = queue.shift()
   if (job !== undefined) return Promise.resolve(job)
   return new Promise((resolve) => {
@@ -107,6 +121,6 @@ export function complete(id: string, result: { ok: true; body: unknown } | { ok:
 }
 
 /** Diagnostics for the owner page. */
-export function relayStatus(): { queued: number; inFlight: number; pollers: number } {
-  return { queued: queue.length, inFlight: waiting.size, pollers: pollers.length }
+export function relayStatus(): { queued: number; inFlight: number; pollers: number; connected: boolean } {
+  return { queued: queue.length, inFlight: waiting.size, pollers: pollers.length, connected: workerConnected() }
 }
