@@ -41,7 +41,7 @@ export function startPageHtml(): string {
   .wrap{max-width:46rem;width:100%}
   .brandbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem}
   .mini{width:2rem;height:auto}
-  .minibrand{font-size:.95rem;font-weight:700;letter-spacing:.24em;text-transform:lowercase;color:#F2F2F4}
+  .minibrand{font-size:.95rem;font-weight:700;letter-spacing:.2em;color:#F2F2F4}
   h1{margin:0 0 .4rem;font-size:1.9rem;font-weight:700;letter-spacing:.01em}
   h1 b{color:#7ee2a8}
   p.lead{margin:0 0 1.6rem;color:#9a9aa2;font-size:1rem;line-height:1.55;font-weight:500}
@@ -70,7 +70,7 @@ export function startPageHtml(): string {
         <rect x="3" y="6" width="7" height="1"/><rect x="2" y="3" width="4" height="1"/>
       </g>
     </svg>
-    <span class="minibrand">massai</span>
+    <span class="minibrand">Massai</span>
   </div>
   <h1>What would you like to <b>make?</b></h1>
   <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing.</p>

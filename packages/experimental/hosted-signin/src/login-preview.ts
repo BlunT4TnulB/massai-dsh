@@ -39,7 +39,7 @@ export function loginPreviewHtml(): string {
     padding:1.6rem 1.5rem 1.2rem;box-shadow:0 30px 80px rgba(0,0,0,.6)}
   .brand{display:flex;align-items:center;gap:.55rem;justify-content:center;margin-bottom:1.15rem}
   .brand svg{width:1.9rem;height:auto}
-  .brand span{font-size:.95rem;font-weight:700;letter-spacing:.24em;text-transform:lowercase}
+  .brand span{font-size:.95rem;font-weight:700;letter-spacing:.2em}
   h1{margin:0 0 .3rem;font-size:1.22rem;font-weight:700;text-align:center;color:#F2F2F4}
   .sub{margin:0 0 1.15rem;font-size:.86rem;color:#9a9aa3;text-align:center;font-weight:500;line-height:1.5}
   .providers{display:grid;gap:.5rem}
@@ -78,7 +78,7 @@ export function loginPreviewHtml(): string {
         <rect x="13" y="1" width="1" height="2"/>
       </g>
     </svg>
-    <span>massai</span>
+    <span>Massai</span>
   </div>
   <h1>Welcome back</h1>
   <p class="sub">Sign in to build — your DeepSeek key stays yours.</p>

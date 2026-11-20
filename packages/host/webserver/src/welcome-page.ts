@@ -80,7 +80,7 @@ export function welcomePage(line?: number): string {
   .card{padding:1.6rem 1.7rem 1.5rem}
   h1{margin:.2rem 0 .35rem;font-size:1.85rem;line-height:1.1;font-weight:700;letter-spacing:-.015em}
   .brandline{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.35rem}
-  .word{font-size:1.1rem;font-weight:700;letter-spacing:.26em;text-transform:lowercase}
+  .word{font-size:1.1rem;font-weight:700;letter-spacing:.22em}
   .sub{color:#9a9aa3;font-size:.92rem;line-height:1.55;font-weight:500;margin:0 0 1.1rem}
   /* the notice block — reads like a disclaimer, says what is actually needed */
   .notice{border:1px solid #2f2f37;border-radius:.7rem;background:#1c1c23;padding:.95rem 1rem;margin:0 0 1.1rem}
@@ -131,7 +131,7 @@ export function welcomePage(line?: number): string {
     <span class="flag">open by default</span>
   </div>
   <div class="card">
-    <div class="brandline"><span class="word">massai</span></div>
+    <div class="brandline"><span class="word">Massai</span></div>
     <h1 id="door-title">${headline}</h1>
     <p class="sub">Point at what you want — a tool, a site, an app, a workflow, a thing that
     doesn't exist yet. A child could be walked through this.</p>
