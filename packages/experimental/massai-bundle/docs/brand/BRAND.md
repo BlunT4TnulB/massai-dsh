@@ -36,6 +36,17 @@ Rendered for real and tested at 16/24/32/48/64px (`compare.png`, `small-sizes.pn
 | Bone | `#F2F2F4` | Wordmark, primary text |
 | Whale blue | `#4D6BFE` | **Only** the whale — a nod to DeepSeek, our engine and first among the commons |
 
+## Icons (Android/Pixel rules that actually matter)
+
+- **Maskable art is separate art.** Android masks the launcher icon to a circle/squircle. A padded
+  "any" icon gets shrunk to a stamp; declare `"purpose": "maskable"` with full-bleed `#151517` and
+  artwork inside the 80% safe circle so the mask crops background, never the shield.
+- Ship **four** entries: `any` 192/512 + `maskable` 192/512. Keep `apple-touch-icon` at 180
+  (iOS never masks) and let it fill ~86%.
+- After any icon change, Android caches the shortcut: remove and re-add it to see the new mark.
+- Renderer: `sharp` from `/opt/dsh/node_modules` (the workspace copy is a broken partial install);
+  run generator scripts from `/opt/dsh` and write output into the repo.
+
 ## Rules
 1. The whale is the only element allowed in whale blue. It never gets recoloured.
 2. The shield keeps its stroke weight at every size; below 24px drop the spears.
@@ -77,6 +88,13 @@ that test: no code, no setup, no vocabulary. If a step needs explaining, the ste
 
 **Invitation (positioning):** *Bring the idea. We'll learn the rest together.*
 — flips "you don't need to know anything" from a confession into a welcome.
+
+## Persistence note
+
+Visitor notes (`/feedback`) and conversation logs live in the container filesystem: they survive
+redeploys **only** with a Render persistent disk (mount `/var/data`, set `DSH_HOME=/var/data/dsh`).
+Disk creation via API returns **402 Payment information required** — it needs a card on the Render
+account, so it is a one-click owner action in the dashboard.
 
 ## Live preview
 `https://massai-dsh.onrender.com/logo-preview` (concept sheet, anonymous)

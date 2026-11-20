@@ -30,6 +30,7 @@ export function startPageHtml(): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — what would you like to make?</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#151517">
@@ -38,6 +39,9 @@ export function startPageHtml(): string {
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem 1.25rem;
     background:#151517;color:#F2F2F4;font-family:system-ui,-apple-system,sans-serif}
   .wrap{max-width:46rem;width:100%}
+  .brandbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem}
+  .mini{width:2rem;height:auto}
+  .minibrand{font-size:.95rem;font-weight:700;letter-spacing:.24em;text-transform:lowercase;color:#F2F2F4}
   h1{margin:0 0 .4rem;font-size:1.9rem;font-weight:700;letter-spacing:.01em}
   h1 b{color:#7ee2a8}
   p.lead{margin:0 0 1.6rem;color:#9a9aa2;font-size:1rem;line-height:1.55;font-weight:500}
@@ -55,6 +59,19 @@ export function startPageHtml(): string {
   .foot{margin-top:1.5rem;color:#6f6f77;font-size:.8rem;text-align:center;line-height:1.6}
   .foot b{color:#8f8f97}
 </style></head><body><div class="wrap">
+  <div class="brandbar">
+    <svg viewBox="0 0 120 132" aria-hidden="true" class="mini">
+      <ellipse cx="60" cy="10" rx="21" ry="5.6" fill="none" stroke="#C9A227" stroke-width="3"/>
+      <path d="M16 100L104 22M104 100L16 22" stroke="#C1440E" stroke-width="3.2" stroke-linecap="round" opacity=".6"/>
+      <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
+        fill="#151517" stroke="#C1440E" stroke-width="5"/>
+      <g fill="#4D6BFE" transform="translate(35 48) scale(2.6)">
+        <rect x="2" y="4" width="9" height="1"/><rect x="2" y="5" width="10" height="1"/>
+        <rect x="3" y="6" width="7" height="1"/><rect x="2" y="3" width="4" height="1"/>
+      </g>
+    </svg>
+    <span class="minibrand">massai</span>
+  </div>
   <h1>What would you like to <b>make?</b></h1>
   <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing.</p>
   <div class="grid">${cards}</div>
