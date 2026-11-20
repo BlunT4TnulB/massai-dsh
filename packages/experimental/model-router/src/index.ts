@@ -42,6 +42,8 @@ export interface Config {
   mode?: 'auto' | 'escalate-only' | 'off'
   ceilingTokens?: number
   errorStreak?: number
+  /** Model used whenever the prompt carries an image (the vision-capable tier). */
+  visionModel?: string
 }
 
 export const Config: z<Config> = z.object({
@@ -51,6 +53,7 @@ export const Config: z<Config> = z.object({
   mode: z.union(['auto', 'escalate-only', 'off']),
   ceilingTokens: z.number(),
   errorStreak: z.number(),
+  visionModel: z.string(),
 })
 
 export interface RouteResult {
@@ -66,6 +69,22 @@ export interface Signals {
   keyword: string | undefined
   /** Failed tool results at the tail of the history. */
   errorStreak: number
+}
+
+/**
+ * Whether any message carries an image block.
+ * @param messages - the step's messages.
+ * @returns true when the prompt is multimodal.
+ */
+function hasImage(messages: ReadonlyArray<{ content?: unknown }>): boolean {
+  for (const message of messages) {
+    const content = message.content
+    if (!Array.isArray(content)) continue
+    for (const part of content) {
+      if (part !== null && typeof part === 'object' && (part as { type?: unknown }).type === 'image') return true
+    }
+  }
+  return false
 }
 
 /** Flatten one message's content into searchable text. */
@@ -129,6 +148,12 @@ export function decide(options: { messages?: ReadonlyArray<{ content?: unknown; 
   const streakLimit = config.errorStreak ?? DEFAULT_ERROR_STREAK
   const signals = signalsOf(options, config)
   const heaviest = (model: string): boolean => !model.includes('flash')
+  // Capability beats cost: a text-only model cannot receive an image at all, so
+  // a multimodal prompt pins the step to the vision-capable tier.
+  if (hasImage(options.messages ?? [])) {
+    const vision = config.visionModel ?? cheap
+    return { model: vision, reason: `pinned to ${vision} (prompt carries an image; it is the vision-capable tier)` }
+  }
 
   if (signals.keyword !== undefined) {
     return { model: quality, reason: `escalated to ${quality} (asks for "${signals.keyword}")` }
@@ -169,9 +194,10 @@ export function apply(ctx: Context, config: Config = {}): void {
           const wantsCheaper = decision.model.includes('flash') && !modelSelection.model.includes('flash')
           if (mode === 'escalate-only' && wantsCheaper) return next()
           if (decision.model !== modelSelection.model) {
-            const selection = modelSelection.reasoningEffort === undefined
-              ? { provider: modelSelection.provider, model: decision.model }
-              : { provider: modelSelection.provider, model: decision.model, reasoningEffort: modelSelection.reasoningEffort }
+            const carryEffort = modelSelection.reasoningEffort !== undefined && !decision.model.includes('flash')
+            const selection = carryEffort
+              ? { provider: modelSelection.provider, model: decision.model, reasoningEffort: modelSelection.reasoningEffort }
+              : { provider: modelSelection.provider, model: decision.model }
             ;(agent as Agent).model.select(selection)
             ctx.logger?.info?.('model-router', '%s -> %s: %s', modelSelection.model, decision.model, decision.reason)
           }
