@@ -66,6 +66,7 @@ export function startPageHtml(): string {
     <a href="/">open the app</a>
   </p>
   <p class="foot">Bring the idea. We'll learn the rest together.<br>
-  <b>Tip:</b> you can always just start typing — nothing here is a commitment.</p>
+  <b>Tip:</b> you can always just start typing — nothing here is a commitment.<br>
+  <a href="/feedback" style="color:#8f8f97;border-bottom:1px solid #33333b;text-decoration:none">Tell us what you're building — we read every note</a></p>
 </div></body></html>`
 }

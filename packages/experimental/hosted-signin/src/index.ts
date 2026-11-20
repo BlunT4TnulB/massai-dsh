@@ -15,6 +15,7 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { startPageHtml } from './start-page.ts'
+import { feedbackPageHtml, recentNotes, recentPageHtml, saveNote, thanksPageHtml } from './feedback.ts'
 
 export const name = 'hosted-signin'
 export const inject = ['credentials', 'webServer', 'browserAuth']
@@ -46,6 +47,22 @@ async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = []
   for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
   return Buffer.concat(chunks).toString('utf8')
+}
+
+/** Read a body into a field map (URL-encoded form or JSON object). */
+async function readFields(req: IncomingMessage): Promise<Map<string, string>> {
+  const text = await readBody(req)
+  const fields = new Map<string, string>()
+  const contentType = req.headers['content-type'] ?? ''
+  if (contentType.includes('application/json')) {
+    const parsed = JSON.parse(text === '' ? '{}' : text) as Record<string, unknown>
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string') fields.set(key, value)
+    }
+    return fields
+  }
+  for (const [key, value] of new URLSearchParams(text)) fields.set(key, value)
+  return fields
 }
 
 /** Extract the apiKey from a JSON or form-encoded body. */
@@ -90,6 +107,45 @@ export function apply(ctx: Context): void {
       },
     })
   }
+  // Visitor notes: anyone can leave one; the owner reads them semi-live.
+  ctx.webServer.register({
+    kind: 'exact', path: '/feedback', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(feedbackPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/feedback', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const fields = await readFields(req)
+        const text = (fields.get('text') ?? '').trim().slice(0, 1000)
+        if (text === '') { respond(res, 400, { error: 'text is required' }); return }
+        const email = (fields.get('email') ?? '').trim().slice(0, 200)
+        saveNote({ at: new Date().toISOString(), text, ...email === '' ? {} : { email } })
+        const html = Buffer.from(thanksPageHtml())
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(html.byteLength), 'cache-control': 'no-store' })
+        res.end(html)
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+  ctx.webServer.register({
+    kind: 'exact', path: '/feedback/recent', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(recentPageHtml(recentNotes(50)))
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(html.byteLength), 'cache-control': 'no-store' })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
   // Guided first step after sign-in: four cards, no vocabulary required.
   ctx.webServer.register({
     kind: 'exact', path: '/start', auth: 'required',
