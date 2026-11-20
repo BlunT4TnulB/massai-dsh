@@ -11914,6 +11914,9 @@ importers:
       '@deepseek-ai/dsh-hosted-signin':
         specifier: workspace:*
         version: link:../hosted-signin
+      '@deepseek-ai/dsh-llm-pi-ai':
+        specifier: workspace:*
+        version: link:../../llm/llm-pi-ai
       '@deepseek-ai/dsh-model-router':
         specifier: workspace:*
         version: link:../model-router
