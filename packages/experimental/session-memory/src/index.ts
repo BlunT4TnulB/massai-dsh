@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
+import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import z from '@deepseek-ai/schemastery'
@@ -133,7 +133,6 @@ function textOf(message: unknown): string {
 async function distill(
   ctx: { llm: { stream(options: GenerateOptions<string>): AsyncIterable<StreamChunk> } },
   config: Config,
-  agent: Agent,
   messages: readonly unknown[],
 ): Promise<string | undefined> {
   const transcript = messages
@@ -177,7 +176,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   /** Agents that already wrote a record this session. */
   const recorded = new Set<string>()
 
-  ctx.on('agent/pre-step', async ({ agent, messages }, next): Promise<PreStepDecision> => {
+  ctx.on('agent/pre-step', async ({ agent }, next): Promise<PreStepDecision> => {
     try {
       const cwd = agent.session.header.cwd ?? process.cwd()
       if (!recalled.has(agent.id)) {
@@ -209,27 +208,38 @@ export function apply(ctx: Context, config: Config = {}): void {
     return next()
   })
 
-  // Once per substantial session, write the durable record.
-  ctx.on('turn/end', async (event: { agent?: Agent }): Promise<void> => {
-    try {
-      const agent = event.agent
-      if (agent === undefined || recorded.has(agent.id)) return
-      const turns = agent.session.seq
-      if (turns < minTurns) return
-      recorded.add(agent.id)
-      const cwd = agent.session.header.cwd ?? process.cwd()
-      const messages: unknown[] = []
-      for (let seq = 0; seq < agent.session.seq; seq += 1) {
-        const record = agent.session.eventAt(seq as never) as { type?: string; data?: { message?: unknown } } | undefined
-        if (record?.type === 'user/message' || record?.type === 'assistant/message') {
-          const message = record.data?.message
-          if (message !== undefined) messages.push(message)
+  // Once per substantial session, write the durable record. `session/event` is
+  // a plain event (no continuation), so the work is fire-and-forget.
+  type SessionLike = {
+    header: { cwd?: string }
+    seq: number
+    id: unknown
+    eventAt(seq: never): unknown
+  }
+  ctx.on('session/event', (sessionRow, sessionEvent) => {
+    const session = sessionRow as unknown as SessionLike
+    const event = sessionEvent as { type?: string }
+    void (async () => {
+      try {
+        if (event.type !== 'turn/end') return
+        if (session.seq < minTurns) return
+        const key = String(session.id)
+        if (recorded.has(key)) return
+        recorded.add(key)
+        const cwd = session.header.cwd ?? process.cwd()
+        const messages: unknown[] = []
+        for (let seq = 0; seq < session.seq; seq += 1) {
+          const record = session.eventAt(seq as never) as { type?: string; data?: { message?: unknown } } | undefined
+          if (record?.type === 'user/message' || record?.type === 'assistant/message') {
+            const message = record.data?.message
+            if (message !== undefined) messages.push(message)
+          }
         }
+        const text = await distill(ctx.get('llm') as never, config, messages)
+        if (text !== undefined) appendRecord(cwd, { at: Date.now(), cwd, session: key, text })
+      } catch {
+        /* memory writes must never break a turn */
       }
-      const text = await distill(ctx.get('llm') as never, config, agent, messages)
-      if (text !== undefined) appendRecord(cwd, { at: Date.now(), cwd, session: String(agent.session.id), text })
-    } catch {
-      /* memory writes must never break a turn */
-    }
+    })()
   })
 }
