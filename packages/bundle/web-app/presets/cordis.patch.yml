@@ -74,6 +74,12 @@
             config:
               - id: compaction-basic
                 name: '@deepseek-ai/dsh-compaction-basic'
+                config:
+                  # Compact far earlier than the 0.8-of-1M default. Every call
+                  # re-reads the whole context at the cached rate, so an 800k
+                  # working window is the dominant cost line, not a safety net.
+                  thresholdRatio: 0.2
+                  retainRatio: 0.06
               - id: command-compact
                 name: '@deepseek-ai/dsh-command-compact'
               - id: tool-result-pruner

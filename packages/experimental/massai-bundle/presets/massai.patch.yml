@@ -29,6 +29,20 @@
             name: '@deepseek-ai/dsh-tool-fs-search'
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
+          # Context hygiene. Every model call re-reads the whole context at the
+          # cached rate, so an uncompacted window is the dominant cost line.
+          - id: compaction-basic
+            name: '@deepseek-ai/dsh-compaction-basic'
+            config:
+              thresholdRatio: 0.2
+              retainRatio: 0.06
+          - id: command-compact
+            name: '@deepseek-ai/dsh-command-compact'
+          - id: tool-result-pruner
+            name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+            config:
+              thresholdChars: 8192
+              headChars: 4096
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
           - id: tool-skill

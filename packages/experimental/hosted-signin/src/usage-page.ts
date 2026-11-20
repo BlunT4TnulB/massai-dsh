@@ -123,6 +123,7 @@ export function usagePageHtml(): string {
   <div class="kpi"><b>${compact(totals.input + totals.cacheRead)}</b><span>prompt tokens</span></div>
   <div class="kpi"><b>${compact(totals.output)}</b><span>completion tokens</span></div>
   <div class="kpi"><b>${compact(totals.cacheRead)}</b><span>from cache</span></div>
+  <div class="kpi"><b>${compact(totals.requests === 0 ? 0 : (totals.input + totals.cacheRead) / totals.requests)}</b><span>avg context / call</span></div>
   <div class="kpi"><b>$${totals.cost.toFixed(2)}</b><span>est. spend</span></div>
   <div class="kpi"><b>${sessions.length}</b><span>sessions</span></div>
 </div></section>
