@@ -38,6 +38,61 @@ const SCENARIOS: ReadonlyArray<{ title: string; body: string; verdict: string }>
   },
 ]
 
+
+/** One platform's setup path: download, install, pull, verify. */
+interface Platform {
+  /** Tab label. */
+  label: string
+  /** What to click first. */
+  download: { text: string; url: string }
+  /** Shell commands in order, each copyable. */
+  commands: readonly string[]
+  /** Extra prose for this platform. */
+  note: string
+}
+
+/** The clickable paths, one per kind of machine a person might own. */
+const PLATFORMS: readonly Platform[] = [
+  {
+    label: 'macOS',
+    download: { text: 'Download Ollama for macOS', url: 'https://ollama.com/download/mac' },
+    commands: [
+      'ollama pull qwen2.5-coder:7b',
+      'curl -sS -X POST http://127.0.0.1:11434/api/generate -H "content-type: application/json" -d \'{"model":"qwen2.5-coder:7b","prompt":"Say ready","stream":false}\'',
+    ],
+    note: 'Apple silicon (M1 or newer) runs the 7B well. On an Intel Mac use the 3B instead.',
+  },
+  {
+    label: 'Windows',
+    download: { text: 'Download Ollama for Windows', url: 'https://ollama.com/download/windows' },
+    commands: [
+      'ollama pull qwen2.5-coder:7b',
+      'curl.exe -sS -X POST http://127.0.0.1:11434/api/generate -H "content-type: application/json" -d "{\\"model\\":\\"qwen2.5-coder:7b\\",\\"prompt\\":\\"Say ready\\",\\"stream\\":false}"',
+    ],
+    note: 'Install it, then open PowerShell. The model runs in the tray; close it to free memory.',
+  },
+  {
+    label: 'Linux',
+    download: { text: 'Install Ollama on Linux', url: 'https://ollama.com/download/linux' },
+    commands: [
+      'curl -fsSL https://ollama.com/install.sh | sh',
+      'ollama pull qwen2.5-coder:7b',
+      'curl -sS -X POST http://127.0.0.1:11434/api/generate -H "content-type: application/json" -d \'{"model":"qwen2.5-coder:7b","prompt":"Say ready","stream":false}\'',
+    ],
+    note: 'Needs about 5 GB of disk for the 7B. Services start automatically on most distributions.',
+  },
+  {
+    label: 'Android phone',
+    download: { text: 'Get Termux (F-Droid)', url: 'https://f-droid.org/en/packages/com.termux/' },
+    commands: [
+      'pkg install ollama',
+      'ollama pull qwen2.5-coder:1.5b',
+      'ollama run qwen2.5-coder:1.5b "Say ready"',
+    ],
+    note: 'Phones run the 1.5B or 3B model, slowly and hot. Use a 12 GB phone with the 3B if you can; keep it plugged in.',
+  },
+]
+
 /** Hardware ladder from a spare phone to a server room. */
 const LADDER: ReadonlyArray<readonly [string, string, string, string]> = [
   ['Old phone (8 GB)', '1B–3B at 4-bit', 'runs, slowly', 'short questions, drafting, offline notes'],
@@ -114,6 +169,23 @@ export function localGuidePageHtml(): string {
   .good{color:#7ee2a8}.warn{color:#f0b46a}
   .note{margin:.7rem 0 0;font-size:.78rem;color:#6f6f78;line-height:1.65}
   .foot{margin-top:1.6rem;font-size:.8rem;color:#6f6f78}
+  .tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem}
+  .tab{padding:.45rem .8rem;border-radius:.45rem;border:1px solid #31313a;background:#1f1f27;color:#c2c2cb;
+    font-size:.82rem;font-weight:600;cursor:pointer}
+  .tab.on{border-color:#C1440E;color:#F2F2F4;background:#241a15}
+  .pane{display:none}.pane.on{display:block}
+  .dl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin:.2rem 0 .8rem}
+  .btn{display:inline-block;padding:.55rem .9rem;border-radius:.5rem;background:#C1440E;color:#fff;
+    font-weight:700;font-size:.88rem;text-decoration:none}
+  .btn:hover{background:#d4531a}
+  .muted{color:#7d7d86;font-size:.76rem}
+  .cmds{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:.45rem}
+  .cmds li{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .cmds code{background:#0b0b0e;border:1px solid #26262d;padding:.4rem .55rem;border-radius:.4rem;
+    font-size:.78rem;color:#d8d8e0;overflow-wrap:anywhere}
+  .copy{padding:.3rem .55rem;border-radius:.35rem;border:1px solid #31313a;background:#1f1f27;color:#9a9aa3;
+    font-size:.7rem;font-weight:600;cursor:pointer}
+  .copy:hover{border-color:#C1440E;color:#F2F2F4}
 </style></head><body><main>
 <h1>Running an agent on your own machine</h1>
 <p class="lede">A local model is free per message, works offline, and keeps your prompts private.
@@ -126,6 +198,19 @@ effect out of one — and knowing when it actually saves money.</p>
   <p class="note"><b>Rule of thumb:</b> model size in RAM, plus ~2 GB for the system, plus room
   for the agent. Apple silicon is the best value per watt; a CPU-only 7B works but feels slow in
   long agent loops. Do not stack a model on the machine already running the agent.</p>
+</section>
+
+
+<section><h2>Get a working unit — pick your machine</h2>
+  <div class="tabs" id="tabs">${PLATFORMS.map((p, i) => `<button class="tab${i === 0 ? ' on' : ''}" data-tab="${String(i)}">${p.label}</button>`).join('')}</div>
+  ${PLATFORMS.map((p, i) => `<div class="pane${i === 0 ? ' on' : ''}" data-pane="${String(i)}">
+    <p class="dl"><a class="btn" href="${p.download.url}" target="_blank" rel="noopener">${p.download.text} →</a>
+      <span class="muted">free, from the people who make the model runner</span></p>
+    <ol class="cmds">${p.commands.map(c => `<li><code>${c.replaceAll('<', '&lt;')}</code><button class="copy" data-copy>copy</button></li>`).join('')}</ol>
+    <p class="note">${p.note}</p>
+  </div>`).join('')}
+  <p class="note"><b>How you know it worked:</b> the last command prints a short JSON reply containing "ready".
+  That means the model is on your machine and answering — no account, no internet needed after this.</p>
 </section>
 
 <section><h2>The ladder: a spare phone to a server room</h2>
@@ -183,6 +268,22 @@ effect out of one — and knowing when it actually saves money.</p>
 <p class="foot"><a href="/guide">← The getting-started guide</a> &nbsp;·&nbsp; <a href="/">The door</a></p>
 <script>
 (() => {
+  // platform tabs + copy buttons
+  for (const tab of document.querySelectorAll('.tab')) {
+    tab.addEventListener('click', () => {
+      for (const other of document.querySelectorAll('.tab')) other.classList.remove('on')
+      for (const pane of document.querySelectorAll('.pane')) pane.classList.remove('on')
+      tab.classList.add('on')
+      document.querySelector('.pane[data-pane="' + tab.dataset.tab + '"]').classList.add('on')
+    })
+  }
+  for (const button of document.querySelectorAll('.copy')) {
+    button.addEventListener('click', async () => {
+      const code = button.parentElement.querySelector('code')
+      try { await navigator.clipboard.writeText(code.textContent) ; button.textContent = 'copied'; setTimeout(() => { button.textContent = 'copy' }, 1500) }
+      catch { button.textContent = 'select it' }
+    })
+  }
   const ids = ['msgs','inp','cache','out','tier','hw']
   const el = (id) => document.getElementById(id)
   const rates = {
