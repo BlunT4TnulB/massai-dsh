@@ -75,23 +75,6 @@ async function readFields(req: IncomingMessage): Promise<Map<string, string>> {
 }
 
 
-/** Prompts a guest session may send before it must bring its own key. */
-const GUEST_PROMPT_LIMIT = 12
-
-/**
- * Count the prompts a session has sent, cheaply, from its durable events.
- * @param session - the agent's session.
- * @returns how many user messages it holds.
- */
-function promptCount(session: { seq: number; eventAt(seq: never): unknown }): number {
-  let count = 0
-  for (let seq = 0; seq < session.seq; seq += 1) {
-    const record = session.eventAt(seq as never) as { type?: string } | undefined
-    if (record?.type === 'user/message') count += 1
-  }
-  return count
-}
-
 /** The worker token from `x-worker-token` or a standard `Authorization: Bearer`. */
 function workerTokenOf(req: IncomingMessage): string | undefined {
   const direct = req.headers['x-worker-token']
