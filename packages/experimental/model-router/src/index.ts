@@ -64,8 +64,10 @@ export interface RouteResult {
 
 /** Signals read from the request about to be sent. */
 export interface Signals {
-  /** Rough prompt size in tokens (characters / 4). */
+  /** Rough prompt size in tokens, whole context (characters / 4). */
   promptTokens: number
+  /** Rough size of the NEWEST user message — the work being asked for now. */
+  newTokens: number
   /** Whether a routing keyword appears in the newest user message. */
   keyword: string | undefined
   /** Failed tool results at the tail of the history. */
@@ -117,10 +119,13 @@ export function signalsOf(options: { messages?: ReadonlyArray<{ content?: unknow
     + (options.system?.length ?? 0)
   const promptTokens = Math.round(chars / 4)
   let keyword: string | undefined
+  let newTokens = 0
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]
     if (message === undefined || message.role !== 'user') continue
-    const lower = textOf(message).toLowerCase()
+    const text = textOf(message)
+    newTokens = Math.round(text.length / 4)
+    const lower = text.toLowerCase()
     keyword = keywords.find(candidate => lower.includes(candidate))
     break
   }
@@ -133,7 +138,7 @@ export function signalsOf(options: { messages?: ReadonlyArray<{ content?: unknow
     if (/(^|\W)(error|failed|failure|exception|traceback)(\W|$)/.test(lower)) errorStreak += 1
     else break
   }
-  return { promptTokens, keyword, errorStreak }
+  return { promptTokens, newTokens, keyword, errorStreak }
 }
 
 /**
@@ -162,11 +167,11 @@ export function decide(options: { messages?: ReadonlyArray<{ content?: unknown; 
   if (signals.errorStreak >= streakLimit) {
     return { model: quality, reason: `escalated to ${quality} (${signals.errorStreak} failed tool results in a row)` }
   }
-  if (signals.promptTokens > ceiling) {
-    return { model: quality, reason: `escalated to ${quality} (${Math.round(signals.promptTokens / 1000)}k-token context)` }
+  if (signals.newTokens > ceiling) {
+    return { model: quality, reason: `escalated to ${quality} (${Math.round(signals.newTokens / 1000)}k tokens of new work)` }
   }
   if (heaviest(options.model)) {
-    return { model: cheap, reason: `dropped to ${cheap} (small context, no hard signals — ${Math.round(signals.promptTokens / 1000)}k tokens)` }
+    return { model: cheap, reason: `dropped to ${cheap} (${Math.round(signals.newTokens / 1000)}k new tokens, no hard signals)` }
   }
   return { model: options.model, reason: `kept ${options.model} (cheap is enough)` }
 }
@@ -197,7 +202,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         if (modelSelection?.model !== undefined) {
           const signals = signalsOf({ messages: messages as never }, config)
           const features: Features = {
-            size: signals.promptTokens < 10_000 ? 0 : signals.promptTokens < 30_000 ? 1 : signals.promptTokens < (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS) ? 2 : 3,
+            size: signals.newTokens < 2_000 ? 0 : signals.newTokens < 10_000 ? 1 : signals.newTokens < (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS) ? 2 : 3,
             keyword: signals.keyword !== undefined,
             struggling: signals.errorStreak >= (config.errorStreak ?? DEFAULT_ERROR_STREAK),
           }
