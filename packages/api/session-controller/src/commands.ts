@@ -38,7 +38,7 @@ import {
   hasApiSessionSubagentOwner,
   type ApiSessionCreated,
 } from './agent.ts'
-import { captionProjection, readImageCaption, writeImageCaption } from '@deepseek-ai/dsh-llm'
+import { readImageCaption, writeImageCaption } from '@deepseek-ai/dsh-llm'
 import type {
 
 
@@ -111,14 +111,14 @@ async function captionImage(
   ctx: { llm: { stream(options: GenerateOptions<string>): AsyncIterable<StreamChunk> } },
   provider: string,
   model: string,
-  image: { type: 'image'; attachment: ImageAttachmentRef },
+  image: ImageAttachmentRef,
 ): Promise<{ text: string; model: string; at: number } | undefined> {
   let text = ''
   try {
     const stream = ctx.llm.stream({
       provider,
       model,
-      messages: [createUserMessage({ content: [image, { type: 'text', text: CAPTION_PROMPT }] })],
+      messages: [createUserMessage({ content: [{ type: 'image', attachment: image }, { type: 'text', text: CAPTION_PROMPT }] })],
     })
     for await (const chunk of stream) {
       if (chunk.type === 'text-delta') text += chunk.text
@@ -444,23 +444,25 @@ export class SessionCommandController {
               agent.model.select({ provider: current.provider, model: vision })
             }
           }
-          // Give text-only models something to work with: caption each image once
-          // with a vision model, so the picture survives as words in the session.
+        }
+        const content = await this.ctx.attachments.admitPromptContent(admission.content)
+        // Give text-only models something to work with: caption each image once
+        // with a vision model, so the picture survives as words in the session.
+        if (hasImage) {
           const provider = agent.model.current()?.provider
           if (provider !== undefined) {
             const visionModel = await visionFallback(this.ctx, provider)
             if (visionModel !== undefined) {
-              for (const part of admission.content) {
+              for (const part of content) {
                 if (part.type !== 'image') continue
                 const attachmentId = part.attachment.attachmentId
                 if (readImageCaption(attachmentId) !== undefined) continue
-                const caption = await captionImage(this.ctx, provider, visionModel, part)
+                const caption = await captionImage(this.ctx, provider, visionModel, part.attachment)
                 if (caption !== undefined) writeImageCaption(attachmentId, caption)
               }
             }
           }
         }
-        const content = await this.ctx.attachments.admitPromptContent(admission.content)
         if (this.hasPromptRequest(agent.session, request.requestId)) return { accepted: true }
         const message: UserMessage = createUserMessage({ content, source })
         if (this.ctx.agents.get(agent.id) !== agent) {

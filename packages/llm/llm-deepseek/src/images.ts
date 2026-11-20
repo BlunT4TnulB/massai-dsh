@@ -1,7 +1,7 @@
 /** Deterministic Messages image preparation for Files references and bounded inline fallback. */
 
 import type { AttachmentStore, ImageAttachmentRef, RequestImageAttachment } from '@deepseek-ai/dsh-attachment'
-import { contentHasImage, IMAGE_OFFLOAD_REQUIRED_CODE, LlmError, offloadedImageText, projectOffloadedImages, requiredImageOffload } from '@deepseek-ai/dsh-llm'
+import { captionProjection, contentHasImage, IMAGE_OFFLOAD_REQUIRED_CODE, LlmError, offloadedImageText, projectOffloadedImages, readImageCaption, requiredImageOffload } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, ImageAttachmentAccessResolver, RequestMessage } from '@deepseek-ai/dsh-llm'
 import type { DeepSeekConnectionOptions as Connection } from './types.ts'
 import { resolveRequestImageTarget } from './request-pricing.ts'
@@ -127,17 +127,23 @@ export async function prepareFileIds(
  */
 function projectCaptions(messages: readonly RequestMessage[]): { messages: RequestMessage[]; missing: number } {
   let missing = 0
-  const projected = messages.map((message) => {
-    const content = message.content.flatMap((block) => {
-      if (block.type !== 'image') return [block]
+  const projected: RequestMessage[] = []
+  for (const message of messages) {
+    const content: ContentBlock[] = []
+    for (const block of message.content) {
+      if (block.type !== 'image') {
+        content.push(block)
+        continue
+      }
       const caption = readImageCaption(block.attachment.attachmentId)
       if (caption === undefined) {
         missing += 1
-        return [block]
+        content.push(block)
+        continue
       }
-      return [{ type: 'text' as const, text: captionProjection(caption) }]
-    })
-    return content === message.content ? message : { ...message, content }
-  })
+      content.push({ type: 'text', text: captionProjection(caption) })
+    }
+    projected.push({ ...message, content } as RequestMessage)
+  }
   return { messages: projected, missing }
 }
