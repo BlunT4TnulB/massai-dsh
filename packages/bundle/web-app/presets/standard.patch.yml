@@ -20,10 +20,10 @@
             name: '@deepseek-ai/dsh-time-context'
           - id: tool-bash
             name: '@deepseek-ai/dsh-tool-bash'
-            disabled: !!js (process.env.DSH_ALLOW_WILDCARD_HOST === '1') || (process.platform === 'win32)
+            disabled: !!js process.env.DSH_ALLOW_WILDCARD_HOST
           - id: tool-pwsh
             name: '@deepseek-ai/dsh-tool-pwsh'
-            disabled: !!js (process.env.DSH_ALLOW_WILDCARD_HOST === '1') || (process.platform !== 'win32)
+            disabled: !!js true
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
             config:
