@@ -144,9 +144,14 @@ async function distill(
   if (transcript.length < 200) return undefined
   const prompt = [
     'Summarise this work session for a teammate who will continue the project later.',
-    'Write at most eight short lines. Cover: what was built or changed, which files matter,',
-    'decisions and why, anything that broke and how it was fixed, and the next step.',
-    'No preamble, no praise, no restating the question.',
+    'Reply with exactly these four sections, each at most three short lines:',
+    '',
+    'WORK: what was built or changed, and which files matter.',
+    'PITFALLS: mistakes made, dead ends, and traps — say what failed and what fixed it.',
+    'TOOLS: which commands or tools actually worked for what (e.g. "npm test --filter x to isolate").',
+    'NEXT: the single next step.',
+    '',
+    'Be concrete. No preamble, no praise, no restating the question. Omit a section only if it is empty.',
     '',
     transcript,
   ].join('\n')
@@ -183,9 +188,17 @@ export function apply(ctx: Context, config: Config = {}): void {
         recalled.add(agent.id)
         const records = readRecords(cwd).slice(-recallEntries)
         if (records.length > 0) {
-          let block = 'Prior work in this project (from earlier sessions):\n'
+          let block = 'Prior work in this project. Use it; do not rediscover it.\n'
           for (const record of records) {
-            const entry = `• ${new Date(record.at).toISOString().slice(0, 10)}: ${record.text.replaceAll('\n', ' ')}\n`
+            const day = new Date(record.at).toISOString().slice(0, 10)
+            // Keep the section labels: PITFALLS is the part that stops a repeat
+            // mistake, and it is the cheapest line in the whole context.
+            const body = record.text
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line !== '')
+              .join(' | ')
+            const entry = `• ${day}: ${body}\n`
             if (block.length + entry.length > recallChars) break
             block += entry
           }
