@@ -4,8 +4,27 @@
 the engine; the shield is the craft. Spears crossed behind it carry the heraldry
 of the name.
 
+## Design review — the three crests (2026-11-20)
+
+Rendered for real and tested at 16/24/32/48/64px (`compare.png`, `small-sizes.png`).
+
+| Variant | Large | Small (≤32px) | Verdict |
+|---|---|---|---|
+| **Current** (`crest.svg`) | strong, bold | **reads** | keep as the **icon/favicon** |
+| **Gemini** (`crest-gemini.svg`) | richest heraldry | mush — rectangle + blob | keep as **art direction**, not an icon |
+| **Fusion v2** (`crest-v2.svg`) | distinctive whale-tail point + bead halo | reads from 24px | keep as the **large mark** |
+
+**Decision:** two lockups, one identity.
+- **Icon** (favicon, app icon, 16–64px): current crest — shield, spears, gold halo, pixel whale. No beads, no motto.
+- **Large mark** (splash, stickers, og art): Fusion v2 — Gemini's whale-tail shield point and beaded Maasai halo, on our ochre/whale-blue palette.
+- **Adopt from Gemini:** the motto **"Deep waters, higher order"** (*Aquae profundae, ordo altior*) and the bead-dot halo for large sizes only.
+- **Decline from Gemini:** the lion crest, the supporters, and the navy field — three more elements would make the mark unreadable at icon size, and navy fights our near-black canvas.
+
 ## Files
 - [`crest.svg`](./crest.svg) — the mark, vectors, transparent (dark-canvas tuned)
+- [`crest-v2.svg`](./crest-v2.svg) — Fusion v2 (large mark, whale-tail point + beaded halo)
+- [`crest-gemini.svg`](./crest-gemini.svg) — Gemini's original brief rendered as SVG
+- [`compare.png`](./compare.png) · [`small-sizes.png`](./small-sizes.png) — the tests behind the decision
 - [`lockup.svg`](./lockup.svg) — crest + `MASSAI` wordmark + `OPEN BY DEFAULT` + tagline
 
 ## Palette
@@ -47,6 +66,8 @@ Running out. · You think it. It runs. · Bring a wish. Leave with it running.
 Bench warmers (unused): *No plan required.* · *Start with nothing. End with something running.*
 
 **Brand line:** limitless by default — no templates, no ceiling.
+
+**Motto (large mark only):** *Deep waters, higher order* · *Aquae profundae, ordo altior*
 
 **Proof line:** *Not a mockup. Not a draft. Running software.*
 
