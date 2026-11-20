@@ -365,7 +365,12 @@ export class BrowserAuth {
    * @param userId - the per-session user id baked into the cookie.
    * @returns false when no Host authority could be read (no cookie written).
    */
-  mintSessionCookie(req: ConnectionIndexRequest, res: ConnectionIndexResponse, secure: boolean, userId: string): boolean {
+  mintSessionCookie(
+    req: ConnectionIndexRequest,
+    res: { setHeader(name: string, value: string): void },
+    secure: boolean,
+    userId: string,
+  ): boolean {
     const authority = requestAudience(req.headers, secure)
     if (authority === undefined) return false
     const issuedAt = Date.now()
