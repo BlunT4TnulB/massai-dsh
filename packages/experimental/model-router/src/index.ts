@@ -47,6 +47,12 @@ export interface Config {
   visionModel?: string
   /** Only route on this provider; local/other routes keep the user's choice. */
   routeProvider?: string
+  /** A free local provider (gateway → Ollama) used for small work when set. */
+  localProvider?: string
+  /** Model id on the local provider. */
+  localModel?: string
+  /** New-turn size under which local work is attempted first. */
+  localMaxTokens?: number
 }
 
 export const Config: z<Config> = z.object({
@@ -58,11 +64,16 @@ export const Config: z<Config> = z.object({
   errorStreak: z.number(),
   visionModel: z.string(),
   routeProvider: z.string(),
+  localProvider: z.string(),
+  localModel: z.string(),
+  localMaxTokens: z.number(),
 })
 
 export interface RouteResult {
   model: string
   reason: string
+  /** Provider to use, when the router moves across providers (local vs cloud). */
+  provider?: string
 }
 
 /** Signals read from the request about to be sent. */
@@ -157,6 +168,19 @@ export function decide(options: { messages?: ReadonlyArray<{ content?: unknown; 
   const streakLimit = config.errorStreak ?? DEFAULT_ERROR_STREAK
   const signals = signalsOf(options, config)
   const heaviest = (model: string): boolean => !model.includes('flash')
+  // Local-first: small, unremarkable work goes to the free model on this machine
+  // when a local route is configured. Anything hard (keywords, a failing loop,
+  // big new work) keeps the cloud route, which the router still tiers.
+  const local = config.localProvider
+  if (local !== undefined && local !== '' && signals.keyword === undefined
+    && signals.errorStreak === 0
+    && signals.newTokens < (config.localMaxTokens ?? 2_500)) {
+    return {
+      model: config.localModel ?? 'auto',
+      provider: local,
+      reason: `local ${local} (${String(signals.newTokens)} new tokens, nothing hard) — free`,
+    }
+  }
   // Capability beats cost: a text-only model cannot receive an image at all, so
   // a multimodal prompt pins the step to the vision-capable tier.
   if (hasImage(options.messages ?? [])) {
@@ -225,11 +249,12 @@ export function apply(ctx: Context, config: Config = {}): void {
             : decide({ model: modelSelection.model, messages: messages as never })
           const wantsCheaper = decision.model.includes('flash') && !modelSelection.model.includes('flash')
           if (mode === 'escalate-only' && wantsCheaper) return next()
-          if (decision.model !== modelSelection.model) {
-            const carryEffort = modelSelection.reasoningEffort !== undefined && !decision.model.includes('flash')
+          const nextProvider = decision.provider ?? modelSelection.provider
+          if (decision.model !== modelSelection.model || nextProvider !== modelSelection.provider) {
+            const carryEffort = modelSelection.reasoningEffort !== undefined && !decision.model.includes('flash') && nextProvider === modelSelection.provider
             const selection = carryEffort
-              ? { provider: modelSelection.provider, model: decision.model, reasoningEffort: modelSelection.reasoningEffort }
-              : { provider: modelSelection.provider, model: decision.model }
+              ? { provider: nextProvider, model: decision.model, reasoningEffort: modelSelection.reasoningEffort }
+              : { provider: nextProvider, model: decision.model }
             ;(agent as Agent).model.select(selection)
             ctx.logger?.info?.('model-router', '%s -> %s: %s', modelSelection.model, decision.model, decision.reason)
           }
