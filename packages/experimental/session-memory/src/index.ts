@@ -74,6 +74,23 @@ function memoryPath(cwd: string): string {
  * @param cwd - project directory.
  * @returns records, oldest first.
  */
+/** Records imported from other assistants; recalled in every project. */
+function readImported(): MemoryRecord[] {
+  const path = join(memoryDir(), '_imported.jsonl')
+  if (!existsSync(path)) return []
+  const out: MemoryRecord[] = []
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.trim() === '') continue
+    try {
+      const parsed = JSON.parse(line) as MemoryRecord
+      if (typeof parsed.text === 'string') out.push(parsed)
+    } catch {
+      /* skip a torn line */
+    }
+  }
+  return out
+}
+
 function readRecords(cwd: string): MemoryRecord[] {
   const path = memoryPath(cwd)
   if (!existsSync(path)) return []
@@ -186,7 +203,9 @@ export function apply(ctx: Context, config: Config = {}): void {
       const cwd = agent.session.header.cwd ?? process.cwd()
       if (!recalled.has(agent.id)) {
         recalled.add(agent.id)
-        const records = readRecords(cwd).slice(-recallEntries)
+        // Imported conversations apply everywhere, so they ride along with the
+        // project's own records — newest first, still inside the character budget.
+        const records = [...readRecords(cwd), ...readImported().slice(-2)]
         if (records.length > 0) {
           let block = 'Prior work in this project. Use it; do not rediscover it.\n'
           for (const record of records) {

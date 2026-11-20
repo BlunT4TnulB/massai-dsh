@@ -17,6 +17,7 @@ import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
+import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
@@ -303,6 +304,75 @@ export function apply(ctx: Context): void {
         'cache-control': 'no-store',
       })
       res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Bring a conversation in from any other assistant: summarise once, remember.
+  ctx.webServer.register({
+    kind: 'exact', path: '/import', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(importPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/import/paste', auth: 'required',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const fields = await readFields(req)
+        const transcript = (fields.get('transcript') ?? '').trim()
+        const title = (fields.get('title') ?? '').trim().slice(0, 120)
+        if (transcript.length < 80) {
+          res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+          res.end(importPageHtml('bad:That is too short to summarise — paste the actual exchange.'))
+          return
+        }
+        const llm = ctx.get('llm') as { stream(options: { provider: string; model: string; messages: unknown[] }): AsyncIterable<{ type: string; text?: string }> } | undefined
+        const summariser = process.env.DSH_SUMMARY_MODEL ?? 'deepseek-v4-pro'
+        let summary = ''
+        if (llm !== undefined) {
+          const prompt = [
+            'Summarise this conversation for an engineer who will continue the work later.',
+            'Reply with exactly these sections, at most three short lines each:',
+            'WORK: what was decided or built.',
+            'PITFALLS: what failed, what was wrong, what to avoid.',
+            'TOOLS: commands, libraries or approaches that worked.',
+            'NEXT: the next step.',
+            'Be concrete. No preamble.',
+            title === '' ? '' : `Subject: ${title}`,
+            '',
+            transcript.slice(0, 24_000),
+          ].filter(line => line !== '').join('\n')
+          try {
+            for await (const chunk of llm.stream({
+              provider: 'deepseek-official',
+              model: summariser,
+              messages: [{ role: 'user', content: [{ type: 'text', text: prompt }], source: { kind: 'user' } }],
+            })) {
+              if (chunk.type === 'text-delta') summary += chunk.text ?? ''
+            }
+          } catch { /* fall through to the raw fallback below */ }
+        }
+        const text = summary.trim() === '' ? transcript.slice(0, 3_000) : summary.trim()
+        const stored = appendImported({
+          at: Date.now(),
+          cwd: IMPORTED_PROJECT,
+          session: `import:${title === '' ? 'conversation' : title}`,
+          text: text.slice(0, 2_000),
+        })
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+        res.end(importPageHtml(stored
+          ? 'ok:Imported. Your next session will recall it.'
+          : 'bad:It was summarised but could not be stored — check the disk.'))
+      } catch (error) {
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+        res.end(importPageHtml(`bad:${error instanceof Error ? error.message : String(error)}`))
+      }
     },
   })
   // Forget one learned record. A memory you cannot remove is a liability.
