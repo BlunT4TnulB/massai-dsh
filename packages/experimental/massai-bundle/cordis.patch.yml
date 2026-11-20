@@ -4,9 +4,12 @@
 - id: agent-default-model
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
+    # Start on the cheap tier and let the router climb: the model is escalated
+    # per step on hard signals (big new work, failing tool loops, hard wording).
+    # Defaulting to pro was paying flagship rates for every greeting.
     provider: deepseek-official
-    model: deepseek-v4-pro
-    reasoningEffort: high
+    model: deepseek-flash
+    reasoningEffort: low
 
 # Expose the cai DeepSeek coding agent as a model-facing tool.
 - insert:
