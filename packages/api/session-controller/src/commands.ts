@@ -1,3 +1,5 @@
+
+
 /** Session commands whose activation policy is explicit at each Remote method. */
 
 import type { ProjectionHandle } from '@deepseek-ai/dsh-session-projection'
@@ -36,6 +38,8 @@ import {
   type ApiSessionCreated,
 } from './agent.ts'
 import type {
+
+
   SessionAttachmentRequest,
   SessionAttachmentValue,
   SessionCancelRequest,
@@ -54,6 +58,34 @@ import type {
   SessionUpdateQueueValue,
   SessionRequestId,
 } from './types.ts'
+
+/**
+ * The model to fall back to when a prompt carries an image but the selected
+ * model is text-only.
+ *
+ * Prefers a model whose id names a cheap/fast tier, then any model that
+ * declares image input. Returns undefined when the provider has none, which is
+ * the only case that still deserves an error.
+ * @param ctx - host context with the llm runtime.
+ * @param provider - the provider route in use.
+ * @returns a vision-capable model id, or undefined.
+ */
+async function visionFallback(
+  ctx: { llm: { listModels(provider: string): Promise<readonly { id: string; inputModalities?: readonly string[] }[]> } },
+  provider: string,
+): Promise<string | undefined> {
+  let models: readonly { id: string; inputModalities?: readonly string[] }[]
+  try {
+    models = await ctx.llm.listModels(provider)
+  } catch {
+    return undefined
+  }
+  const vision = models.filter(model => model.inputModalities?.includes('image') === true)
+  if (vision.length === 0) return undefined
+  const cheap = vision.find(model => /(flash|mini|lite|fast|small|cheap)/i.test(model.id))
+  return (cheap ?? vision[0])?.id
+}
+
 
 type PromptContentCandidate =
   | SessionPromptRequest['content'][number]
@@ -353,11 +385,19 @@ export class SessionCommandController {
           if (current !== undefined) {
             const model = await this.ctx.llm.resolveModelInfo(current.provider, current.model)
             if (model.inputModalities !== undefined && !model.inputModalities.includes('image')) {
-              throw new RemoteError(
-                'session/attachment-invalid',
-                `Model "${current.model}" does not support image input.`,
-                { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
-              )
+              // Capability beats the selected route: rather than reject a prompt the
+              // user has already attached, move this step to a model that takes images
+              // and let the switch notice explain it. Only complain when the provider
+              // offers no vision-capable model at all.
+              const vision = await visionFallback(this.ctx, current.provider)
+              if (vision === undefined) {
+                throw new RemoteError(
+                  'session/attachment-invalid',
+                  `Model "${current.model}" does not support image input and no vision-capable model is available.`,
+                  { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
+                )
+              }
+              agent.model.select({ provider: current.provider, model: vision })
             }
           }
         }
