@@ -80,6 +80,7 @@ export const LEGACY_PREFIXED_EXPERIMENTAL_PACKAGE_DIRECTORIES: readonly string[]
   'packages/experimental/webworker-packer',
   'packages/experimental/webworker-runtime',
   'packages/experimental/worktree',
+  '@deepseek-ai/dsh-session-memory',
 ]
 const unprefixedNames = new Set(Object.values(EXPERIMENTAL_PACKAGE_NAME_EXCEPTIONS))
 

@@ -30,6 +30,18 @@
 
 # Cost-aware model routing (decision engine + route_model tool).
 - insert:
+    # Cross-session memory: substantial sessions are distilled once, and new
+    # sessions in the same project start with what was learned.
+    - id: session-memory
+      name: "@deepseek-ai/dsh-session-memory"
+      config:
+        enabled: true
+        summaryProvider: deepseek-official
+        summaryModel: deepseek-v4-pro
+        minTurns: 6
+        recallEntries: 3
+        recallChars: 1200
+
     - id: model-router
       name: "@deepseek-ai/dsh-model-router"
       config:
