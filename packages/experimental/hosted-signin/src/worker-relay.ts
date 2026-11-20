@@ -68,7 +68,18 @@ const POLL_HOLD_MS = 25_000
  * @returns true when a worker is available to answer.
  */
 export function workerConnected(): boolean {
-  return pollers.length > 0 || Date.now() - lastPollAt < CONNECTED_WINDOW_MS
+  return pollers.some(poller => restingFor(poller.name) === 0)
+    || Date.now() - lastPollAt < CONNECTED_WINDOW_MS
+}
+
+/**
+ * How long this machine should still rest, in ms (0 = available).
+ * @param name - machine name.
+ * @returns milliseconds remaining in its rest, zero when it may work.
+ */
+function restingFor(name: string): number {
+  const until = resting.get(name) ?? 0
+  return Math.max(0, until - Date.now())
 }
 
 export function enqueue(body: unknown, target?: string): Promise<unknown> {
