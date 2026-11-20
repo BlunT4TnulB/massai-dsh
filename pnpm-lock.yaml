@@ -480,6 +480,9 @@ importers:
       '@deepseek-ai/dsh-sdk-minimal':
         specifier: workspace:*
         version: link:../../packages/bundle/sdk-minimal
+      '@deepseek-ai/dsh-session-memory':
+        specifier: workspace:*
+        version: link:../../packages/experimental/session-memory
       '@deepseek-ai/dsh-session-persistence-sqlite':
         specifier: workspace:*
         version: link:../../packages/session/session-persistence-sqlite
@@ -11914,6 +11917,9 @@ importers:
       '@deepseek-ai/dsh-model-router':
         specifier: workspace:*
         version: link:../model-router
+      '@deepseek-ai/dsh-session-memory':
+        specifier: workspace:*
+        version: link:../session-memory
       '@deepseek-ai/dsh-tool-cai':
         specifier: workspace:*
         version: link:../tool-cai
@@ -12143,6 +12149,21 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+
+  packages/experimental/session-memory:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-agent':
+        specifier: workspace:*
+        version: link:../../core/agent
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:*
+        version: link:../../llm/llm
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
 
   packages/experimental/session-search:
     dependencies:
