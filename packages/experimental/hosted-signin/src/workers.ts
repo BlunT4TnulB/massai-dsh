@@ -113,7 +113,10 @@ export function workersPageHtml(): string {
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem}
   .muted{color:#7d7d86}
   .note{margin:.7rem 0 0;font-size:.78rem;color:#6f6f78;line-height:1.6}
-  code{background:#1f1f27;padding:.12rem .35rem;border-radius:.3rem;font-size:.8rem}
+  code{background:#0d0d11;border:1px solid #26262d;padding:.35rem .5rem;border-radius:.4rem;font-size:.78rem;
+    color:#d8d8e0;overflow-wrap:anywhere;display:inline-block}
+  .howto{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:.55rem;font-size:.86rem;color:#c2c2cb}
+  .var{color:#D9822B}
   a{color:#7ee2a8;text-decoration:none}
 </style></head><body><main>
 <header><h1>Local agents</h1><span class="flag">open by default</span></header>
@@ -124,6 +127,16 @@ export function workersPageHtml(): string {
   <p class="note">A machine is online while its heartbeat is younger than 5 minutes.
   On each computer run <code>./tools/massai-worker.sh</code> — it reports the local
   model, its speed, and stays out of the way.</p>
+</section>
+<section><h2>Add a machine</h2>
+  <p class="note" style="margin-top:0">On the computer that runs the local model, run these two commands.
+  The first makes the model answer; the second makes this page show it.</p>
+  <ol class="howto">
+    <li><code>./tools/massai-local.sh</code> <span class="muted">— install and verify a local model</span></li>
+    <li><code>./tools/massai-worker.sh --hub <span class="var">&lt;this site's address&gt;</span> --token <span class="var">&lt;DSH_WORKER_TOKEN&gt;</span> --name <span class="var">&lt;a name you'll recognise&gt;</span></code></li>
+  </ol>
+  <p class="note">The token is the value of <code>DSH_WORKER_TOKEN</code> set on this service.
+  Nothing about your prompts, files, or conversations is sent — only the machine name, model, address, and measured speed.</p>
 </section>
 <section><h2>What this is, and is not</h2>
   <p class="note">Phase 1 is presence: which machines are alive, with what model, and how fast.
