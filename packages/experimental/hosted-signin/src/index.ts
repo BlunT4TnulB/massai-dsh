@@ -15,7 +15,7 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
-import { ratesPageHtml, usagePageHtml } from './usage-page.ts'
+import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
 import { startPageHtml } from './start-page.ts'
@@ -189,9 +189,10 @@ export function apply(ctx: Context): void {
   for (const [path, render] of [
     ['/usage', usagePageHtml],
     ['/rates', ratesPageHtml],
+    ['/models', modelsPageHtml],
   ] as const) {
     ctx.webServer.register({
-      kind: 'exact', path, auth: path === '/usage' ? 'required' : 'anonymous',
+      kind: 'exact', path, auth: path === '/rates' ? 'anonymous' : 'required',
       handler: (req, res) => {
         const html = Buffer.from(render())
         res.writeHead(200, {

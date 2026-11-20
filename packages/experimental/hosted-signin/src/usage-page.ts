@@ -201,3 +201,75 @@ export function ratesPageHtml(): string {
   <a href="https://platform.deepseek.com/top_up" target="_blank" rel="noopener">Top up</a>
 </div></section>`)
 }
+
+/** One model's framing on the guidance page. */
+const MODEL_GUIDE = [
+  {
+    id: 'deepseek-flash',
+    title: 'deepseek-flash',
+    subtitle: 'the workhorse',
+    tone: 'good',
+    good: ['Single-file edits', 'Copy and layout changes', 'Quick questions', 'Iterating on something that already works'],
+    avoid: ['Architecture across many files', 'Hard debugging with long logs', 'Specs that need planning first'],
+  },
+  {
+    id: 'deepseek-v4-pro',
+    title: 'deepseek-v4-pro',
+    subtitle: 'the deep thinker',
+    tone: 'warn',
+    good: ['Multi-file refactors', 'Design decisions and trade-offs', 'Gnarly bugs and long stack traces', 'Anything you would otherwise re-explain three times'],
+    avoid: ['One-line tweaks', 'Repeating a step that already worked', 'Exploration where flash is enough'],
+  },
+] as const
+
+/**
+ * Render the model guidance page: what each model is for, and what this
+ * deployment's own measurements say about how they are actually being used.
+ * @returns the page HTML.
+ */
+export function modelsPageHtml(): string {
+  const points = readUsage()
+  const models = byModel(points)
+  const heaviest = Math.max(1, ...models.map(m => m.promptPerCall))
+  const measured = models.length === 0
+    ? '<p class="note">No calls measured yet — once you build, this page reports which model is doing what.</p>'
+    : `<table><thead><tr><th>model</th><th>calls</th><th>prompt/call</th><th>est. spend</th><th>what it means</th></tr></thead><tbody>${
+      models.map((m) => {
+        const verdict = efficiencyVerdict(m, heaviest)
+        return `<tr><td class="mono">${m.model}</td><td>${m.calls}</td><td>${compact(m.promptPerCall)}</td>
+          <td>$${m.cost.toFixed(3)}</td>
+          <td class="${verdict.tone === 'warn' ? 'warn' : verdict.tone === 'ok' ? 'good' : 'muted'}">${verdict.label}</td></tr>`
+      }).join('')
+    }</tbody></table>`
+  const cards = MODEL_GUIDE.map(card => `<div class="modelcard">
+    <h3 class="${card.tone === 'good' ? 'good' : 'warn'}">${card.title} <span class="muted" style="font-weight:500;letter-spacing:0;text-transform:none">— ${card.subtitle}</span></h3>
+    <p class="muted" style="margin:.3rem 0 .5rem;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Good at</p>
+    <ul>${card.good.map(item => `<li>${item}</li>`).join('')}</ul>
+    <p class="muted" style="margin:.7rem 0 .5rem;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Skip it for</p>
+    <ul class="avoid">${card.avoid.map(item => `<li>${item}</li>`).join('')}</ul>
+  </div>`).join('')
+  return chrome('Models', `
+<section><h2>The short version</h2>
+  <p class="note" style="font-size:.9rem;color:#c9c9d2;margin:0">
+  <b>Start on flash.</b> It handles most building — you have probably noticed you forget which model you are on.
+  Move up to <b>v4-pro</b> when the task spans many files, when a bug keeps winning, or when the plan matters more
+  than the typing. Move back down as soon as it is done; the expensive model is for the hard sentence,
+  not the whole conversation.</p>
+</section>
+<section><h2>What each one is for</h2><div style="display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))">
+  ${cards}
+</div></section>
+<section><h2>What your own usage says</h2>${measured}
+  <p class="note">This is measured from your session logs, priced at published rates.
+  <a href="/usage">See the full timeline →</a></p>
+</section>
+<section><h2>More</h2><div class="links">
+  <a href="/usage">Usage timeline</a><a href="/rates">Rates &amp; happy hour</a><a href="/admin">Owner console</a>
+</div></section>
+<style>
+  .modelcard{border:1px solid #26262d;border-radius:.7rem;padding:.85rem .95rem;background:#1b1b22}
+  .modelcard h3{margin:0;font-size:.95rem}
+  .modelcard ul{margin:0;padding-left:1.1rem;color:#c2c2cb;font-size:.82rem;line-height:1.55}
+  .modelcard ul.avoid{color:#8f8f97}
+</style>`)
+}
