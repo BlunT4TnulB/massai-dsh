@@ -158,7 +158,7 @@ export function memoryPageHtml(): string {
 This is what a new session in that project will be told, before you type a word — read it, and prune anything wrong
 by editing the files under <code>${esc(memoryDir())}</code>.</p>
 ${body}
-<p class="foot"><a href="/admin">← Owner console</a> &nbsp;·&nbsp; <a href="/workers">Local agents</a></p>
+<p class="foot"><a href="/admin">← Owner console</a> &nbsp;·&nbsp; <a href="/workers">Local agents</a> &nbsp;·&nbsp; <a href="/import">Bring a conversation in</a></p>
 <script>
 (() => {
   for (const button of document.querySelectorAll('.forget')) {

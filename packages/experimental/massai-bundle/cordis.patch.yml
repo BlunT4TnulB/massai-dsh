@@ -123,3 +123,53 @@
 - insert:
     - id: deepseek-chat-import
       name: '@deepseek-ai/dsh-deepseek-chat-import'
+
+# Other assistants, if this deployment is given keys for them. Each row stays
+# disabled until its key exists, so an unfunded provider never shows up in the
+# picker or fails a request. Add the key in the environment to switch one on.
+- insert:
+    - id: llm-gemini
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      disabled: !!js !process.env.GEMINI_API_KEY
+      config:
+        providers:
+          gemini:
+            displayName: Google Gemini
+            apiKeyEnv: GEMINI_API_KEY
+            api: openai-completions
+            baseURL: https://generativelanguage.googleapis.com/v1beta/openai
+            models:
+              - id: gemini-2.5-flash
+                name: Gemini 2.5 Flash
+                contextWindow: 1000000
+                maxTokens: 8192
+    - id: llm-claude
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      disabled: !!js !process.env.ANTHROPIC_API_KEY
+      config:
+        providers:
+          claude:
+            displayName: Anthropic Claude
+            apiKeyEnv: ANTHROPIC_API_KEY
+            api: openai-completions
+            baseURL: https://api.anthropic.com/v1
+            models:
+              - id: claude-sonnet-4-5
+                name: Claude Sonnet 4.5
+                contextWindow: 200000
+                maxTokens: 8192
+    - id: llm-chatgpt
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      disabled: !!js !process.env.OPENAI_API_KEY
+      config:
+        providers:
+          chatgpt:
+            displayName: OpenAI
+            apiKeyEnv: OPENAI_API_KEY
+            api: openai-completions
+            baseURL: https://api.openai.com/v1
+            models:
+              - id: gpt-5
+                name: GPT-5
+                contextWindow: 400000
+                maxTokens: 8192
