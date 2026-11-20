@@ -69,6 +69,44 @@ export const Config: z<Config> = z.object({
   localMaxTokens: z.number(),
 })
 
+/** One candidate route with its relative price (1 = cheap cloud tier). */
+export interface Arm {
+  /** Stable arm id used by the learner. */
+  id: string
+  /** Provider route. */
+  provider: string
+  /** Model id. */
+  model: string
+  /** Relative price: local is near-free, cheap is 1, quality is 2. */
+  price: number
+}
+
+/**
+ * The arms this deployment may choose between, cheapest first.
+ * @param config - router configuration.
+ * @returns candidate arms including the local route when configured.
+ */
+export function armsOf(config: Config = {}): Arm[] {
+  const arms: Arm[] = []
+  const local = config.localProvider
+  if (local !== undefined && local !== '' && (process.env.DSH_LOCAL_ENABLED ?? '1') !== '0') {
+    arms.push({ id: `${local}/auto`, provider: local, model: config.localModel ?? 'auto', price: 0.02 })
+  }
+  arms.push({
+    id: `deepseek-official/${config.cheapModel ?? DEFAULT_CHEAP_MODEL}`,
+    provider: config.routeProvider ?? 'deepseek-official',
+    model: config.cheapModel ?? DEFAULT_CHEAP_MODEL,
+    price: 1,
+  })
+  arms.push({
+    id: `deepseek-official/${config.qualityModel ?? DEFAULT_QUALITY_MODEL}`,
+    provider: config.routeProvider ?? 'deepseek-official',
+    model: config.qualityModel ?? DEFAULT_QUALITY_MODEL,
+    price: 2,
+  })
+  return arms
+}
+
 export interface RouteResult {
   model: string
   reason: string
@@ -169,8 +207,7 @@ export function decide(options: { messages?: ReadonlyArray<{ content?: unknown; 
   const signals = signalsOf(options, config)
   const heaviest = (model: string): boolean => !model.includes('flash')
   // Local-first: small, unremarkable work goes to the free model on this machine
-  // when a local route is configured. Anything hard (keywords, a failing loop,
-  // big new work) keeps the cloud route, which the router still tiers.
+  // when a local route is configured. Hard signals keep the cloud route.
   const local = config.localProvider
   if (local !== undefined && local !== '' && signals.keyword === undefined
     && signals.errorStreak === 0
@@ -219,7 +256,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   // Learned statistics, loaded once and kept in memory; every observed step is
   // persisted so the router keeps improving across restarts.
   const learner = loadState()
-  const previous = new Map<string, { features: Features; model: string }>()
+  const previous = new Map<string, { features: Features; arm: string }>()
   if (mode !== 'off') {
     // The per-step seam: the agent has already chosen a route for this step, and
     // `agent.model.select` records a switch that the harness announces to the
@@ -229,26 +266,43 @@ export function apply(ctx: Context, config: Config = {}): void {
         // Only steer the DeepSeek route. A local model is already the cheapest
         // thing available, and a third-party route may not share these tiers.
         const routeProvider = config.routeProvider ?? 'deepseek-official'
-        if (modelSelection?.model !== undefined && modelSelection.provider === routeProvider) {
+        const localProvider = config.localProvider ?? ''
+        const steerable = modelSelection?.provider === routeProvider
+          || (localProvider !== '' && modelSelection?.provider === localProvider)
+        if (modelSelection?.model !== undefined && steerable) {
           const signals = signalsOf({ messages: messages as never }, config)
           const features: Features = {
             size: signals.newTokens < 2_000 ? 0 : signals.newTokens < 10_000 ? 1 : signals.newTokens < (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS) ? 2 : 3,
             keyword: signals.keyword !== undefined,
             struggling: signals.errorStreak >= (config.errorStreak ?? DEFAULT_ERROR_STREAK),
           }
+          const arms = armsOf(config)
+          const priceOf = (armId: string): number => arms.find(arm => arm.id === armId)?.price ?? 1
           // The tail of the history is the outcome of the PREVIOUS step.
           const last = previous.get(agent.id)
           if (last !== undefined) {
-            observe(learner, last.features, last.model, { failed: signals.errorStreak > 0 }, last.model.includes('flash') ? 1 : 2)
+            observe(learner, last.features, last.arm, { failed: signals.errorStreak > 0 }, priceOf(last.arm))
             saveState(learner)
           }
-          previous.set(agent.id, { features, model: modelSelection.model })
-          const learned = choose(learner, features, [config.cheapModel ?? DEFAULT_CHEAP_MODEL, config.qualityModel ?? DEFAULT_QUALITY_MODEL])
-          const decision = learned !== undefined
-            ? { model: learned.arm, reason: learned.reason }
-            : decide({ model: modelSelection.model, messages: messages as never })
-          const wantsCheaper = decision.model.includes('flash') && !modelSelection.model.includes('flash')
-          if (mode === 'escalate-only' && wantsCheaper) return next()
+          // Policy overrides first: capability and hard signals outrank price.
+          const hard = hasImage(messages as never)
+            || signals.keyword !== undefined
+            || signals.errorStreak >= (config.errorStreak ?? DEFAULT_ERROR_STREAK)
+            || signals.newTokens > (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS)
+          const learnerArms = hard ? arms.filter(arm => arm.price > 0.5) : arms
+          const learned = choose(learner, features, learnerArms.map(arm => arm.id))
+          let decision: RouteResult
+          if (learned !== undefined) {
+            const arm = arms.find(candidate => candidate.id === learned.arm)
+            decision = arm === undefined
+              ? decide({ model: modelSelection.model, messages: messages as never }, config)
+              : { provider: arm.provider, model: arm.model, reason: learned.reason }
+          } else {
+            decision = decide({ model: modelSelection.model, messages: messages as never }, config)
+          }
+          previous.set(agent.id, { features, arm: decision.provider === undefined
+            ? `${routeProvider}/${decision.model}`
+            : `${decision.provider}/${decision.model}` })
           const nextProvider = decision.provider ?? modelSelection.provider
           if (decision.model !== modelSelection.model || nextProvider !== modelSelection.provider) {
             const carryEffort = modelSelection.reasoningEffort !== undefined && !decision.model.includes('flash') && nextProvider === modelSelection.provider
