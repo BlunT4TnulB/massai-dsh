@@ -139,8 +139,15 @@
             api: openai-completions
             baseURL: https://generativelanguage.googleapis.com/v1beta/openai
             models:
-              - id: gemini-2.5-flash
-                name: Gemini 2.5 Flash
+              # `2.5-flash` is retired for new accounts (Google answers 404 and
+              # recommends a newer id); the `-latest` aliases are what actually
+              # answer, verified against this deployment's key.
+              - id: gemini-flash-latest
+                name: Gemini Flash (latest)
+                contextWindow: 1000000
+                maxTokens: 8192
+              - id: gemini-flash-lite-latest
+                name: Gemini Flash Lite (latest)
                 contextWindow: 1000000
                 maxTokens: 8192
     - id: llm-claude
