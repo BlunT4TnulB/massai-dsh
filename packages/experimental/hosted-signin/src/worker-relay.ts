@@ -139,8 +139,8 @@ export function nextJob(workerName = ''): Promise<RelayJob | undefined> {
       resolve(value)
     }
     const timer = setTimeout(() => {
-      const index = pollers.indexOf(finish)
-      if (index >= 0) pollers.splice(index, 1)
+      const position = pollers.findIndex(entry => entry.resolve === finish)
+      if (position >= 0) pollers.splice(position, 1)
       resolve(undefined)
     }, POLL_HOLD_MS)
     pollers.push({ name, resolve: finish })
