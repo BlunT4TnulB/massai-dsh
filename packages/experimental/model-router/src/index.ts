@@ -45,6 +45,8 @@ export interface Config {
   errorStreak?: number
   /** Model used whenever the prompt carries an image (the vision-capable tier). */
   visionModel?: string
+  /** Only route on this provider; local/other routes keep the user's choice. */
+  routeProvider?: string
 }
 
 export const Config: z<Config> = z.object({
@@ -55,6 +57,7 @@ export const Config: z<Config> = z.object({
   ceilingTokens: z.number(),
   errorStreak: z.number(),
   visionModel: z.string(),
+  routeProvider: z.string(),
 })
 
 export interface RouteResult {
@@ -199,7 +202,10 @@ export function apply(ctx: Context, config: Config = {}): void {
     // conversation — so a downgrade is visible, never silent.
     ctx.on('agent/pre-step', async ({ agent, messages, modelSelection }, next): Promise<PreStepDecision> => {
       try {
-        if (modelSelection?.model !== undefined) {
+        // Only steer the DeepSeek route. A local model is already the cheapest
+        // thing available, and a third-party route may not share these tiers.
+        const routeProvider = config.routeProvider ?? 'deepseek-official'
+        if (modelSelection?.model !== undefined && modelSelection.provider === routeProvider) {
           const signals = signalsOf({ messages: messages as never }, config)
           const features: Features = {
             size: signals.newTokens < 2_000 ? 0 : signals.newTokens < 10_000 ? 1 : signals.newTokens < (config.ceilingTokens ?? DEFAULT_CEILING_TOKENS) ? 2 : 3,

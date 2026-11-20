@@ -30,6 +30,7 @@
         cheapModel: deepseek-flash
         qualityModel: deepseek-v4-pro
         visionModel: deepseek-flash
+        routeProvider: deepseek-official
         ceilingTokens: 45000
 
 # Account connectors (store/list credentials in the vault).
