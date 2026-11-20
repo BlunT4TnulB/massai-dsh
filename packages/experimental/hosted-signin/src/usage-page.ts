@@ -8,7 +8,7 @@
 
 import {
   byDay, byHour, byModel, bySession, compact, costOf, efficiencyVerdict, isOffPeak,
-  OFF_PEAK_UTC, RATES, readUsage, rateFor,
+  OFF_PEAK_UTC, RATES, readUsage,
 } from './usage.ts'
 
 /** Shared page chrome. */
