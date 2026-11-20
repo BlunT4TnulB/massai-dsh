@@ -34,6 +34,9 @@ const DEEPSEEK_TOPUP = 'https://platform.deepseek.com/top_up'
  * @returns the complete HTML document.
  */
 export function welcomePage(line?: number): string {
+  // A deployment that carries its own key can let visitors try the workshop
+  // before they have one of their own.
+  const previewEnabled = (process.env.DEEPSEEK_API_KEY ?? '') !== ''
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY ?? ''
   const clerkReady = publishableKey !== '' && (process.env.CLERK_SECRET_KEY ?? '') !== ''
   const index = line === undefined
@@ -109,6 +112,12 @@ export function welcomePage(line?: number): string {
     background:#1f1f27;color:#EDEDF1;font-weight:600;font-size:.86rem;cursor:pointer}
   .socialbtn:hover{border-color:#C1440E;background:#23232c}
   .socialnote{margin-top:.5rem;text-align:center;color:#6f6f78;font-size:.72rem}
+  /* try-before-you-key */
+  .preview{margin:.2rem 0 1rem;text-align:center}
+  .previewbtn{display:block;padding:.7rem .9rem;border-radius:.55rem;background:#C1440E;color:#fff;
+    font-weight:700;font-size:.95rem;text-decoration:none}
+  .previewbtn:hover{background:#d4531a}
+  .previewnote{margin-top:.45rem;color:#7d7d86;font-size:.72rem;line-height:1.5}
   /* manual paste */
   .manual{border-top:1px solid #26262d;padding-top:.9rem;margin-top:.2rem}
   .manual label{display:block;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#82828b;font-weight:600;margin-bottom:.45rem}
@@ -181,6 +190,11 @@ export function welcomePage(line?: number): string {
       </div>
       <div class="socialnote" id="clerk-debug" style="display:none;margin-top:.45rem;font-family:ui-monospace,monospace;font-size:.68rem;color:#7ee2a8;white-space:pre-wrap;text-align:left"></div>
       <div class="socialnote" id="clerk-note">Sign-in is handled by Clerk; your DeepSeek key stays yours.</div>
+    </div>` : ''}
+
+    ${previewEnabled ? `<div class="preview">
+      <a class="previewbtn" href="/api/preview">Try it now — no key needed</a>
+      <div class="previewnote">A short hands-on look at the workshop, on us. Bring your own key when you want to keep going.</div>
     </div>` : ''}
 
     <div class="manual">

@@ -74,6 +74,24 @@ async function readFields(req: IncomingMessage): Promise<Map<string, string>> {
   return fields
 }
 
+
+/** Prompts a guest session may send before it must bring its own key. */
+const GUEST_PROMPT_LIMIT = 12
+
+/**
+ * Count the prompts a session has sent, cheaply, from its durable events.
+ * @param session - the agent's session.
+ * @returns how many user messages it holds.
+ */
+function promptCount(session: { seq: number; eventAt(seq: never): unknown }): number {
+  let count = 0
+  for (let seq = 0; seq < session.seq; seq += 1) {
+    const record = session.eventAt(seq as never) as { type?: string } | undefined
+    if (record?.type === 'user/message') count += 1
+  }
+  return count
+}
+
 /** The worker token from `x-worker-token` or a standard `Authorization: Bearer`. */
 function workerTokenOf(req: IncomingMessage): string | undefined {
   const direct = req.headers['x-worker-token']
@@ -339,6 +357,42 @@ export function apply(ctx: Context): void {
       } catch (error) {
         respond(res, 503, { ok: false, error: error instanceof Error ? error.message : String(error) })
       }
+    },
+  })
+  // Guests get a taste, not a free tier: once the cap is reached the step is
+  // rejected with a message that points at the way to continue.
+  ctx.on('agent/pre-step', async ({ agent }, next) => {
+    try {
+      const userId = (agent.session.header as { userId?: string }).userId ?? ''
+      if (userId.startsWith('guest-') && promptCount(agent.session as never) > GUEST_PROMPT_LIMIT) {
+        return { kind: 'reject' } as never
+      }
+    } catch {
+      /* the limiter must never break a step */
+    }
+    return next()
+  })
+
+  // Try-before-you-key: a guest session that spends the owner's key, capped.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/preview', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST' && req.method !== 'GET') { respond(res, 405, { error: 'method not allowed' }); return }
+      // Only possible when the deployment carries its own key to spend.
+      if ((process.env.DEEPSEEK_API_KEY ?? '') === '') {
+        respond(res, 503, { error: 'this deployment has no preview key' })
+        return
+      }
+      const minter = ctx.get('browserAuth') as
+        | { mintSessionCookie(req: IncomingMessage, res: { setHeader(name: string, value: string): void }, secure: boolean, userId: string): boolean }
+        | undefined
+      if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
+      const guest = `guest-${randomUUID()}`
+      if (!minter.mintSessionCookie(req, res, ctx.webServer.protocol === 'https:', guest)) {
+        respond(res, 400, { error: 'missing Host authority' }); return
+      }
+      res.writeHead(303, { location: '/', 'cache-control': 'no-store' })
+      res.end()
     },
   })
   // Local agents: machines report in here so they appear inside Massai.
