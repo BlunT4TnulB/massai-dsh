@@ -138,6 +138,20 @@ export function apply(ctx: Context): void {
       }
     },
   })
+  // Owner export: pull the notes wall off before a redeploy (JSONL, one note per line).
+  ctx.webServer.register({
+    kind: 'exact', path: '/feedback/export.jsonl', auth: 'required',
+    handler: (req, res) => {
+      const body = Buffer.from(recentNotes(500).slice().reverse().map(note => `${JSON.stringify(note)}\n`).join(''))
+      res.writeHead(200, {
+        'content-type': 'application/x-ndjson; charset=utf-8',
+        'content-length': String(body.byteLength),
+        'content-disposition': 'attachment; filename="massai-notes.jsonl"',
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
   ctx.webServer.register({
     kind: 'exact', path: '/feedback/recent', auth: 'required',
     handler: (req, res) => {
