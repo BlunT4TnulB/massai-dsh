@@ -18,6 +18,7 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
+import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
@@ -298,6 +299,19 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/memory', auth: 'required',
     handler: (req, res) => {
       const html = Buffer.from(memoryPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // Every backend, what it costs, and where its free tier ends.
+  ctx.webServer.register({
+    kind: 'exact', path: '/providers', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(providersPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),

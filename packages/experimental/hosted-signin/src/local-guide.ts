@@ -386,7 +386,7 @@ effect out of one — and knowing when it actually saves money.</p>
   explains what it will do, and only reports success after a real test prompt.</p>
 </section>
 
-<p class="foot"><a href="/guide">← The getting-started guide</a> &nbsp;·&nbsp; <a href="/">The door</a></p>
+<p class="foot"><a href="/providers">Other providers and what they cost</a> &nbsp;·&nbsp; <a href="/guide">← The getting-started guide</a> &nbsp;·&nbsp; <a href="/">The door</a></p>
 
 <script>
 (() => {
