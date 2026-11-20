@@ -14,6 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
+import { adminPageHtml } from './admin-page.ts'
 import { loginPreviewHtml } from './login-preview.ts'
 import { startPageHtml } from './start-page.ts'
 import { feedbackPageHtml, recentNotes, recentPageHtml, saveNote, thanksPageHtml } from './feedback.ts'
@@ -108,6 +109,19 @@ export function apply(ctx: Context): void {
       },
     })
   }
+  // Owner console: presence-only status, notes wall, session census, quick links.
+  ctx.webServer.register({
+    kind: 'exact', path: '/admin', auth: 'required',
+    handler: (req, res) => {
+      const html = Buffer.from(adminPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
   // Sign-in card preview: the Clerk layout in our tokens, before Clerk is wired.
   ctx.webServer.register({
     kind: 'exact', path: '/login-preview', auth: 'anonymous',

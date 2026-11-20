@@ -1,0 +1,153 @@
+/**
+ * Owner console: presence-only health of the hosted deployment. It never
+ * prints secrets — only whether each one exists — plus the notes wall, a
+ * session-log census and quick links to the other owner-facing pages.
+ *
+ * @module @deepseek-ai/dsh-hosted-signin/admin-page
+ */
+
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { recentNotes } from './feedback.ts'
+
+/** Where the harness home points. */
+function harnessHome(): string {
+  return process.env.DSH_HOME ?? join(homedir(), '.dsh')
+}
+
+/** One row of the status table. */
+interface Fact {
+  /** Row label. */
+  label: string
+  /** Rendered value. */
+  value: string
+  /** How it should read: fine, caution, or unknown. */
+  tone: 'ok' | 'warn' | 'info'
+}
+
+/** Census of session logs under the harness home. */
+function sessionCensus(): { count: number; newest: string; megabytes: string } {
+  let count = 0
+  let newest = 0
+  let bytes = 0
+  const walk = (dir: string, depth: number): void => {
+    if (depth > 4 || count > 5000) return
+    let entries: string[]
+    try {
+      entries = readdirSync(dir)
+    } catch {
+      return
+    }
+    for (const name of entries) {
+      const full = join(dir, name)
+      let stat
+      try {
+        stat = statSync(full)
+      } catch {
+        continue
+      }
+      if (stat.isDirectory()) {
+        walk(full, depth + 1)
+      } else if (name.endsWith('.jsonl')) {
+        count += 1
+        bytes += stat.size
+        newest = Math.max(newest, stat.mtimeMs)
+      }
+    }
+  }
+  walk(harnessHome(), 0)
+  return {
+    count,
+    newest: newest === 0 ? '—' : new Date(newest).toISOString().replace('T', ' ').slice(0, 19),
+    megabytes: (bytes / (1024 * 1024)).toFixed(1),
+  }
+}
+
+/** Compose the owner console. */
+export function adminPageHtml(): string {
+  const home = harnessHome()
+  const hosted = process.env.DSH_ALLOW_WILDCARD_HOST !== undefined
+  const ownerKey = process.env.DEEPSEEK_API_KEY !== undefined && process.env.DEEPSEEK_API_KEY !== ''
+  const notes = recentNotes(8)
+  const sessions = sessionCensus()
+  const vault = join(home, '.credentials.yaml')
+  const facts: Fact[] = [
+    { label: 'Hosted mode', value: hosted ? 'on — shell tools disabled for visitors' : 'off — local/trusted use', tone: hosted ? 'ok' : 'warn' },
+    { label: 'Owner DeepSeek key', value: ownerKey ? 'configured (value hidden)' : 'absent — visitors must bring their own', tone: ownerKey ? 'ok' : 'info' },
+    { label: 'Harness home', value: `${home}${existsSync(home) ? '' : ' (missing)'}`, tone: existsSync(home) ? 'ok' : 'warn' },
+    { label: 'Credential vault', value: existsSync(vault) ? 'present (contents hidden)' : 'absent', tone: existsSync(vault) ? 'ok' : 'info' },
+    { label: 'Session logs', value: `${sessions.count} files · ${sessions.megabytes} MB · newest ${sessions.newest}`, tone: 'info' },
+    { label: 'Notes wall', value: `${notes.length === 0 ? 'empty' : 'has entries'} · export available`, tone: 'info' },
+    { label: 'Node', value: `${process.version} · up ${Math.round(process.uptime() / 60)} min`, tone: 'info' },
+  ]
+  const rows = facts.map(f => `<tr><th>${f.label}</th><td class="t-${f.tone}">${f.value}</td></tr>`).join('')
+  const noteList = notes.length === 0
+    ? '<p class="empty">No notes yet.</p>'
+    : notes.map(note => `<div class="note"><time>${note.at}</time><p>${escapeText(note.text)}</p>${note.email === undefined ? '' : `<div class="mail">${escapeText(note.email)}</div>`}</div>`).join('')
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Massai — owner console</title>
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#151517">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:2rem 1.25rem 3rem;background:#0e0e10;color:#F2F2F4;
+    font-family:system-ui,-apple-system,sans-serif;
+    background-image:radial-gradient(60rem 40rem at 15% 0%,rgba(193,68,14,.14),transparent 70%)}
+  main{max-width:52rem;margin:0 auto}
+  header{display:flex;align-items:center;gap:.65rem;margin-bottom:1.4rem}
+  header svg{width:2rem;height:auto}
+  h1{margin:0;font-size:1.15rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+  .flag{margin-left:auto;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:#D9822B;font-weight:600}
+  section{border:1px solid #2a2a31;border-radius:.8rem;background:#17171c;padding:1.1rem 1.2rem;margin-bottom:1rem}
+  h2{margin:0 0 .8rem;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:#8a8a93;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:.86rem}
+  th{text-align:left;font-weight:600;color:#9a9aa3;padding:.34rem 0;width:12rem;vertical-align:top}
+  td{padding:.34rem 0;color:#d6d6de}
+  .t-ok{color:#7ee2a8}.t-warn{color:#f0b46a}.t-info{color:#d6d6de}
+  .links{display:flex;flex-wrap:wrap;gap:.5rem}
+  .links a{display:inline-block;padding:.42rem .75rem;border-radius:.4rem;border:1px solid #31313a;
+    background:#1f1f27;color:#e6e6ec;text-decoration:none;font-size:.82rem;font-weight:600}
+  .links a:hover{border-color:#C1440E}
+  .note{border:1px solid #26262d;border-radius:.55rem;padding:.6rem .7rem;margin:.45rem 0;background:#1b1b22}
+  .note time{display:block;color:#6f6f78;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase}
+  .note p{margin:.2rem 0 0;font-size:.86rem;color:#dcdce4;white-space:pre-wrap}
+  .note .mail{color:#82828b;font-size:.72rem;margin-top:.25rem}
+  .empty{color:#6f6f78;font-size:.85rem;margin:0}
+</style></head><body><main>
+<header>
+  <svg viewBox="0 0 120 132" aria-hidden="true">
+    <ellipse cx="60" cy="10" rx="21" ry="5.6" fill="none" stroke="#C9A227" stroke-width="3"/>
+    <path d="M16 100L104 22M104 100L16 22" stroke="#C1440E" stroke-width="3.2" stroke-linecap="round" opacity=".6"/>
+    <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
+      fill="#151517" stroke="#C1440E" stroke-width="4.5"/>
+  </svg>
+  <h1>Owner console</h1><span class="flag">open by default</span>
+</header>
+<section><h2>Status</h2><table>${rows}</table></section>
+<section><h2>Notes wall (newest ${notes.length})</h2>${noteList}
+  <p style="margin:.8rem 0 0"><a href="/feedback/export.jsonl" style="color:#7ee2a8;text-decoration:none;font-size:.82rem;font-weight:600">Download all notes →</a></p>
+</section>
+<section><h2>Owner pages</h2><div class="links">
+  <a href="/">Door</a><a href="/start">Guided start</a><a href="/feedback">Leave-note form</a>
+  <a href="/feedback/recent">Notes (full)</a><a href="/logo-preview">Logo concepts</a>
+  <a href="/login-preview">Sign-in card preview</a><a href="/healthz">Health</a>
+</div></section>
+</main></body></html>`
+}
+
+/**
+ * Escape one user-supplied string for HTML text.
+ * @param value - raw text.
+ * @returns the escaped text.
+ */
+function escapeText(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
