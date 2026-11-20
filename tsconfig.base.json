@@ -48,6 +48,7 @@
       "@deepseek-ai/dsh-experimental-terminal-bundle": ["./packages/experimental/terminal-bundle/src/index.ts"],
       "@deepseek-ai/dsh-experimental-badge-skill-bundle": ["./packages/experimental/badge-skill-bundle/src/index.ts"],
       "@deepseek-ai/dsh-model-router": ["./packages/experimental/model-router/src/index.ts"],
+      "@deepseek-ai/dsh-session-memory": ["./packages/experimental/session-memory/src/index.ts"],
       "@deepseek-ai/dsh-tool-cai": ["./packages/experimental/tool-cai/src/index.ts"],
       "@deepseek-ai/dsh-tool-sync": ["./packages/experimental/tool-sync/src/index.ts"],
       "@deepseek-ai/dsh-account-connect": ["./packages/experimental/account-connect/src/index.ts"],
