@@ -36,6 +36,8 @@ const waiting = new Map<string, RelayJob>()
 const pollers: Array<{ name: string; resolve: (job: RelayJob | undefined) => void }> = []
 /** Jobs answered per machine. */
 const served = new Map<string, number>()
+/** Rotates so an untargeted job does not always land on the same machine. */
+let pickCursor = 0
 /** When a worker last asked for work (ms since epoch). */
 let lastPollAt = 0
 /** How recently a worker must have polled to count as connected. */
@@ -91,10 +93,13 @@ export function enqueue(body: unknown, target?: string): Promise<unknown> {
     waiting.set(id, job)
     // Hand the job straight to a waiting worker when one is eligible; a
     // targeted job only goes to the machine it names.
+    // Untargeted work rotates through the waiting machines; a named job goes to
+    // exactly the machine it asks for.
     const eligible = job.target === undefined
-      ? (pollers.length > 0 ? 0 : -1)
+      ? (pollers.length > 0 ? pickCursor % pollers.length : -1)
       : pollers.findIndex(candidate => candidate.name === job.target)
     if (eligible >= 0) {
+      pickCursor += 1
       const [poller] = pollers.splice(eligible, 1)
       if (poller !== undefined) {
         markPicked(job)

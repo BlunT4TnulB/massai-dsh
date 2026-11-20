@@ -75,7 +75,7 @@ export function workerTokenAccepted(presented: string | undefined): boolean {
  * Render the owner's view of every registered machine.
  * @returns the page HTML.
  */
-export function workersPageHtml(relay?: { queued: number; inFlight: number; pollers: number }): string {
+export function workersPageHtml(relay?: { queued: number; inFlight: number; pollers: number; served?: Record<string, number> }): string {
   const list = listWorkers()
   const configured = (process.env.DSH_WORKER_TOKEN ?? '') !== ''
   const rows = list.map((worker) => {
@@ -88,6 +88,7 @@ export function workersPageHtml(relay?: { queued: number; inFlight: number; poll
       <td class="mono">${escapeText(worker.endpoint)}</td>
       <td>${latency}</td>
       <td>${age < 90 ? `${String(age)}s ago` : `${String(Math.round(age / 60))}m ago`}</td>
+      <td>${String(relay?.served?.[worker.name] ?? 0)}</td>
       <td class="muted">${escapeText(worker.note ?? '')}</td>
     </tr>`
   }).join('')
@@ -125,8 +126,8 @@ export function workersPageHtml(relay?: { queued: number; inFlight: number; poll
 <header><h1>Local agents</h1><span class="flag">open by default</span></header>
 <section><h2>Machines reporting in</h2>
   ${configured ? '' : '<p class="note" style="color:#f0b46a;margin-top:0">Worker heartbeats are not configured: set <code>DSH_WORKER_TOKEN</code> on this service and on each machine.</p>'}
-  <table><thead><tr><th>machine</th><th>model</th><th>endpoint</th><th>latency</th><th>last seen</th><th>note</th></tr></thead>
-  <tbody>${rows === '' ? '<tr><td colspan="6" class="muted">No machines have reported yet.</td></tr>' : rows}</tbody></table>
+  <table><thead><tr><th>machine</th><th>model</th><th>endpoint</th><th>latency</th><th>last seen</th><th>jobs</th><th>note</th></tr></thead>
+  <tbody>${rows === '' ? '<tr><td colspan="7" class="muted">No machines have reported yet.</td></tr>' : rows}</tbody></table>
   <p class="note">A machine is online while its heartbeat is younger than 5 minutes.
   On each computer run <code>./tools/massai-worker.sh</code> — it reports the local
   model, its speed, and stays out of the way.</p>
