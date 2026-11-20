@@ -178,7 +178,23 @@ export function ratesPageHtml(): string {
   <div class="kpis">
     <div class="kpi"><b class="${offPeak ? 'good' : 'warn'}">${offPeak ? 'HAPPY HOUR' : 'PRIME TIME'}</b><span>${new Date(now).toISOString().slice(11, 16)} UTC</span></div>
     <div class="kpi"><b>${String(OFF_PEAK_UTC[0]).padStart(2, '0')}:30–${String(OFF_PEAK_UTC[1]).padStart(2, '0')}:30</b><span>discount window (UTC)</span></div>
+    <div class="kpi"><b id="local-window">—</b><span>in your local time</span></div>
   </div>
+  <script>
+  (() => {
+    // The discount window is fixed in UTC; show it in the reader's clock so the
+    // answer to "when should I build?" is a time they recognise.
+    const start = ${JSON.stringify(OFF_PEAK_UTC[0])}, end = ${JSON.stringify(OFF_PEAK_UTC[1])}
+    const pad = (n) => String(n).padStart(2, '0')
+    const fmt = (hours) => {
+      const base = new Date(Date.UTC(2000, 0, 1))
+      base.setUTCHours(Math.floor(hours), Math.round((hours % 1) * 60), 0, 0)
+      return new Date(base.getTime()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    const target = document.getElementById('local-window')
+    if (target) target.textContent = fmt(start) + '–' + fmt(end)
+  })()
+  </script>
   <p class="note">DeepSeek discounts off-peak usage — half price on the chat model, and deeper on
   the reasoner. Build big things overnight and pay less; the timeline shows when the work happened.</p>
 </section>
