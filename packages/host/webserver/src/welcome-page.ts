@@ -193,6 +193,7 @@ export function welcomePage(line?: number): string {
 
     <div class="foot">
       <p class="ask">Tell us what you're building — <a href="/feedback">we read every note</a>.</p>
+      <p class="ask" style="margin-bottom:.5rem"><a href="/guide" style="color:#7ee2a8">First time? Read the two-minute guide →</a></p>
       <p class="fine"><b>Massai is the workshop. DeepSeek is the engine inside it</b> — you bring
       the key, they bill the usage at their published rates, and we never see your card.
       Massai stands on open-source shoulders, DeepSeek first among them, with thanks.

@@ -15,6 +15,7 @@ import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
+import { guidePageHtml } from './guide.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
@@ -209,6 +210,19 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/admin', auth: 'required',
     handler: (req, res) => {
       const html = Buffer.from(adminPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // The public plain-language guide: no account, no key, no repo needed.
+  ctx.webServer.register({
+    kind: 'exact', path: '/guide', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(guidePageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
