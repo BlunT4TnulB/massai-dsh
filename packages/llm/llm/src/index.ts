@@ -46,6 +46,7 @@ export * from './brand.ts'
 export * from './error.ts'
 export type * from './types.ts'
 export * from './content.ts'
+export * from './image-captions.ts'
 export * from './assistant-stream.ts'
 export type * from './message.ts'
 export {

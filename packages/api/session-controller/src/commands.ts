@@ -13,13 +13,14 @@ import type { Agent, ModelSelection as AgentModelSelection } from '@deepseek-ai/
 import { AttachmentError } from '@deepseek-ai/dsh-attachment'
 import type {
   AttachmentAdmissionPart,
+  ImageAttachmentRef,
 } from '@deepseek-ai/dsh-attachment'
 import type { FileUploadReceiptId, StagedAttachment } from '@deepseek-ai/dsh-client-file-upload/types'
 import type {} from '@deepseek-ai/dsh-client-file-upload'
 import {
   type ReasoningEffortId, createUserMessage, freezeMessage,
 } from '@deepseek-ai/dsh-llm'
-import type { MessageId, MessageSource } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, MessageId, MessageSource, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { buildForkSeed } from '@deepseek-ai/dsh-session/fork'
 import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
@@ -37,6 +38,7 @@ import {
   hasApiSessionSubagentOwner,
   type ApiSessionCreated,
 } from './agent.ts'
+import { captionProjection, readImageCaption, writeImageCaption } from '@deepseek-ai/dsh-llm'
 import type {
 
 
@@ -84,6 +86,48 @@ async function visionFallback(
   if (vision.length === 0) return undefined
   const cheap = vision.find(model => /(flash|mini|lite|fast|small|cheap)/i.test(model.id))
   return (cheap ?? vision[0])?.id
+}
+
+/** What the vision model is asked to say about an image. */
+const CAPTION_PROMPT = [
+  'Describe this image for an engineer who cannot see it.',
+  'Lead with what it is, then cover: any visible text (transcribe it), layout, ' +
+  'UI elements and their states, colours, and details that change the work ' +
+  '(errors, numbers, labels, crop, orientation). Be concrete and dense; no preamble.',
+].join(' ')
+
+/**
+ * Produce a caption for one image with a vision-capable model.
+ *
+ * Best-effort by design: a failed caption leaves the old refusal path intact and
+ * must never block the prompt.
+ * @param ctx - host context with the llm runtime.
+ * @param provider - provider route to call.
+ * @param model - vision-capable model id.
+ * @param image - the image content block to describe.
+ * @returns the caption, or undefined when the call failed.
+ */
+async function captionImage(
+  ctx: { llm: { stream(options: GenerateOptions<string>): AsyncIterable<StreamChunk> } },
+  provider: string,
+  model: string,
+  image: { type: 'image'; attachment: ImageAttachmentRef },
+): Promise<{ text: string; model: string; at: number } | undefined> {
+  let text = ''
+  try {
+    const stream = ctx.llm.stream({
+      provider,
+      model,
+      messages: [createUserMessage({ content: [image, { type: 'text', text: CAPTION_PROMPT }] })],
+    })
+    for await (const chunk of stream) {
+      if (chunk.type === 'text-delta') text += chunk.text
+    }
+  } catch {
+    return undefined
+  }
+  const trimmed = text.trim()
+  return trimmed === '' ? undefined : { text: trimmed, model, at: Date.now() }
 }
 
 
@@ -398,6 +442,21 @@ export class SessionCommandController {
                 )
               }
               agent.model.select({ provider: current.provider, model: vision })
+            }
+          }
+          // Give text-only models something to work with: caption each image once
+          // with a vision model, so the picture survives as words in the session.
+          const provider = agent.model.current()?.provider
+          if (provider !== undefined) {
+            const visionModel = await visionFallback(this.ctx, provider)
+            if (visionModel !== undefined) {
+              for (const part of admission.content) {
+                if (part.type !== 'image') continue
+                const attachmentId = part.attachment.attachmentId
+                if (readImageCaption(attachmentId) !== undefined) continue
+                const caption = await captionImage(this.ctx, provider, visionModel, part)
+                if (caption !== undefined) writeImageCaption(attachmentId, caption)
+              }
             }
           }
         }

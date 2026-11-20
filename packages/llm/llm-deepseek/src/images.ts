@@ -44,6 +44,12 @@ export async function prepareImages(
   if (!messages.some(message => contentHasImage(message.content))) return { messages, versions }
   const model = connection.models.find(entry => entry.id === modelId)
   if (model?.inputModalities?.includes('image') !== true || attachments === undefined) {
+    // A text-only model cannot receive pixels, but it can read a caption. Every
+    // image is captioned once at admission; when all of them have one, the
+    // request degrades to text instead of failing. A missing caption keeps the
+    // old refusal, so nothing is ever silently dropped.
+    const degraded = projectCaptions(messages)
+    if (degraded.missing === 0) return { messages: degraded.messages, versions }
     throw new LlmError('DeepSeek Messages image input requires a vision model and attachment service', 'UNSUPPORTED_CONTENT')
   }
   if (messages.some(message => message.role !== 'user' && message.role !== 'tool' && contentHasImage(message.content))) {
@@ -108,4 +114,30 @@ export async function prepareFileIds(
     }
   }
   return ids
+}
+
+/**
+ * Replace every image block with its stored caption text.
+ *
+ * Used when the route cannot accept pixels: the caption is what the picture
+ * means to this model. Images without a caption are left in place and counted,
+ * so the caller can keep refusing rather than send a silent hole.
+ * @param messages - request history that still carries image blocks.
+ * @returns projected history and how many images had no caption.
+ */
+function projectCaptions(messages: readonly RequestMessage[]): { messages: RequestMessage[]; missing: number } {
+  let missing = 0
+  const projected = messages.map((message) => {
+    const content = message.content.flatMap((block) => {
+      if (block.type !== 'image') return [block]
+      const caption = readImageCaption(block.attachment.attachmentId)
+      if (caption === undefined) {
+        missing += 1
+        return [block]
+      }
+      return [{ type: 'text' as const, text: captionProjection(caption) }]
+    })
+    return content === message.content ? message : { ...message, content }
+  })
+  return { messages: projected, missing }
 }
