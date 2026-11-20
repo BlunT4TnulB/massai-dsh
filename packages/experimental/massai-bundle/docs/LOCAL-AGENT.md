@@ -69,3 +69,26 @@ strong model as a deliberate escalation rather than the default.
 
 That is the whole idea: **the small model does the lifting, the big model gets
 called in.** You should not have to know which one answered.
+
+---
+
+## Where this goes: local agents as a network
+
+The first step is one computer running one small model. The shape it grows into is
+**Massai as the hub and local agents as the workers** — several machines, each
+running a local model, connected to the same Massai so work lands on whichever
+machine has capacity. DeepSeek stays the reliable default and the escalation path;
+local agents are added capacity, not a replacement.
+
+Design notes for that future, so today's work does not paint us into a corner:
+
+- **The gateway is the seam.** Every local model is reached through one
+  OpenAI-compatible endpoint, so a machine's model is just a `baseURL` —
+  localhost today, `http://workstation.local:8000/v1` tomorrow.
+- **Routing is per step, not per session.** The router already decides step by
+  step, which is what a multi-machine pool needs: send this step to any worker
+  that can answer it, keep the conversation in one place.
+- **Identity is the user, not the machine.** Clerk/user ids key the credentials,
+  so a person can move between machines without re-authenticating.
+- **Failure is expected.** A worker that goes offline is just a provider that
+  fails and falls back — the retry/fallback path already exists.
