@@ -11911,6 +11911,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-quickstart':
         specifier: workspace:*
         version: link:../client-ui-quickstart
+      '@deepseek-ai/dsh-deepseek-chat-import':
+        specifier: workspace:*
+        version: link:../deepseek-chat-import
       '@deepseek-ai/dsh-hosted-signin':
         specifier: workspace:*
         version: link:../hosted-signin
