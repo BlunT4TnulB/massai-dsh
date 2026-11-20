@@ -18,6 +18,8 @@ export interface RelayJob {
   id: string
   /** The OpenAI-shaped request body to forward. */
   body: unknown
+  /** Only this machine may take the job, when the caller named one. */
+  target?: string
   /** When the job was queued (ms since epoch). */
   at: number
   /** Delivers the worker's answer to the waiting caller. */
@@ -30,8 +32,10 @@ export interface RelayJob {
 const queue: RelayJob[] = []
 /** Jobs by id, so a result can find its waiter. */
 const waiting = new Map<string, RelayJob>()
-/** Long-poll waiters: resolve with a job when one arrives. */
-const pollers: Array<(job: RelayJob | undefined) => void> = []
+/** Long-poll waiters: machine name and its resolver. */
+const pollers: Array<{ name: string; resolve: (job: RelayJob | undefined) => void }> = []
+/** Jobs answered per machine. */
+const served = new Map<string, number>()
 /** When a worker last asked for work (ms since epoch). */
 let lastPollAt = 0
 /** How recently a worker must have polled to count as connected. */
@@ -59,7 +63,7 @@ export function workerConnected(): boolean {
   return pollers.length > 0 || Date.now() - lastPollAt < CONNECTED_WINDOW_MS
 }
 
-export function enqueue(body: unknown): Promise<unknown> {
+export function enqueue(body: unknown, target?: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const id = randomUUID()
     // Two-phase timeout: a job nobody picks up means no worker is listening, and
@@ -74,6 +78,7 @@ export function enqueue(body: unknown): Promise<unknown> {
     const job: RelayJob = {
       id,
       body,
+      ...(target === undefined || target === '' ? {} : { target }),
       at: Date.now(),
       timer,
       settle: (result) => {
@@ -84,13 +89,20 @@ export function enqueue(body: unknown): Promise<unknown> {
       },
     }
     waiting.set(id, job)
-    const poller = pollers.shift()
-    if (poller !== undefined) {
-      markPicked(job)
-      poller(job)
-    } else {
-      queue.push(job)
+    // Hand the job straight to a waiting worker when one is eligible; a
+    // targeted job only goes to the machine it names.
+    const eligible = job.target === undefined
+      ? (pollers.length > 0 ? 0 : -1)
+      : pollers.findIndex(candidate => candidate.name === job.target)
+    if (eligible >= 0) {
+      const [poller] = pollers.splice(eligible, 1)
+      if (poller !== undefined) {
+        markPicked(job)
+        poller.resolve(job)
+        return
+      }
     }
+    queue.push(job)
   })
 }
 
@@ -111,9 +123,12 @@ function markPicked(job: RelayJob): void {
  * Take the next job for a polling worker, waiting briefly for one.
  * @returns the job, or undefined when none arrived.
  */
-export function nextJob(): Promise<RelayJob | undefined> {
+export function nextJob(workerName = ''): Promise<RelayJob | undefined> {
   lastPollAt = Date.now()
-  const queued = queue.shift()
+  const name = workerName.trim()
+  // A named worker may only take untargeted jobs or jobs aimed at it.
+  const index = queue.findIndex(job => job.target === undefined || job.target === name)
+  const queued = index >= 0 ? queue.splice(index, 1)[0] : undefined
   if (queued !== undefined) {
     markPicked(queued)
     return Promise.resolve(queued)
@@ -128,7 +143,7 @@ export function nextJob(): Promise<RelayJob | undefined> {
       if (index >= 0) pollers.splice(index, 1)
       resolve(undefined)
     }, POLL_HOLD_MS)
-    pollers.push(finish)
+    pollers.push({ name, resolve: finish })
   })
 }
 
@@ -138,14 +153,28 @@ export function nextJob(): Promise<RelayJob | undefined> {
  * @param result - the worker's outcome.
  * @returns whether the job was still waiting.
  */
-export function complete(id: string, result: { ok: true; body: unknown } | { ok: false; error: string }): boolean {
+export function complete(id: string, result: { ok: true; body: unknown } | { ok: false; error: string }, workerName = ''): boolean {
   const job = waiting.get(id)
   if (job === undefined) return false
+  const name = workerName.trim()
+  if (name !== '') served.set(name, (served.get(name) ?? 0) + 1)
   job.settle(result)
   return true
 }
 
 /** Diagnostics for the owner page. */
-export function relayStatus(): { queued: number; inFlight: number; pollers: number; connected: boolean } {
-  return { queued: queue.length, inFlight: waiting.size, pollers: pollers.length, connected: workerConnected() }
+export function relayStatus(): {
+  queued: number
+  inFlight: number
+  pollers: number
+  connected: boolean
+  served: Record<string, number>
+} {
+  return {
+    queued: queue.length,
+    inFlight: waiting.size,
+    pollers: pollers.length,
+    connected: workerConnected(),
+    served: Object.fromEntries(served),
+  }
 }

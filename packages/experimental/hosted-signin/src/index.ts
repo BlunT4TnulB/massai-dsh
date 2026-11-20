@@ -238,7 +238,8 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       const token = workerTokenOf(req)
       if (!workerTokenAccepted(token)) { respond(res, 404, { error: 'not found' }); return }
-      const job = await nextJob()
+      const workerName = typeof req.headers['x-worker-name'] === 'string' ? req.headers['x-worker-name'] : ''
+      const job = await nextJob(workerName)
       if (job === undefined) { res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); return }
       respond(res, 200, { id: job.id, body: job.body })
     },
@@ -252,13 +253,13 @@ export function apply(ctx: Context): void {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
         const raw = await readBody(req)
-        const payload = JSON.parse(raw === '' ? '{}' : raw) as { id?: unknown; error?: unknown; body?: unknown }
+        const payload = JSON.parse(raw === '' ? '{}' : raw) as { id?: unknown; error?: unknown; body?: unknown; worker?: unknown }
         const id = typeof payload.id === 'string' ? payload.id : ''
         const error = typeof payload.error === 'string' ? payload.error : undefined
         if (id === '') { respond(res, 400, { error: 'id is required' }); return }
         const delivered = error !== undefined && error !== ''
-          ? complete(id, { ok: false, error })
-          : complete(id, { ok: true, body: payload.body ?? {} })
+          ? complete(id, { ok: false, error }, typeof payload.worker === 'string' ? payload.worker : '')
+          : complete(id, { ok: true, body: payload.body ?? {} }, typeof payload.worker === 'string' ? payload.worker : '')
         respond(res, delivered ? 200 : 409, { ok: delivered, relay: relayStatus() })
       } catch (admissionError) {
         respond(res, 400, { error: admissionError instanceof Error ? admissionError.message : String(admissionError) })
@@ -278,8 +279,12 @@ export function apply(ctx: Context): void {
       }
       try {
         const raw = await readBody(req)
-        const body: unknown = raw === '' ? {} : JSON.parse(raw)
-        const answer = await enqueue(body)
+        const parsed: unknown = raw === '' ? {} : JSON.parse(raw)
+        // `model` is either "auto" (any machine) or a machine name — so a client
+        // can ask for the big GPU by name.
+        const requested = (parsed as { model?: unknown }).model
+        const target = typeof requested === 'string' && requested !== 'auto' ? requested : undefined
+        const answer = await enqueue(parsed, target)
         respond(res, 200, answer)
       } catch (relayError) {
         respond(res, 503, { error: relayError instanceof Error ? relayError.message : String(relayError) })
