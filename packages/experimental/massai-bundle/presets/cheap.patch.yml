@@ -27,6 +27,12 @@
             config:
               thresholdRatio: 0.2
               retainRatio: 0.06
+              # The summary IS the session's memory: after this runs, everything
+              # above is gone. Write it with the strong model even though every
+              # other step stays on the cheap one — summaries are rare, and a bad
+              # one poisons every later turn.
+              summarizationProvider: deepseek-official
+              summarizationModel: deepseek-v4-pro
           - id: command-compact
             name: '@deepseek-ai/dsh-command-compact'
           - id: tool-result-pruner

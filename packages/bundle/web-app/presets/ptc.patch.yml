@@ -81,6 +81,12 @@
                   # working window is the dominant cost line, not a safety net.
                   thresholdRatio: 0.2
                   retainRatio: 0.06
+                  # The summary IS the session's memory: everything above it is
+                  # gone after this runs. Write it with the strong model while
+                  # every other step stays cheap — summaries are rare and a bad
+                  # one poisons every later turn.
+                  summarizationProvider: deepseek-official
+                  summarizationModel: deepseek-v4-pro
               - id: command-compact
                 name: '@deepseek-ai/dsh-command-compact'
               - id: tool-result-pruner
