@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { zstdDecompressSync } from 'node:zlib'
+import zlib from 'node:zlib'
 
 /** One measured request. */
 export interface UsagePoint {
@@ -92,6 +92,9 @@ export function costOf(point: UsagePoint, rate: RateSet): number {
   return base * (isOffPeak(point.at) ? rate.offPeakMultiplier : 1)
 }
 
+/** zstd decompression, when the Node build exposes it (22.15+). */
+const zstdDecompress = (zlib as unknown as { zstdDecompressSync?: (input: Buffer) => Buffer }).zstdDecompressSync
+
 /** Where session logs live. */
 function sessionsRoot(): string {
   return join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'sessions')
@@ -134,7 +137,7 @@ export function readUsage(maxFiles = 400): UsagePoint[] {
       try {
         const raw = readFileSync(full)
         text = name.endsWith('.zstd')
-          ? zstdDecompressSync(raw).toString('utf8')
+          ? (zstdDecompress === undefined ? '' : zstdDecompress(raw).toString('utf8'))
           : raw.toString('utf8')
       } catch {
         continue
