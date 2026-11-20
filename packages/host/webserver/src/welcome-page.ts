@@ -164,6 +164,7 @@ export function welcomePage(line?: number): string {
         <button class="socialbtn" type="button" data-clerk>GitHub</button>
         <button class="socialbtn" type="button" data-clerk>Apple</button>
       </div>
+      <div class="socialnote" id="clerk-debug" style="display:none;margin-top:.45rem;font-family:ui-monospace,monospace;font-size:.68rem;color:#7ee2a8;white-space:pre-wrap;text-align:left"></div>
       <div class="socialnote" id="clerk-note">Sign-in is handled by Clerk; your DeepSeek key stays yours.</div>
     </div>` : ''}
 
@@ -188,6 +189,14 @@ ${clerkReady ? `<script>
 (() => {
   const pk = ${JSON.stringify(publishableKey)}
   const note = document.getElementById('clerk-note')
+  const debug = document.getElementById('clerk-debug')
+  const step = (message) => {
+    if (debug && new URLSearchParams(location.search).has('clerkdebug')) {
+      debug.style.display = 'block'
+      debug.textContent += message + '\n'
+    }
+  }
+  step('key: ' + pk.slice(0, 12) + '…')
   const fail = (message) => { if (note) { note.textContent = message; note.style.color = '#f0b46a' } }
   // The publishable key encodes the instance's Frontend API host.
   let host = ''
@@ -195,15 +204,19 @@ ${clerkReady ? `<script>
     const body = pk.replace(/^pk_(test|live)_/, '').replace(/-/g, '+').replace(/_/g, '/')
     host = atob(body + '='.repeat((4 - body.length % 4) % 4)).replace(/\$+$/, '').trim()
   } catch { /* fall through to the failure path */ }
+  step('host: ' + host)
   if (!host) { fail('Sign-in is unavailable right now — paste a key below.'); return }
   const script = document.createElement('script')
   script.src = 'https://' + host + '/npm/@clerk/clerk-js@5/dist/clerk.browser.js'
   script.async = true
-  script.onerror = () => fail('Sign-in could not load — paste a key below.')
+  step('loading clerk-js…')
+  script.onerror = () => { step('clerk-js FAILED to load'); fail('Sign-in could not load — paste a key below.') }
   script.onload = async () => {
     try {
       const clerk = window.Clerk
+      step('clerk-js loaded: ' + (typeof clerk))
       await clerk.load({ publishableKey: pk })
+      step('load ok · session: ' + (clerk.session ? 'yes' : 'no'))
       let exchanged = false
       const exchange = async () => {
         if (exchanged) return
@@ -217,15 +230,15 @@ ${clerkReady ? `<script>
         if (response.ok) { exchanged = true; location.href = '/start'; return }
         fail('Sign-in could not be completed — paste a key below.')
       }
-      if (clerk.session) { await exchange(); return }
-      clerk.addListener((resources) => { if (resources.session) void exchange() })
+      if (clerk.session) { step('exchanging existing session…'); await exchange(); return }
+      clerk.addListener((resources) => { if (resources.session) { step('session appeared — exchanging…'); void exchange() } })
       for (const button of document.querySelectorAll('[data-clerk]')) {
         button.addEventListener('click', () => {
-          try { clerk.openSignIn() } catch { fail('Sign-in could not open — paste a key below.') }
+          try { step('openSignIn()'); clerk.openSignIn(); step('modal requested') } catch (error) { step('openSignIn threw: ' + String(error)); fail('Sign-in could not open — paste a key below.') }
         })
       }
       if (note) note.textContent = 'Sign-in is handled by Clerk; your DeepSeek key stays yours.'
-    } catch { fail('Sign-in could not start — paste a key below.') }
+    } catch (error) { step('load threw: ' + String(error)); fail('Sign-in could not start — paste a key below.') }
   }
   document.body.append(script)
 })()
