@@ -7,7 +7,8 @@
  */
 
 import {
-  byDay, byHour, bySession, compact, costOf, isOffPeak, OFF_PEAK_UTC, RATES, readUsage,
+  byDay, byHour, byModel, bySession, compact, costOf, efficiencyVerdict, isOffPeak,
+  OFF_PEAK_UTC, RATES, readUsage, rateFor,
 } from './usage.ts'
 
 /** Shared page chrome. */
@@ -72,7 +73,7 @@ export function usagePageHtml(): string {
   const totals = points.reduce((acc, p) => ({
     input: acc.input + p.input, output: acc.output + p.output,
     cacheRead: acc.cacheRead + p.cacheRead, requests: acc.requests + 1,
-    cost: acc.cost + costOf(p, RATES[0] as typeof RATES[number]),
+    cost: acc.cost + costOf(p),
   }), { input: 0, output: 0, cacheRead: 0, requests: 0, cost: 0 })
   const maxDay = Math.max(1, ...days.map(d => d.input + d.output))
   const maxHour = Math.max(1, ...hours.map(h => h.tokens))
@@ -90,6 +91,24 @@ export function usagePageHtml(): string {
     const height = Math.round((h.tokens / maxHour) * 40)
     return `<rect x="${i * 10 + 1}" y="${42 - height}" width="7" height="${Math.max(height, 1)}" fill="${h.tokens === 0 ? '#26262d' : '#7ee2a8'}" rx="1"><title>${h.tokens} tokens</title></rect>`
   }).join('')
+  const models = byModel(points)
+  const heaviest = Math.max(1, ...models.map(m => m.promptPerCall))
+  const totalCalls = Math.max(1, models.reduce((sum, m) => sum + m.calls, 0))
+  const modelRows = models.length === 0
+    ? '<tr><td colspan="7" class="muted">No model activity recorded yet.</td></tr>'
+    : models.map((m) => {
+      const verdict = efficiencyVerdict(m, heaviest)
+      const share = Math.round((m.calls / totalCalls) * 100)
+      return `<tr>
+        <td class="mono">${m.model}</td>
+        <td>${m.calls}</td>
+        <td>${share}%</td>
+        <td>${compact(m.promptPerCall)}</td>
+        <td>${compact(m.input + m.cacheRead + m.output)}</td>
+        <td>$${m.cost.toFixed(3)}</td>
+        <td class="${verdict.tone === 'warn' ? 'warn' : verdict.tone === 'ok' ? 'good' : 'muted'}">${verdict.label}</td>
+      </tr>`
+    }).join('')
   const rows = sessions.slice(0, 12).map(s => `<tr>
     <td class="mono">${s.session.slice(0, 18)}…</td>
     <td>${s.requests}</td>
@@ -122,6 +141,13 @@ export function usagePageHtml(): string {
   <p class="note">Green = activity. Right edge is now. Off-peak (half price) runs
   ${String(OFF_PEAK_UTC[0]).padStart(2, '0')}:30–${String(OFF_PEAK_UTC[1]).padStart(2, '0')}:30 UTC.</p>
 </section>
+<section><h2>By model <span class="muted" style="letter-spacing:0;text-transform:none;font-weight:500">— what each model actually did</span></h2>
+  <table><thead><tr><th>model</th><th>calls</th><th>share</th><th>prompt/call</th><th>tokens</th><th>est. spend</th><th>read</th></tr></thead>
+  <tbody>${modelRows}</tbody></table>
+  <p class="note">"Possibly overkill" means the model was handed small prompts a lighter model already
+  handles here — a hint to switch down, not a verdict. "Carrying the big jobs" is the opposite:
+  the heavy model is earning its price.</p>
+</section>
 <section><h2>Per session</h2>
   <table><thead><tr><th>session</th><th>calls</th><th>prompt</th><th>cache</th><th>completion</th><th>last activity</th></tr></thead>
   <tbody>${rows === '' ? '<tr><td colspan="6" class="muted">No usage recorded yet.</td></tr>' : rows}</tbody></table>
@@ -141,7 +167,7 @@ export function ratesPageHtml(): string {
   const now = Date.now()
   const offPeak = isOffPeak(now)
   const rows = RATES.map(rate => `<tr>
-    <td class="mono">${rate.label}</td>
+    <td class="mono">${rate.label}<br><span class="muted" style="font-size:.68rem">${rate.models.join(' · ')}</span></td>
     <td>$${rate.inputMiss.toFixed(2)}</td>
     <td>$${rate.inputHit.toFixed(2)}</td>
     <td>$${rate.output.toFixed(2)}</td>

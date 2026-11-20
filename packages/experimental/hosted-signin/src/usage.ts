@@ -20,6 +20,8 @@ export interface UsagePoint {
   at: number
   /** Session that produced it. */
   session: string
+  /** Provider model id that served the request. */
+  model: string
   /** Prompt tokens sent (cache miss). */
   input: number
   /** Tokens served from the provider cache. */
@@ -45,6 +47,8 @@ export interface SessionUsage {
 export interface RateSet {
   /** Name for display. */
   label: string
+  /** Provider model ids priced by this row. */
+  models: readonly string[]
   /** Cache-miss prompt tokens. */
   inputMiss: number
   /** Cache-hit prompt tokens. */
@@ -60,9 +64,19 @@ export interface RateSet {
  * one-line edit. Verify against platform.deepseek.com before trusting a figure.
  */
 export const RATES: readonly RateSet[] = [
-  { label: 'deepseek-chat', inputMiss: 0.27, inputHit: 0.07, output: 1.1, offPeakMultiplier: 0.5 },
-  { label: 'deepseek-reasoner', inputMiss: 0.55, inputHit: 0.14, output: 2.19, offPeakMultiplier: 0.25 },
+  { label: 'deepseek-flash', models: ['deepseek-flash', 'deepseek-chat'], inputMiss: 0.27, inputHit: 0.07, output: 1.1, offPeakMultiplier: 0.5 },
+  { label: 'deepseek-v4-pro', models: ['deepseek-v4-pro', 'deepseek-reasoner'], inputMiss: 0.55, inputHit: 0.14, output: 2.19, offPeakMultiplier: 0.25 },
 ]
+
+/**
+ * The rate row for one model id.
+ * @param model - provider model id.
+ * @returns the matching row, defaulting to the cheapest published set.
+ */
+export function rateFor(model: string): RateSet {
+  const hit = RATES.find(rate => rate.models.some(id => model.includes(id) || id.includes(model)))
+  return hit ?? (RATES[0] as RateSet)
+}
 
 /** DeepSeek's off-peak window in UTC ([startHour, endHour) with a midnight wrap). */
 export const OFF_PEAK_UTC: readonly [number, number] = [16.5, 0.5]
@@ -84,7 +98,7 @@ export function isOffPeak(at: number): boolean {
  * @param rate - rate set to price with.
  * @returns US dollars.
  */
-export function costOf(point: UsagePoint, rate: RateSet): number {
+export function costOf(point: UsagePoint, rate: RateSet = rateFor(point.model)): number {
   const millions = 1_000_000
   const base = (point.input / millions) * rate.inputMiss
     + (point.cacheRead / millions) * rate.inputHit
@@ -149,13 +163,18 @@ export function readUsage(maxFiles = 400): UsagePoint[] {
           const event = JSON.parse(line) as {
             type?: string
             time?: number
-            data?: { usage?: Partial<Record<'inputTokens' | 'outputTokens' | 'cacheReadTokens' | 'cacheWriteTokens', number>> }
+            data?: {
+              usage?: Partial<Record<'inputTokens' | 'outputTokens' | 'cacheReadTokens' | 'cacheWriteTokens', number>>
+              message?: { source?: { model?: string } }
+              model?: string
+            }
           }
           const usage = event.data?.usage
           if (usage === undefined) continue
           points.push({
             at: event.time ?? 0,
             session,
+            model: event.data?.message?.source?.model ?? event.data?.model ?? 'unknown',
             input: usage.inputTokens ?? 0,
             output: usage.outputTokens ?? 0,
             cacheRead: usage.cacheReadTokens ?? 0,
@@ -169,6 +188,58 @@ export function readUsage(maxFiles = 400): UsagePoint[] {
   }
   walk(root, 0)
   return points.filter(p => p.at > 0).sort((a, b) => a.at - b.at)
+}
+
+/** One model's share of the work. */
+export interface ModelUsage {
+  model: string
+  calls: number
+  input: number
+  output: number
+  cacheRead: number
+  cost: number
+  /** Average prompt tokens per call — the "was this overkill?" signal. */
+  promptPerCall: number
+}
+
+/** Roll points up per model. */
+export function byModel(points: readonly UsagePoint[]): ModelUsage[] {
+  const map = new Map<string, ModelUsage>()
+  for (const point of points) {
+    const hit = map.get(point.model)
+    if (hit === undefined) {
+      map.set(point.model, {
+        model: point.model, calls: 1, input: point.input, output: point.output,
+        cacheRead: point.cacheRead, cost: costOf(point), promptPerCall: point.input + point.cacheRead,
+      })
+      continue
+    }
+    hit.calls += 1
+    hit.input += point.input
+    hit.output += point.output
+    hit.cacheRead += point.cacheRead
+    hit.cost += costOf(point)
+    hit.promptPerCall += point.input + point.cacheRead
+  }
+  for (const entry of map.values()) {
+    entry.promptPerCall = entry.calls === 0 ? 0 : Math.round(entry.promptPerCall / entry.calls)
+  }
+  return [...map.values()].sort((a, b) => b.calls - a.calls)
+}
+
+/**
+ * Advisory verdict for one model on this workload: the average prompt size says
+ * whether a heavier model is buying anything.
+ * @param entry - the model rollup.
+ * @param heaviest - the largest average prompt across models this period.
+ * @returns a short label and how to read it.
+ */
+export function efficiencyVerdict(entry: ModelUsage, heaviest: number): { label: string; tone: 'ok' | 'warn' | 'info' } {
+  if (entry.calls < 3) return { label: 'too little data', tone: 'info' }
+  const share = heaviest === 0 ? 0 : entry.promptPerCall / heaviest
+  if (share < 0.25) return { label: 'possibly overkill — small prompts', tone: 'warn' }
+  if (share > 0.85) return { label: 'carrying the big jobs', tone: 'ok' }
+  return { label: 'in range', tone: 'info' }
 }
 
 /** Roll points up per session, newest activity first. */
@@ -207,7 +278,7 @@ export function byDay(points: readonly UsagePoint[], days = 14): Array<{ day: st
     if (bucket === undefined) continue
     bucket.input += point.input + point.cacheRead
     bucket.output += point.output
-    bucket.cost += costOf(point, RATES[0] as RateSet)
+    bucket.cost += costOf(point)
   }
   return [...buckets.entries()].map(([day, v]) => ({ day, ...v }))
 }
