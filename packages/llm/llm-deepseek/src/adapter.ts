@@ -126,7 +126,7 @@ export class DeepSeekAdapter<C extends Connection = Connection> extends LlmAdapt
         const history = inline ? inlineImages(messages, versions, connection) : messages
         const body = serialize(options, connection, history, versions, this.imageAccess, (reason) => {
           this.dependencies.onReplayDegrade?.({ provider: options.provider, model: options.model, reason })
-        }, fileIds)
+        }, fileIds, this.dependencies.options().historyReasoning ?? 'all')
         const requestIdentity: Omit<DeepSeekLlmApiExtensionRequest, 'body'> = {
           signal: live,
           ...options.sessionId === undefined ? {} : { sessionId: String(options.sessionId) },

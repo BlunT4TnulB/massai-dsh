@@ -1,6 +1,13 @@
 # Revamp bundle patch: cost-aware defaults for the forked DSH.
 # Keeps DeepSeek-V4-Pro as the main-agent default (best coding quality).
 # Uncomment the second entry to default the main agent to Flash (cheaper/faster).
+- id: llm-deepseek
+  config:
+    # Replaying every reasoning block makes long sessions 2-3x larger in context
+    # (measured: 60% of assistant content) and it is re-read on every call. Keep
+    # the reasoning the active tool chain needs; drop finished turns.
+    historyReasoning: current-turn
+
 - id: agent-default-model
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
@@ -58,7 +65,14 @@
     - id: hosted-signin
       name: "@deepseek-ai/dsh-hosted-signin"
 
-# - id: agent-default-model
+# - id: llm-deepseek
+  config:
+    # Replaying every reasoning block makes long sessions 2-3x larger in context
+    # (measured: 60% of assistant content) and it is re-read on every call. Keep
+    # the reasoning the active tool chain needs; drop finished turns.
+    historyReasoning: current-turn
+
+- id: agent-default-model
 #   name: "@deepseek-ai/dsh-agent-default-model"
 #   config:
 #     provider: deepseek-official

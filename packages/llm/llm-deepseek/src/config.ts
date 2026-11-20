@@ -23,6 +23,12 @@ export interface Config {
   thinking: Volatile<'enabled' | 'disabled' | undefined>
   /** Default thinking effort (default `high`); `off` disables thinking per request. */
   reasoningEffort: Volatile<'off' | 'low' | 'high' | 'max' | undefined>
+  /**
+   * Whether reasoning is replayed for the whole history (`all`, the default) or
+   * only for the turn in flight (`current-turn`). Old reasoning is most of a
+   * long session's context and is re-read on every call.
+   */
+  historyReasoning: Volatile<'all' | 'current-turn' | undefined>
   /** Default per-request output cap (default 256,000); a model's own cap and explicit request values win. */
   maxTokens: Volatile<number>
   /** Positive context capacity used when the selected model has no exact value (default 1,000,000). */
@@ -98,6 +104,10 @@ const catalogModel: z<DeepSeekCatalogModel> = z.object({
 export const deepSeekConfigFields = {
   baseURL: z.string().volatile(),
   thinking: z.union(['enabled', 'disabled']).volatile(),
+  // Replaying every reasoning block makes history 2-3x larger and it is re-read
+  // on every call. `current-turn` keeps the reasoning the active tool chain
+  // needs and drops reasoning from finished turns.
+  historyReasoning: z.union(['all', 'current-turn']).volatile(),
   reasoningEffort: z.union(['off', 'low', 'high', 'max']).volatile(),
   maxTokens: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER).default(DEFAULT_MAX_TOKENS).volatile(),
   defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW).volatile(),

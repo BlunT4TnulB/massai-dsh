@@ -24,15 +24,15 @@ function toolInput(raw: string): Record<string, unknown> {
     : {}
 }
 
-function assistant(message: Message, model: string, onReplayDegrade?: (reason: string) => void): WireBlock[] {
+function assistant(message: Message, model: string, onReplayDegrade?: (reason: string) => void, keepReasoning = true): WireBlock[] {
   const replay = readReplay(message, model, onReplayDegrade)
   return message.content.flatMap((block, index): WireBlock | WireBlock[] => {
     switch (block.type) {
       case 'text': return block.text.length === 0 ? [] : { type: 'text', text: block.text }
-      case 'reasoning': return {
+      case 'reasoning': return keepReasoning ? {
         type: 'thinking', thinking: block.text,
         ...replay?.[index]?.signature === undefined ? {} : { signature: replay[index].signature },
-      }
+      } : []
       case 'tool-call': return { type: 'tool_use', id: block.id, name: block.name, input: toolInput(block.arguments) }
       default: return unsupported(`assistant content ${block.type}`)
     }
@@ -60,7 +60,15 @@ export function serialize(
   images: ReadonlyMap<ImageAttachmentRef['attachmentId'], RequestImageAttachment>, access: ImageAttachmentAccessResolver,
   onReplayDegrade?: (reason: string) => void,
   fileIds?: ReadonlyMap<ImageAttachmentRef['attachmentId'], DeepSeekFileId>,
+  historyReasoning: 'all' | 'current-turn' = 'all',
 ): WireRequest {
+  // The turn in flight starts at the last user message. Reasoning before it has
+  // already produced its tool calls, so replaying it costs context and buys
+  // nothing once `current-turn` is selected.
+  let currentTurnStart = 0
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index]?.role === 'user') { currentTurnStart = index; break }
+  }
   const model = connection.models.find(entry => entry.id === options.model)
   const inHistory = model?.systemPromptUpdate === 'in-history'
   const input = (blocks: readonly ContentBlock[]): WireInput[] => blocks.flatMap((block): WireInput[] => {
@@ -88,7 +96,8 @@ export function serialize(
     if (messages.at(-1)?.role !== 'user') return unsupported('system update without a preceding user or tool-result turn')
     messages.push(...systemUpdates.splice(0))
   }
-  for (const message of history) {
+  for (let historyIndex = 0; historyIndex < history.length; historyIndex += 1) {
+    const message = history[historyIndex] as Message
     if (message.role === 'developer') {
       const content = message.content.flatMap((block): WireBlock[] => {
         switch (block.type) {
@@ -115,8 +124,9 @@ export function serialize(
       }
       continue
     }
+    const keepReasoning = historyReasoning === 'all' || historyIndex >= currentTurnStart
     const content: WireBlock[] = message.role === 'assistant'
-      ? assistant(message, options.model, onReplayDegrade)
+      ? assistant(message, options.model, onReplayDegrade, keepReasoning)
       : message.role === 'tool'
         ? [{ type: 'tool_result', tool_use_id: message.toolCallId, content: input(message.content), ...message.isError === undefined ? {} : { is_error: message.isError } }]
         : message.content.flatMap((block): WireBlock[] => input([block]))
