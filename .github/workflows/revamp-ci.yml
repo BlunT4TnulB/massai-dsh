@@ -104,7 +104,10 @@ jobs:
 
       - name: Build and push image
         run: |
-          docker build -t ghcr.io/blunt4tnulb/massai:latest .
+          # Tag by commit as well as :latest. Render's image service can serve a
+          # stale :latest digest; a unique tag makes a deploy deterministic.
+          docker build -t ghcr.io/blunt4tnulb/massai:${{ github.sha }} -t ghcr.io/blunt4tnulb/massai:latest .
+          docker push ghcr.io/blunt4tnulb/massai:${{ github.sha }}
           docker push ghcr.io/blunt4tnulb/massai:latest
 
       - name: Smoke-test the image (bind + /healthz)
