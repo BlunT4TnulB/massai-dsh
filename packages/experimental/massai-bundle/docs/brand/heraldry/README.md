@@ -34,3 +34,27 @@ Canvas `#151517`, ochre `#C1440E`, halo gold `#C9A227`, bone `#F2F2F4`. DeepSeek
 - It has no single silhouette, so a tab strip of six icons would not pick it out.
 - The crest and the icon must be recognisably the same family — shield/V/halo/tail is that
   family, at every size.
+
+## The monogram: the initials are in the crest
+
+Look at the top of the artwork and the letters are already there:
+
+- the **crown** — its points and valleys spell a **W**
+- the **helm's visor** — squares off into a **V**
+- the **halo** behind them — the ring that encloses both
+
+So the icon is not an abstraction, it is a transcription: `vw-icon.svg` is the halo ring
+(gold) around the W crown (bone) above the V visor (ochre). `proof-wv.png` crops the crest
+so the correspondence is visible side by side; `mono-refined.png` and `vw-tiny2.png` are the
+proofs at large and icon sizes.
+
+Two artworks, same rule as the icon:
+
+| Size | File | What is drawn |
+|---|---|---|
+| ≥24px | `vw-icon.svg` | halo ring + W + V |
+| ≤20px | `vw-icon-small.svg` | no ring, thicker letters, filling the tile |
+
+`vw-ligature.svg` is an alternative for large display: one continuous shape whose two valleys
+are the W and whose point is the V. It is stronger as a mark, but at 16px the two letters stop
+being separable, so it is not the app icon.
