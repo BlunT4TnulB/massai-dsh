@@ -32,12 +32,15 @@ const DEEPSEEK_TOPUP = 'https://platform.deepseek.com/top_up'
 
 /** The crest, small enough to sit beside the wordmark. */
 const CREST = `<svg class="crest-sm" viewBox="0 0 512 512" aria-hidden="true">
-        <circle cx="256" cy="196" r="150" fill="none" stroke="#C9A227" stroke-width="14" opacity=".9"/>
-        <path d="M256 96 L412 146 C412 300 356 386 256 436 C156 386 100 300 100 146 Z"
-          fill="#1b1b22" stroke="#C1440E" stroke-width="16" stroke-linejoin="round"/>
-        <path d="M186 168 L256 300 L326 168 L306 168 L256 262 L206 168 Z" fill="#B9B9C2"/>
-        <path d="M256 392 C 236 344 210 314 158 286 C 190 344 222 372 252 382 Z" fill="#4D6BFE"/>
-        <path d="M256 392 C 276 344 302 314 354 286 C 322 344 290 372 260 382 Z" fill="#4D6BFE"/>
+        <g fill="#E8CB84">
+          <path d="M 252 140 C 212 100 168 88 124 100 C 168 124 206 160 240 192 Z"/>
+          <path d="M 260 140 C 300 100 344 88 388 100 C 344 124 306 160 272 192 Z"/>
+          <rect x="248" y="100" width="16" height="372" rx="8"/>
+          <path d="M 92 244 h 328 a 30 30 0 0 1 0 60 h -328 a 30 30 0 0 1 0 -60 Z"/>
+          <path d="M 178 424 C 178 456 146 476 106 490 H 406 C 366 476 334 456 334 424 Z"/>
+        </g>
+        <circle cx="168" cy="274" r="27" fill="#0b0b0e"/>
+        <circle cx="344" cy="274" r="27" fill="#0b0b0e"/>
       </svg>`
 
 /** Shared page styling: one window, two rooms. */
@@ -59,7 +62,7 @@ const SHELL_CSS = `
   .card{padding:1.6rem 1.7rem 1.5rem}
   .brandline{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
   .crest-sm{width:2.05rem;height:auto;flex:none}
-  .word{font-size:1.1rem;font-weight:700;letter-spacing:.22em}
+  .word{font-family:Georgia,'Times New Roman',serif;font-size:1.16rem;font-weight:400;letter-spacing:.28em;color:#EFDCA4}
   h1{margin:.2rem 0 .5rem;font-size:1.85rem;line-height:1.1;font-weight:700;letter-spacing:-.015em}
   .sub{color:#9a9aa3;font-size:.94rem;line-height:1.6;font-weight:500;margin:0 0 1.3rem}
   .sub b{color:#E7E7EC;font-weight:600}
