@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+  <radialGradient id="core" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+    <stop offset="22%" stop-color="#FFF6D0" stop-opacity=".95"/>
+    <stop offset="55%" stop-color="#E5BE62" stop-opacity=".45"/>
+    <stop offset="100%" stop-color="#E5BE62" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="g" x1="0.15" y1="0" x2="0.85" y2="1">
+    <stop offset="0%" stop-color="#FFF7DC"/><stop offset="26%" stop-color="#EDD08A"/>
+    <stop offset="60%" stop-color="#C89B36"/><stop offset="100%" stop-color="#7A5310"/>
+  </linearGradient>
+  <linearGradient id="jet" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF"/><stop offset="20%" stop-color="#FFF4C8"/>
+    <stop offset="60%" stop-color="#DFBB5E"/><stop offset="100%" stop-color="#96701F"/>
+  </linearGradient>
+  <filter id="bloom" x="-70%" y="-70%" width="240%" height="240%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+<rect width="512" height="512" fill="#08080a"/>
+<!-- the discharge bloom behind the pinch -->
+<ellipse cx="256" cy="176" rx="150" ry="120" fill="url(#core)" opacity=".55"/>
+<g filter="url(#bloom)">
+  <!-- horns: tips curl upward, meeting at the pinch -->
+  <path d="M62 150 C 104 88 178 66 256 92 C 334 66 408 88 450 150
+           C 396 112 330 100 256 124 C 182 100 116 112 62 150 Z" fill="url(#g)"/>
+  <!-- filament -->
+  <rect x="248" y="108" width="16" height="336" rx="8" fill="url(#jet)"/>
+  <!-- shoulder bar -->
+  <path d="M100 240 h312 a32 32 0 0 1 0 64 h-312 a32 32 0 0 1 0 -64 Z" fill="url(#g)"/>
+  <!-- waisted foot -->
+  <path d="M166 420 H 346 C 356 452 392 476 436 490 H 76 C 120 476 156 452 166 420 Z" fill="url(#g)"/>
+</g>
+<!-- eyes punched after the bloom so they stay crisp -->
+<circle cx="170" cy="272" r="24" fill="#08080a"/>
+<circle cx="342" cy="272" r="24" fill="#08080a"/>
+<!-- bevel highlight along the top edges -->
+<path d="M62 150 C 104 88 178 66 256 92 C 334 66 408 88 450 150"
+      fill="none" stroke="#FFF8DF" stroke-width="3" opacity=".85"/>
+<rect x="100" y="240" width="312" height="5" rx="2.5" fill="#FFF8DF" opacity=".55"/>
+</svg>
