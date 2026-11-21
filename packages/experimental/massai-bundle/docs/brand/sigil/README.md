@@ -29,3 +29,19 @@ face is recognisable from three lines.
 - The horns can read as wings or a moustache at some sizes; shorter, steeper horns fix that.
 - The foot is currently a plain trapezoid-to-curve; the reference art uses a *waisted* foot.
 - Nothing here is live: the shipped mark is still the VW monogram until the owner chooses.
+
+## Revision 2 — the forks are the V
+
+The cap became **two forked horns** rising from the pinch. They read as a **V** (the owner's
+initial) and as the discharge's own split — one shape doing both jobs. The filament now runs
+*between* the eyes and down into the foot, so the figure is a single connected body rather
+than stacked plates.
+
+Files: `final-art.svg` (texture + rays), `final-flat.svg` (two-tone), `final-icon.svg`
+(16–48px: forks, fat bar, eyes, no foot), `final-lockup.svg`, plus `context.png` showing tab,
+door, phone, mark and lockup together.
+
+Open questions for the owner before this goes live:
+1. Forks (V) or the smooth cup from rev 1?
+2. Do the rays stay, or is that too literal a halo?
+3. 16px still crowds four elements; dropping to *eyes + bar only* is the alternative icon.
