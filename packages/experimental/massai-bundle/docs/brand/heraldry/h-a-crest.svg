@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" fill="#151517"/>
+<!-- halo behind the shield -->
+<circle cx="256" cy="196" r="150" fill="none" stroke="#C9A227" stroke-width="14" opacity=".9"/>
+<!-- shield -->
+<path d="M256 96 L412 146 C412 300 356 386 256 436 C156 386 100 300 100 146 Z"
+      fill="#1b1b22" stroke="#C1440E" stroke-width="16" stroke-linejoin="round"/>
+<!-- V visor: the helmet's face, squared -->
+<path d="M186 168 L256 300 L326 168 L306 168 L256 262 L206 168 Z" fill="#F2F2F4"/>
+<!-- whale tail below the V -->
+<path d="M256 392 C 236 344 210 314 158 286 C 190 344 222 372 252 382 Z" fill="#4D6BFE"/>
+<path d="M256 392 C 276 344 302 314 354 286 C 322 344 290 372 260 382 Z" fill="#4D6BFE"/>
+</svg>
