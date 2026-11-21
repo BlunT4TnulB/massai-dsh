@@ -45,3 +45,28 @@ Open questions for the owner before this goes live:
 1. Forks (V) or the smooth cup from rev 1?
 2. Do the rays stay, or is that too literal a halo?
 3. 16px still crowds four elements; dropping to *eyes + bar only* is the alternative icon.
+
+## Why the gold looks different from the AI renders
+
+The owner's studies are **volumetric renders**: light travels *through* the material
+(subsurface scattering, emission, refraction, branching discharge filaments). Mine is
+**vector + SVG filters** — a per-pixel lighting model with one distant light over procedural
+noise (`feTurbulence` + `feDiffuseLighting`), plus gradients and blurs. It can fake a
+*tactile surface*; it cannot simulate *light inside a volume*.
+
+Practical consequences:
+
+| | AI render | SVG v1–v2 | SVG v3–v4 |
+|---|---|---|---|
+| Dynamic range | white-hot cores to near-black bronze | mid-tone khaki everywhere | hot cores, deep recesses |
+| Material | glass/molten gold | bumpy matte metal | glass-edged metal |
+| Interior | crackle, glow through the body | none | branching crackle + core light |
+
+What closed the gap in v3/v4: additive core light down the filament, procedural branching
+crackle clipped to the body, a glass rim gradient (bright top, dark bottom), a radial volume
+overlay, multi-layer bloom, and a saturated ramp
+`#FFF7CE → #FFD659 → #E8A21C → #6B3A06 → #3E2003`.
+
+**The honest limit:** vector will not equal a raytrace. The correct split is
+*vector owns the geometry, the render owns the material* — use the vector at small sizes and
+for print, the render for hero art at large sizes.

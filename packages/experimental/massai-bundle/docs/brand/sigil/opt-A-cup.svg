@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="gold" x1="0.05" y1="0" x2="0.95" y2="1">
+    <stop offset="0%" stop-color="#FFFBE8"/><stop offset="16%" stop-color="#F5E2A8"/>
+    <stop offset="46%" stop-color="#D5AC49"/><stop offset="76%" stop-color="#9A6E1C"/>
+    <stop offset="100%" stop-color="#6B470C"/></linearGradient>
+  <linearGradient id="fil" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#FFFFFF"/><stop offset="16%" stop-color="#FFF7D2"/>
+    <stop offset="52%" stop-color="#EFCE7A"/><stop offset="100%" stop-color="#8E6516"/></linearGradient>
+  <radialGradient id="pinch" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".8"/>
+    <stop offset="30%" stop-color="#FFF3C6" stop-opacity=".26"/>
+    <stop offset="100%" stop-color="#FFE9A8" stop-opacity="0"/></radialGradient>
+  <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="11" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#FFE9A8" surfaceScale="1.5" result="lit">
+      <feDistantLight azimuth="230" elevation="60"/></feDiffuseLighting>
+    <feComposite in="lit" in2="SourceGraphic" operator="in" result="tex"/>
+    <feBlend in="SourceGraphic" in2="tex" mode="overlay"/></filter>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="512" height="512" fill="#070709"/>
+<circle cx="256" cy="176" r="150" fill="url(#pinch)"/>
+<g filter="url(#glow)" opacity=".42" fill="#F0CE7C"><path d="M 138 148 C 170 98 214 82 256 94 C 298 82 342 98 374 148 C 336 118 298 106 256 120 C 214 106 176 118 138 148 Z"/><path d="M 92 244 h 328 a 30 30 0 0 1 0 60 h -328 a 30 30 0 0 1 0 -60 Z"/><path d="M 178 424 C 178 456 146 476 106 490 H 406 C 366 476 334 456 334 424 Z"/></g>
+<g filter="url(#grain)" fill="url(#gold)"><path d="M 138 148 C 170 98 214 82 256 94 C 298 82 342 98 374 148 C 336 118 298 106 256 120 C 214 106 176 118 138 148 Z"/><path d="M 92 244 h 328 a 30 30 0 0 1 0 60 h -328 a 30 30 0 0 1 0 -60 Z"/><path d="M 178 424 C 178 456 146 476 106 490 H 406 C 366 476 334 456 334 424 Z"/></g><rect x="248" y="100" width="16" height="372" rx="8" fill="url(#fil)"/><circle cx="168" cy="274" r="27" fill="#070709"/><circle cx="344" cy="274" r="27" fill="#070709"/><circle cx="168" cy="274" r="27" fill="none" stroke="#FFEFC0" stroke-width="2.5" opacity=".85"/><circle cx="344" cy="274" r="27" fill="none" stroke="#FFEFC0" stroke-width="2.5" opacity=".85"/></svg>
