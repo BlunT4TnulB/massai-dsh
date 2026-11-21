@@ -71,3 +71,18 @@ and the filigree; deep blue-black `#0B1020`→`#151517` for the ocean the whale 
 From this artwork, in priority order: **the V** (visor), **the halo** (ring above), **the
 whale tail** (blue, below). Everything else — crown, mantling, knotwork, lion, warrior, scroll —
 lives in the crest tier and the artwork tier, never in the 16px icon. See `README.md`.
+
+## Verification note — the glyph check
+
+Before this mark was adopted, every glyph in the medallion ring was inspected at full
+magnification, because a low-resolution crop of a square glyph can read as a meander or worse.
+
+- `verify-glyphs-left.png` — the two left medallions: a **rounded square with interior hooks
+  (grille / portcullis)** and a **diamond lattice** with a small pennant. Neither is a
+  swastika, and no rotation of them produces one.
+- `verify-glyphs-right.png` — the right side: **M**, a **gear/cog**, and two **linked rings**.
+- `verify-first-halo.png` — the earlier draft's halo, which carries **ornamental vine
+  filigree only** and no glyphs at all.
+
+Rule going forward: no symbol ships without a full-resolution look, and no such concern is
+mentioned next to a design until it has actually been checked.
