@@ -126,89 +126,45 @@
 
 # Other assistants, if this deployment is given keys for them. Each row stays
 # disabled until its key exists, so an unfunded provider never shows up in the
-# picker or fails a request. Add the key in the environment to switch one on.
+# picker or fails a request.
+#
+# These are all routes pi-ai already ships (`google`, `groq`, `openrouter`,
+# `anthropic`, `openai`), so only the credential is declared here. Hand-declaring
+# a route pi-ai also ships collides at load time and stops the app from booting —
+# that is what happened with `groq` the first time.
 - insert:
-
+    - id: llm-google
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      disabled: !!js process.env.GEMINI_API_KEY === undefined
+      config:
+        providers:
+          google:
+            apiKeyEnv: GEMINI_API_KEY
     - id: llm-groq
       name: '@deepseek-ai/dsh-llm-pi-ai'
       disabled: !!js process.env.GROQ_API_KEY === undefined
       config:
         providers:
           groq:
-            displayName: Groq (free, very fast)
             apiKeyEnv: GROQ_API_KEY
-            api: openai-completions
-            baseURL: https://api.groq.com/openai/v1
-            models:
-              - id: openai/gpt-oss-120b
-                name: GPT-OSS 120B on Groq
-                contextWindow: 131072
-                maxTokens: 8192
     - id: llm-openrouter
       name: '@deepseek-ai/dsh-llm-pi-ai'
       disabled: !!js process.env.OPENROUTER_API_KEY === undefined
       config:
         providers:
           openrouter:
-            displayName: OpenRouter (free models)
             apiKeyEnv: OPENROUTER_API_KEY
-            api: openai-completions
-            baseURL: https://openrouter.ai/api/v1
-            models:
-              - id: google/gemma-4-26b-a4b-it:free
-                name: Gemma 4 26B (free)
-                contextWindow: 262144
-                maxTokens: 8192
-
-    - id: llm-gemini
-      name: '@deepseek-ai/dsh-llm-pi-ai'
-      disabled: !!js process.env.GEMINI_API_KEY === undefined
-      config:
-        providers:
-          gemini:
-            displayName: Google Gemini
-            apiKeyEnv: GEMINI_API_KEY
-            api: openai-completions
-            baseURL: https://generativelanguage.googleapis.com/v1beta/openai
-            models:
-              # `2.5-flash` is retired for new accounts (Google answers 404 and
-              # recommends a newer id); the `-latest` aliases are what actually
-              # answer, verified against this deployment's key.
-              - id: gemini-flash-latest
-                name: Gemini Flash (latest)
-                contextWindow: 1000000
-                maxTokens: 8192
-              - id: gemini-flash-lite-latest
-                name: Gemini Flash Lite (latest)
-                contextWindow: 1000000
-                maxTokens: 8192
-    - id: llm-claude
+    - id: llm-anthropic
       name: '@deepseek-ai/dsh-llm-pi-ai'
       disabled: !!js process.env.ANTHROPIC_API_KEY === undefined
       config:
         providers:
-          claude:
-            displayName: Anthropic Claude
+          anthropic:
             apiKeyEnv: ANTHROPIC_API_KEY
-            api: openai-completions
-            baseURL: https://api.anthropic.com/v1
-            models:
-              - id: claude-sonnet-4-5
-                name: Claude Sonnet 4.5
-                contextWindow: 200000
-                maxTokens: 8192
-    - id: llm-chatgpt
+    - id: llm-openai
       name: '@deepseek-ai/dsh-llm-pi-ai'
       disabled: !!js process.env.OPENAI_API_KEY === undefined
       config:
         providers:
-          chatgpt:
-            displayName: OpenAI
+          openai:
             apiKeyEnv: OPENAI_API_KEY
-            api: openai-completions
-            baseURL: https://api.openai.com/v1
-            models:
-              - id: gpt-5
-                name: GPT-5
-                contextWindow: 400000
-                maxTokens: 8192
