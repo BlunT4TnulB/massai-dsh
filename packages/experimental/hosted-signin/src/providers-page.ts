@@ -50,7 +50,7 @@ const BACKENDS: readonly Backend[] = [
     name: 'Groq',
     env: 'GROQ_API_KEY',
     free: 'Free tier, no card. Very fast inference on open models.',
-    wall: 'Roughly 1,000 requests and 200,000 tokens per day per model — a good afternoon of real building reaches that.',
+    wall: 'About 1,000 requests and 200k tokens per day per model. Verified working with openai/gpt-oss-120b — a good afternoon of building reaches the cap.',
     keyUrl: 'https://console.groq.com/keys',
     priceUrl: 'https://groq.com/pricing',
     use: 'Speed: drafting, reformatting, quick edits where latency matters.',
@@ -252,7 +252,9 @@ rather than a surprise at 4pm on a Tuesday.</p>
   restart. The provider appears in the model picker; without the key it stays invisible, never broken.</p>
 </section>
 
-<section><h2>What free tiers teach you</h2>${lessons}</section>
+<section><h2>Tower of Knowledge</h2>
+  <p class="note" style="margin-top:0">Three floors, learned the expensive way. Each one is why the next key matters.</p>
+  ${lessons}</section>
 
 <section><h2>The practical answer</h2>
   <p class="note" style="margin-top:0;font-size:.86rem;color:#c2c2cb">Start free — a Gemini or Groq
