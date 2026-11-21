@@ -31,17 +31,13 @@ const DEEPSEEK_KEYS = 'https://platform.deepseek.com/api_keys'
 const DEEPSEEK_TOPUP = 'https://platform.deepseek.com/top_up'
 
 /** The crest, small enough to sit beside the wordmark. */
-const CREST = `<svg class="crest-sm" viewBox="0 0 120 132" aria-hidden="true">
-        <ellipse cx="60" cy="10" rx="21" ry="5.6" fill="none" stroke="#C9A227" stroke-width="3"/>
-        <path d="M16 100L104 22M104 100L16 22" stroke="#C1440E" stroke-width="3.2" stroke-linecap="round" opacity=".55"/>
-        <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
-          fill="#151517" stroke="#C1440E" stroke-width="4.5"/>
-        <g fill="#4D6BFE" transform="translate(35 48) scale(2.6)">
-          <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
-          <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
-          <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
-          <rect x="13" y="1" width="1" height="2"/>
-        </g>
+const CREST = `<svg class="crest-sm" viewBox="0 0 512 512" aria-hidden="true">
+        <circle cx="256" cy="196" r="150" fill="none" stroke="#C9A227" stroke-width="14" opacity=".9"/>
+        <path d="M256 96 L412 146 C412 300 356 386 256 436 C156 386 100 300 100 146 Z"
+          fill="#1b1b22" stroke="#C1440E" stroke-width="16" stroke-linejoin="round"/>
+        <path d="M186 168 L256 300 L326 168 L306 168 L256 262 L206 168 Z" fill="#B9B9C2"/>
+        <path d="M256 392 C 236 344 210 314 158 286 C 190 344 222 372 252 382 Z" fill="#4D6BFE"/>
+        <path d="M256 392 C 276 344 302 314 354 286 C 322 344 290 372 260 382 Z" fill="#4D6BFE"/>
       </svg>`
 
 /** Shared page styling: one window, two rooms. */
