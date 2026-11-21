@@ -239,6 +239,10 @@ rather than a surprise at 4pm on a Tuesday.</p>
 <section><h2>Backends</h2>
   <table><thead><tr><th>provider</th><th>state</th><th>good at</th><th>links</th></tr></thead>
   <tbody>${rows}</tbody></table>
+  <p class="note"><b>Where to find them in the app:</b> the model picker groups by provider —
+  DeepSeek's two models (Flash and Pro) are one group; Gemini and Groq are separate groups in the
+  same list. If you only see Flash and Pro, you are looking inside the DeepSeek group. Switch groups
+  to switch brain.</p>
   <p class="note">A provider is switched on by putting its key in the deployment environment
   (<code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code>, …) and restarting. Off means invisible:
   it is not offered in the model picker and cannot be chosen by mistake.</p>
