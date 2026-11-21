@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import { accessPageHtml } from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
@@ -299,6 +300,19 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/memory', auth: 'required',
     handler: (req, res) => {
       const html = Buffer.from(memoryPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+  // The access room: keys, accounts and sign-in, moved off the front door.
+  ctx.webServer.register({
+    kind: 'exact', path: '/access', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(accessPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),

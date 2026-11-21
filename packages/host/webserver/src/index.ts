@@ -27,7 +27,7 @@ import Negotiator from 'negotiator'
 import { renderIndexInjections, type IndexInjection } from './injections.ts'
 
 export { renderIndexInjections } from './injections.ts'
-import { welcomePage } from './welcome-page.ts'
+import { accessPageHtml, welcomePage } from './welcome-page.ts'
 export type { IndexInjection, IndexInjectionPlacement } from './injections.ts'
 
 /** One application entry URL contributed for startup printing or browser handoff. */
@@ -880,3 +880,4 @@ export class WebServer extends Service {
 }
 
 export default WebServer
+export { accessPageHtml, welcomePage }
