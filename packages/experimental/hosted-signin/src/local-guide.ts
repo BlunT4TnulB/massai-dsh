@@ -313,6 +313,26 @@ effect out of one — and knowing when it actually saves money.</p>
   <div class="suggest" id="bOut"></div>
 </section>
 
+
+<section><h2>Does any of this work offline?</h2>
+  <table><thead><tr><th>thing</th><th>online</th><th>offline</th><th>why</th></tr></thead><tbody>
+    <tr><td><b>This website</b> (the hosted Massai)</td><td class="good">yes</td><td>no</td>
+      <td>It runs on a server somewhere else. No internet, no page.</td></tr>
+    <tr><td><b>An agent on your own computer</b></td><td class="good">yes</td><td class="good">yes</td>
+      <td>Once the model file is downloaded it answers on the machine. Nothing leaves.</td></tr>
+    <tr><td><b>Real work</b> (files, builds, tests)</td><td class="good">yes</td><td class="good">yes</td>
+      <td>Tools run locally; only model calls need a network — and a local model does not.</td></tr>
+    <tr><td><b>Sign-in</b> (Google/Clerk)</td><td class="good">yes</td><td>no</td>
+      <td>Clerk is a cloud identity service. Offline, a local install uses its own token instead.</td></tr>
+    <tr><td><b>Cloud models</b> (DeepSeek, Gemini, Groq)</td><td class="good">yes</td><td>no</td>
+      <td>They are remote by definition. Offline you fall back to the local model.</td></tr>
+  </tbody></table>
+  <p class="note"><b>The honest summary:</b> the hosted link is online-only, always. The free, offline
+  experience is the <em>local</em> install — the model runs on your machine, the agent runs on your
+  machine, and the only thing you lose is the big cloud brains. That is the trade: offline is private
+  and free, online is powerful.</p>
+</section>
+
 <section><h2>Which model? (the short answer)</h2>
   <table><thead><tr><th>model</th><th>file</th><th>RAM</th><th>fits</th><th>use it for</th></tr></thead>
   <tbody>${picks}</tbody></table>
