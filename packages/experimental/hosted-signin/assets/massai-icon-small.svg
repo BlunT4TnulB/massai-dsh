@@ -1,13 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <rect width="120" height="120" rx="26" fill="#151517"/>
-  <path d="M60 16c24 0 34 14 34 32 0 26-18 43-34 52-16-9-34-26-34-52 0-18 10-32 34-32z"
-    fill="#151517" stroke="#C1440E" stroke-width="9"/>
-  <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
-    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
-    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
-    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
-    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
-    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
-    <rect x="6" y="0" width="1" height="1"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" fill="#151517"/>
+<path d="M52 104 L52 186 L146 280 L256 132 L366 280 L460 186 L460 104 L360 208 L256 118 L152 208 Z" fill="#F2F2F4"/>
+<path d="M186 300 L256 452 L326 300 L288 300 L256 372 L224 300 Z" fill="#C1440E"/>
 </svg>

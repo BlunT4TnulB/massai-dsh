@@ -1,18 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
-  <!-- the halo: a gold ring (and its glow) floating above the shield -->
-  <ellipse cx="60" cy="9" rx="27" ry="9" fill="#D9822B" opacity=".13"/>
-  <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="7" opacity=".16"/>
-  <ellipse cx="60" cy="9" rx="21" ry="5.6" fill="none" stroke="#D9822B" stroke-width="3.2"/>
-  <path d="M14 100L106 18M106 100L14 18" stroke="#C1440E" stroke-width="4" stroke-linecap="round" opacity=".7"/>
-  <path d="M106 18l-11 2 9 9zM14 18l11 2-9 9z" fill="#C1440E" opacity=".7"/>
-  <path d="M60 14c25 0 36 15 36 34 0 27-19 45-36 54-17-9-36-27-36-54 0-19 11-34 36-34z"
-    fill="#151517" stroke="#C1440E" stroke-width="6"/>
-  <g fill="#4D6BFE" transform="translate(36.4 50) scale(2.8)">
-    <rect x="2" y="3" width="4" height="1"/><rect x="2" y="4" width="9" height="1"/>
-    <rect x="2" y="5" width="10" height="1"/><rect x="3" y="6" width="7" height="1"/>
-    <rect x="11" y="3" width="1" height="1"/><rect x="12" y="2" width="1" height="2"/>
-    <rect x="13" y="1" width="1" height="2"/><rect x="12" y="4" width="2" height="2"/>
-    <rect x="13" y="5" width="1" height="2"/><rect x="6" y="1" width="1" height="2"/>
-    <rect x="6" y="0" width="1" height="1"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" fill="#151517"/>
+<!-- halo behind the shield -->
+<circle cx="256" cy="196" r="150" fill="none" stroke="#C9A227" stroke-width="14" opacity=".9"/>
+<!-- shield -->
+<path d="M256 96 L412 146 C412 300 356 386 256 436 C156 386 100 300 100 146 Z"
+      fill="#1b1b22" stroke="#C1440E" stroke-width="16" stroke-linejoin="round"/>
+<!-- V visor: the helmet's face, squared -->
+<path d="M186 168 L256 300 L326 168 L306 168 L256 262 L206 168 Z" fill="#F2F2F4"/>
+<!-- whale tail below the V -->
+<path d="M256 392 C 236 344 210 314 158 286 C 190 344 222 372 252 382 Z" fill="#4D6BFE"/>
+<path d="M256 392 C 276 344 302 314 354 286 C 322 344 290 372 260 382 Z" fill="#4D6BFE"/>
 </svg>
