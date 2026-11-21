@@ -84,6 +84,59 @@ const BACKENDS: readonly Backend[] = [
   },
 ]
 
+
+/** The collection checklist, in the order worth doing. */
+const CHECKLIST: ReadonlyArray<{
+  env: string
+  name: string
+  url: string
+  steps: string
+  unlocks: string
+}> = [
+  {
+    env: 'DEEPSEEK_API_KEY',
+    name: 'DeepSeek',
+    url: 'https://platform.deepseek.com/api_keys',
+    steps: 'Sign in → Create new key → copy the sk-… value. Add credit at platform.deepseek.com/top_up.',
+    unlocks: 'Real work. The default backend and the one the whole workshop is tuned for.',
+  },
+  {
+    env: 'GEMINI_API_KEY',
+    name: 'Google Gemini',
+    url: 'https://aistudio.google.com/apikey',
+    steps: 'Sign in with Google → Create API key → copy the AQ.… value.',
+    unlocks: '1M-token context reading, images and audio, free tier.',
+  },
+  {
+    env: 'GROQ_API_KEY',
+    name: 'Groq',
+    url: 'https://console.groq.com/keys',
+    steps: 'Sign in → API Keys → Create API Key → copy the gsk_… value.',
+    unlocks: 'The fastest replies of any provider here, free tier.',
+  },
+  {
+    env: 'OPENROUTER_API_KEY',
+    name: 'OpenRouter',
+    url: 'https://openrouter.ai/keys',
+    steps: 'Sign in → Keys → Create Key → copy the sk-or-… value.',
+    unlocks: 'Seventeen free models through one key.',
+  },
+  {
+    env: 'ANTHROPIC_API_KEY',
+    name: 'Anthropic Claude',
+    url: 'https://console.anthropic.com/settings/keys',
+    steps: 'Sign in → API keys → Create key → copy the sk-ant-… value. Needs a card.',
+    unlocks: 'Careful long-form reasoning; paid only.',
+  },
+  {
+    env: 'OPENAI_API_KEY',
+    name: 'OpenAI',
+    url: 'https://platform.openai.com/api-keys',
+    steps: 'Sign in → API keys → Create new secret key → copy the sk-… value. Needs billing.',
+    unlocks: 'The widest ecosystem; paid only.',
+  },
+]
+
 /** What the free tiers actually teach you, in three beats. */
 const LESSONS: ReadonlyArray<readonly [string, string]> = [
   [
@@ -131,6 +184,16 @@ export function providersPageHtml(): string {
       <p><b>Where it runs out:</b> ${esc(backend.wall)}</p>
     </td></tr>`
   }).join('')
+  const checklist = CHECKLIST.map((item, index) => {
+    const ready = (process.env[item.env] ?? '') !== ''
+    return `<tr>
+      <td>${String(index + 1)}</td>
+      <td><b>${esc(item.name)}</b><br><code>${esc(item.env)}</code></td>
+      <td><a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.url)}</a>
+        <p class="small">${esc(item.steps)}</p></td>
+      <td>${esc(item.unlocks)}<br>${ready ? '<span class="pill on">already set</span>' : '<span class="pill">not set</span>'}</td>
+    </tr>`
+  }).join('')
   const lessons = LESSONS.map(([title, body]) => `<div class="lesson">
     <h3>${esc(title)}</h3><p>${esc(body)}</p>
   </div>`).join('')
@@ -164,6 +227,7 @@ export function providersPageHtml(): string {
   .lesson p{margin:0;color:#b9b9c2;font-size:.85rem;line-height:1.6}
   a{color:#7ee2a8;text-decoration:none}
   .note{margin:.8rem 0 0;font-size:.78rem;color:#6f6f78;line-height:1.6}
+  .small{margin:.25rem 0 0;font-size:.74rem;color:#7d7d86;line-height:1.5}
   .foot{margin-top:1.2rem;font-size:.8rem;color:#6f6f78}
   code{background:#1f1f27;padding:.1rem .3rem;border-radius:.3rem;font-size:.78rem}
 </style></head><body><main>
@@ -178,6 +242,14 @@ rather than a surprise at 4pm on a Tuesday.</p>
   <p class="note">A provider is switched on by putting its key in the deployment environment
   (<code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code>, …) and restarting. Off means invisible:
   it is not offered in the model picker and cannot be chosen by mistake.</p>
+</section>
+
+<section><h2>Collect your keys — in this order</h2>
+  <p class="note" style="margin-top:0">Each row gives the exact page, what to click, and the environment
+  variable the key goes into. Do them top to bottom; the first one is the only one that costs money.</p>
+  <table><thead><tr><th>#</th><th>provider</th><th>where</th><th>what you get</th></tr></thead><tbody>${checklist}</tbody></table>
+  <p class="note">Adding a key: paste it into the deployment's environment as the variable named above, then
+  restart. The provider appears in the model picker; without the key it stays invisible, never broken.</p>
 </section>
 
 <section><h2>What free tiers teach you</h2>${lessons}</section>
