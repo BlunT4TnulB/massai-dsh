@@ -85,9 +85,13 @@ or engineering advice. You are responsible for reviewing and testing anything yo
 you create it with the provider, you pay the provider directly, and you remain bound by that provider's terms.
 Massai stores it to make calls for you and never displays it back to anyone else.</p>
 
-<h2>4. Your projects</h2>
+<h2>4. Your projects — and important storage notice</h2>
 <p>You own what you build. Outputs produced through Massai are yours to use, publish, sell or delete. If a
 project is published to the community shelf, you chose that, and you can withdraw it.</p>
+<div class="callout"><b>Storage notice.</b> Projects and conversations are currently kept on ephemeral
+infrastructure: <b>they can be lost when the service is redeployed or restarted.</b> Durable project storage
+is planned but not yet in place. Until it is, treat Massai as a workbench, not a vault — copy out anything
+you need to keep.</div>
 
 <h2>5. Acceptable use</h2>
 <p>You must follow the <a href="/aup">acceptable use policy</a>. In short: nothing illegal, nothing that attacks

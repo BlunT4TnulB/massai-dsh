@@ -65,7 +65,7 @@ export function startPageHtml(): string {
     <span class="minibrand">Massai</span>
   </div>
   <h1>What would you like to <b>make?</b></h1>
-  <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing.</p>
+  <p class="lead">Pick one and I will write the first words for you — or walk you through it, one click at a time. You don't need to know a thing. <br><span style="color:#D9822B;font-weight:600">Massai is a workbench, not a vault right now — copy out anything you need to keep.</span></p>
   <div class="grid">${cards}</div>
   <p class="quick">In a hurry?
     <a href="/?prompt=${encodeURIComponent('Build me a website for ')}">website</a> ·
