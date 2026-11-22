@@ -380,7 +380,7 @@ export function apply(ctx: Context): void {
   // Credit ledger: a coffee becomes somebody's allowance. Owner-only, because it
   // is money. Positive to top up, negative to correct.
   ctx.webServer.register({
-    kind: 'exact', path: '/api/credits/grant', auth: 'required', methods: ['POST'],
+    kind: 'exact', path: '/api/credits/grant', auth: 'required',
     handler: async (req, res) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
@@ -405,7 +405,7 @@ export function apply(ctx: Context): void {
   // One switch to stop new guests without a deploy: for when a link goes further
   // than expected and the ledger needs a breath.
   ctx.webServer.register({
-    kind: 'exact', path: '/api/guest/freeze', auth: 'required', methods: ['POST'],
+    kind: 'exact', path: '/api/guest/freeze', auth: 'required',
     handler: async (req, res) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       const fields = await readFields(req)
