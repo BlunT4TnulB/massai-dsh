@@ -498,7 +498,7 @@ export class BrowserAuth {
   <h1>Welcome to Massai 🚀</h1>
   <p>This page opens through a personal access link. Ask whoever shared Massai
   with you for your link — it looks like:</p>
-  <code>massai-dsh.onrender.com/?token=…</code>
+  <code>${(process.env.PUBLIC_ORIGIN ?? 'https://massai-dsh.onrender.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')}/?token=…</code>
   <p>Open that link and you're in.</p>
 </div></body></html>`)
       return
