@@ -544,6 +544,22 @@ export function apply(ctx: Context): void {
     return next()
   })
 
+
+  // A one-line answer to "is the proxy actually telling us where the visitor is?".
+  // It echoes the visitor's own country and nothing else — no address, no hash.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/geo', auth: 'anonymous',
+    handler: (req, res) => {
+      const country = countryOf(req)
+      respond(res, 200, {
+        country: country === '' ? null : country,
+        source: country === '' ? 'no proxy header' : 'proxy header',
+        freeGemini: freeGeminiAllowed(country),
+        strict: (process.env.DSH_GEO_STRICT ?? '') === '1',
+      })
+    },
+  })
+
   // Is the database configured and reachable? One honest answer, owner-only.
   ctx.webServer.register({
     kind: 'exact', path: '/api/db/status', auth: 'required',
