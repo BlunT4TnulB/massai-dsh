@@ -158,6 +158,8 @@ export function localGuidePageHtml(): string {
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="theme-color" content="#151517">
 <style>
+  .brandmark{width:1.6rem;height:1.6rem;flex:none;vertical-align:-.3rem;margin-right:.5rem}
+
   *{box-sizing:border-box}
   body{margin:0;padding:2.2rem 1.25rem 3rem;background:#0e0e10;color:#F2F2F4;
     font-family:system-ui,-apple-system,sans-serif;
@@ -221,7 +223,7 @@ export function localGuidePageHtml(): string {
   .suggeststeps{margin:.7rem 0 0;padding-left:1.1rem;font-size:.82rem;color:#c2c2cb;line-height:1.7}
   .suggeststeps code{background:#0b0b0e;border:1px solid #31313a;padding:.18rem .4rem;border-radius:.35rem;font-size:.78rem}
 </style></head><body><main>
-<h1>Running an agent on your own machine</h1>
+<h1><img class="brandmark" src="/massai-crest.svg" alt="" width="26" height="26">Running an agent on your own machine</h1>
 <p class="lede">A local model is free per message, works offline, and keeps your prompts private.
 It is also slower and less capable than a frontier model. This page is about getting real
 effect out of one — and knowing when it actually saves money.</p>

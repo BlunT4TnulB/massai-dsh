@@ -203,6 +203,8 @@ export function providersPageHtml(): string {
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="theme-color" content="#151517">
 <style>
+  .brandmark{width:1.6rem;height:1.6rem;flex:none;vertical-align:-.3rem;margin-right:.5rem}
+
   *{box-sizing:border-box}
   body{margin:0;padding:2rem 1.25rem 3rem;background:#0e0e10;color:#F2F2F4;
     font-family:system-ui,-apple-system,sans-serif;
@@ -231,7 +233,7 @@ export function providersPageHtml(): string {
   .foot{margin-top:1.2rem;font-size:.8rem;color:#6f6f78}
   code{background:#1f1f27;padding:.1rem .3rem;border-radius:.3rem;font-size:.78rem}
 </style></head><body><main>
-<h1>Every brain, and what it really costs</h1>
+<h1><img class="brandmark" src="/massai-crest.svg" alt="" width="26" height="26">Every brain, and what it really costs</h1>
 <p class="lede">One deployment can talk to several providers. This page shows which are switched on,
 what each free tier actually gives you, and where it stops being free — so the choice is yours
 rather than a surprise at 4pm on a Tuesday.</p>

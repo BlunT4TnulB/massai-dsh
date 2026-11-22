@@ -127,6 +127,8 @@ export function memoryPageHtml(): string {
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="theme-color" content="#151517">
 <style>
+  .brandmark{width:1.6rem;height:1.6rem;flex:none;vertical-align:-.3rem;margin-right:.5rem}
+
   *{box-sizing:border-box}
   body{margin:0;padding:2rem 1.25rem 3rem;background:#0e0e10;color:#F2F2F4;
     font-family:system-ui,-apple-system,sans-serif;
@@ -153,7 +155,7 @@ export function memoryPageHtml(): string {
   a{color:#7ee2a8;text-decoration:none}
   .foot{margin-top:1.2rem;font-size:.8rem;color:#6f6f78}
 </style></head><body><main>
-<header><h1>Memory</h1><span class="flag">open by default</span></header>
+<header><h1><img class="brandmark" src="/massai-badge.svg" alt="" width="26" height="26">Memory</h1><span class="flag">open by default</span></header>
 <p class="lede">${String(total)} record${total === 1 ? '' : 's'} across ${String(groups.length)} project${groups.length === 1 ? '' : 's'}.
 This is what a new session in that project will be told, before you type a word — read it, and prune anything wrong
 by editing the files under <code>${esc(memoryDir())}</code>.</p>

@@ -14,6 +14,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import z from '@deepseek-ai/schemastery'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { choose, loadState, observe, saveState, summarize, type Features } from './learning.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
@@ -282,7 +283,26 @@ export function apply(ctx: Context, config: Config = {}): void {
             const record = agent.session.eventAt(seq as never) as { type?: string } | undefined
             if (record?.type === 'user/message') prompts += 1
           }
-          if (prompts > guestLimit) return { kind: 'reject' }
+          if (prompts > guestLimit) {
+            // A guest who spends the last prompt of the preview gets one
+            // courtesy turn: the model is told to say the preview has ended and
+            // where to continue. After that the step is rejected, so the
+            // deployment's key cannot be spent indefinitely.
+            if (prompts === guestLimit + 1) {
+              const notice = createUserMessage({
+                source: { kind: 'user' },
+                content: [{
+                  type: 'text',
+                  text: '[preview ended — this is a system note, not the user speaking] '
+                    + 'The free preview for this visitor is over. Reply in at most two short sentences: '
+                    + 'say the preview has ended, that their work is saved, and that they can keep going by '
+                    + 'signing in or adding their own DeepSeek key at /access. Do not attempt the request.',
+                }],
+              })
+              return { kind: 'enter', messages: [...(messages as never[]), notice as never] }
+            }
+            return { kind: 'reject' }
+          }
         }
         if (modelSelection?.model !== undefined && steerable) {
           const signals = signalsOf({ messages: messages as never }, config)

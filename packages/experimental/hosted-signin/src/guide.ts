@@ -81,6 +81,8 @@ export function guidePageHtml(): string {
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#151517">
 <style>
+  .brandmark{width:1.6rem;height:1.6rem;flex:none;vertical-align:-.3rem;margin-right:.5rem}
+
   *{box-sizing:border-box}
   body{margin:0;padding:2.2rem 1.25rem 3rem;background:#0e0e10;color:#F2F2F4;
     font-family:system-ui,-apple-system,sans-serif;
@@ -116,7 +118,7 @@ export function guidePageHtml(): string {
     <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
       fill="#151517" stroke="#C1440E" stroke-width="4.5"/>
   </svg>
-  <h1>Get started</h1>
+  <h1><img class="brandmark" src="/massai-crest.svg" alt="" width="26" height="26">Get started</h1>
 </header>
 <p class="lede">No jargon, no install. About five minutes, and a few dollars of credit goes a long way.
 Massai is where you describe what you want built and an AI agent builds it with you. The intelligence
