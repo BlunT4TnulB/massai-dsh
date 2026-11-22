@@ -69,13 +69,6 @@ export function userCap(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 0
 }
 
-/** Sum one person's rows. */
-function totalOf(rows: readonly UsageRow[]): number {
-  let sum = 0
-  for (const row of rows) sum += costOf(row, rateFor(row.model))
-  return sum
-}
-
 /**
  * Build the month's ledger from the database.
  * @param now - injectable clock, for tests.

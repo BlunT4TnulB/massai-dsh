@@ -357,7 +357,7 @@ export function apply(ctx: Context): void {
   onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
     if (!databaseConfigured()) return next()
     const userId = String(agent.session.header?.userId ?? '')
-    const verdict = await checkBudget(userId).catch(() => ({ allowed: true }))
+    const verdict = await checkBudget(userId).catch(() => ({ allowed: true } as const))
     if (verdict.allowed) return next()
     const key = userId === '' ? '(unattributed)' : userId
     if (!explained.has(key)) {
