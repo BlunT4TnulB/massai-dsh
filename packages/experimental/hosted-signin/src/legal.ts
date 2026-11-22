@@ -238,6 +238,12 @@ free preview switched on for strangers.</p>
 extra allowance, that is a discretionary gift back — it is not part of a purchase, it is not guaranteed,
 and it is not transferable.</p>
 
+<h2>Two doors, deliberately kept apart</h2>
+<p>This page is a <b>gift</b> door and nothing here sells anything — there is no top-up button on it and
+no paid tier anywhere in Massai today. If a paid product is ever offered, it will be a separate page
+with its own total price, its own refund terms, its own receipt, and a merchant of record handling
+sales tax. Mixing the two is how a tip jar accidentally becomes a shop.</p>
+
 <h2>Why it is worded this carefully</h2>
 <p>Because a gift and a sale are different in law, and the difference protects both sides. Selling
 prepaid access would make this a shop with refund rights, tax registration, and prepaid-balance rules
