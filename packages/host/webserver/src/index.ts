@@ -634,13 +634,16 @@ export class WebServer extends Service {
       // probes and API calls are exempt: they are machine traffic and a redirect
       // there would break them rather than help anyone.
       const canonical = (process.env.PUBLIC_ORIGIN ?? '').trim().replace(/\/+$/, '')
+      // `target` is built from the request path alone, so its hostname is a
+      // placeholder — the real host only exists in the Host header.
+      const requestHost = (req.headers.host ?? '').replace(/:\d+$/, '').toLowerCase()
       if (canonical !== ''
         && (req.method === 'GET' || req.method === 'HEAD')
-        && req.headers.host !== undefined
+        && requestHost !== ''
         && !target.pathname.startsWith('/api/')
         && target.pathname !== '/healthz'
-        && target.hostname !== new URL(canonical).hostname
-        && this.isPlatformHost(target.hostname)) {
+        && requestHost !== new URL(canonical).hostname.toLowerCase()
+        && this.isPlatformHost(requestHost)) {
         res.writeHead(301, { location: canonical + target.pathname + target.search, 'cache-control': 'no-store' })
         res.end()
         return
