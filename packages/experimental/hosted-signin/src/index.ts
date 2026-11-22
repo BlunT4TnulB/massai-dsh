@@ -23,6 +23,7 @@ import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
+import { costOf, readUsage } from './usage.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
 import { loginPreviewHtml } from './login-preview.ts'
@@ -327,7 +328,20 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/providers', auth: 'anonymous',
     handler: (req, res) => {
-      const html = Buffer.from(providersPageHtml())
+      // A running total, straight from the usage meter the router writes.
+      let summary: { calls: number; cost: number; since?: string } | undefined
+      try {
+        const points = readUsage()
+        if (points.length > 0) {
+          const oldest = points.reduce((a, b) => (a.at <= b.at ? a : b))
+          summary = {
+            calls: points.length,
+            cost: points.reduce((sum, point) => sum + costOf(point), 0),
+            since: new Date(oldest.at).toISOString().slice(0, 10),
+          }
+        }
+      } catch { /* the page still renders without the strip */ }
+      const html = Buffer.from(providersPageHtml(summary))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),

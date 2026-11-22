@@ -167,7 +167,7 @@ function esc(value: string): string {
  * Render the providers page.
  * @returns the page HTML.
  */
-export function providersPageHtml(): string {
+export function providersPageHtml(summary?: { calls: number; cost: number; since?: string }): string {
   const rows = BACKENDS.map((backend) => {
     const on = (process.env[backend.env] ?? '') !== ''
     return `<tr>
@@ -248,6 +248,16 @@ rather than a surprise at 4pm on a Tuesday.</p>
   <p class="note">A provider is switched on by putting its key in the deployment environment
   (<code>GEMINI_API_KEY</code>, <code>GROQ_API_KEY</code>, …) and restarting. Off means invisible:
   it is not offered in the model picker and cannot be chosen by mistake.</p>
+</section>
+
+${summary === undefined ? '' : `<section>
+  <h2>What this deployment has actually spent</h2>
+  <p class="lede" style="margin:0">
+    <b style="font-size:1.35rem;color:#EFDCA4">$${summary.cost.toFixed(2)}</b>
+    across <b>${summary.calls.toLocaleString('en-US')}</b> model calls${summary.since === undefined ? '' : ` since ${summary.since}`}.
+    Every figure on this page comes from the same meter.</p>
+  <p class="note">That is the whole point of the routing: cheap by default, quality bought only where it
+  changes the outcome. DeepSeek halves its prices off-peak (16:30–00:30 UTC).</p>
 </section>
 
 <section><h2>Collect your keys — in this order</h2>
