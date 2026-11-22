@@ -32,15 +32,9 @@ const DEEPSEEK_TOPUP = 'https://platform.deepseek.com/top_up'
 
 /** The crest, small enough to sit beside the wordmark. */
 const CREST = `<svg class="crest-sm" viewBox="0 0 512 512" aria-hidden="true">
-        <g fill="#E8CB84">
-          <path d="M 252 140 C 212 100 168 88 124 100 C 168 124 206 160 240 192 Z"/>
-          <path d="M 260 140 C 300 100 344 88 388 100 C 344 124 306 160 272 192 Z"/>
-          <rect x="248" y="100" width="16" height="372" rx="8"/>
-          <path d="M 92 244 h 328 a 30 30 0 0 1 0 60 h -328 a 30 30 0 0 1 0 -60 Z"/>
-          <path d="M 178 424 C 178 456 146 476 106 490 H 406 C 366 476 334 456 334 424 Z"/>
-        </g>
-        <circle cx="168" cy="274" r="27" fill="#0b0b0e"/>
-        <circle cx="344" cy="274" r="27" fill="#0b0b0e"/>
+        <circle cx="256" cy="256" r="238" fill="none" stroke="#D9B463" stroke-width="14"/>
+        <circle cx="256" cy="256" r="222" fill="none" stroke="#D9B463" stroke-width="3"/>
+        <circle cx="256" cy="256" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="308" cy="256" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="282" cy="301" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="230" cy="301" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="204" cy="256" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="230" cy="211" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="282" cy="211" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="334" cy="301" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="256" cy="346" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="178" cy="301" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="178" cy="211" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="256" cy="166" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="334" cy="211" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="360" cy="256" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="308" cy="346" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="204" cy="346" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="152" cy="256" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="204" cy="166" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/><circle cx="308" cy="166" r="52" fill="none" stroke="#D9B463" stroke-width="2.2"/>
       </svg>`
 
 /** Shared page styling: one window, two rooms. */
@@ -61,7 +55,7 @@ const SHELL_CSS = `
   .bar .flag{color:#D9822B;letter-spacing:.14em;font-size:.66rem}
   .card{padding:1.6rem 1.7rem 1.5rem}
   .brandline{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
-  .crest-sm{width:2.05rem;height:auto;flex:none}
+  .crest-sm{width:2.5rem;height:auto;flex:none}
   .word{font-family:Georgia,'Times New Roman',serif;font-size:1.16rem;font-weight:400;letter-spacing:.28em;color:#EFDCA4}
   h1{margin:.2rem 0 .5rem;font-size:1.85rem;line-height:1.1;font-weight:700;letter-spacing:-.015em}
   .sub{color:#9a9aa3;font-size:.94rem;line-height:1.6;font-weight:500;margin:0 0 1.3rem}

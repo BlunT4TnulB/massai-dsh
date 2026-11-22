@@ -41,6 +41,7 @@ export function startPageHtml(): string {
   .wrap{max-width:46rem;width:100%}
   .brandbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem}
   .mini{width:2rem;height:auto}
+  .face{width:2rem;height:2rem;flex:none}
   .minibrand{font-size:.95rem;font-weight:700;letter-spacing:.2em;color:#F2F2F4}
   h1{margin:0 0 .4rem;font-size:1.9rem;font-weight:700;letter-spacing:.01em}
   h1 b{color:#7ee2a8}
