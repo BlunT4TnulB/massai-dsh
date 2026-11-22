@@ -53,7 +53,7 @@ function shell(title: string, body: string): string {
 <div class="brand"><img src="/massai-crest.svg" alt=""><span>MASSAI</span></div>
 ${body}
 <p class="foot"><a href="/">The door</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a>
-· <a href="/aup">Acceptable use</a> · <a href="/access">Sign in</a></p>
+· <a href="/aup">Acceptable use</a> · <a href="/support">Support</a> · <a href="/access">Sign in</a></p>
 </main></body></html>`
 }
 
@@ -203,5 +203,61 @@ human reads it.</p>
 <h2>Report abuse</h2>
 <p>Found something on Massai that should not be there? Say so through the <a href="/feedback">feedback form</a>
 and include the link. Reports about illegal content are handled first.</p>
+`)
+}
+
+/**
+ * The support page: a tip jar, not a shop.
+ *
+ * The wording matters more than the button. A *donation* is a gift; a *sale* of
+ * credit makes the operator a merchant of record with refund, tax and consumer
+ * obligations attached. So this page accepts support, promises nothing in return,
+ * and mentions extra allowance only as a discretionary thank-you.
+ * @param koFiUrl - the operator's tip page, when they have configured one.
+ * @returns the page HTML.
+ */
+export function supportPageHtml(koFiUrl: string): string {
+  const button = koFiUrl === ''
+    ? '<p class="callout">The tip jar is not open yet. When it is, this is where it will live — and the wording below is what it will say.</p>'
+    : `<p style="margin:1.2rem 0"><a href="${esc(koFiUrl)}" rel="noopener"
+        style="display:inline-block;padding:.75rem 1.15rem;border-radius:.5rem;background:#C1440E;color:#fff;
+        font-weight:700;text-decoration:none">Buy the workshop a coffee →</a></p>`
+  return shell('Support', `
+<h1>Support the workshop</h1>
+<p class="meta">The free tier runs on the operator's own money. This is the tip jar.</p>
+
+${button}
+
+<h2>What this is</h2>
+<p>A <b>gift</b>. You are not buying software, credits, tokens, storage or a subscription — there is no
+product attached to this button and nothing is owed back. You are helping cover the bills that keep the
+free preview switched on for strangers.</p>
+
+<h2>What you get</h2>
+<p>Our thanks, and the free tier staying alive. If the operator decides to thank supporters with a little
+extra allowance, that is a discretionary gift back — it is not part of a purchase, it is not guaranteed,
+and it is not transferable.</p>
+
+<h2>Why it is worded this carefully</h2>
+<p>Because a gift and a sale are different in law, and the difference protects both sides. Selling
+prepaid access would make this a shop with refund rights, tax registration, and prepaid-balance rules
+attached. A tip jar has none of those, and it can be honest about what it is: one person covering a
+shared bill.</p>
+
+<h2>If you would rather not give money</h2>
+<p>Completely fine — and there are better gifts than money:</p>
+<ul>
+  <li>bring your own model API key at <a href="/access">/access</a>, which costs us nothing;</li>
+  <li>build something and tell us what broke, via the <a href="/feedback">feedback form</a>;</li>
+  <li>fork the project and run your own copy — that is what it is for.</li>
+</ul>
+
+<h2>Where the money goes</h2>
+<p>Model tokens for the free preview, hosting, and the database. Nothing else. The operator keeps a
+public running total of what the deployment spends on the <a href="/providers">providers page</a>.</p>
+
+<h2>Refunds</h2>
+<p>Gifts are not refundable, but if you tapped the button by mistake, say so through the
+<a href="/feedback">feedback form</a> and it will be put right.</p>
 `)
 }

@@ -19,7 +19,7 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
-import { aupPageHtml, privacyPageHtml, termsPageHtml } from './legal.ts'
+import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
@@ -426,6 +426,7 @@ export function apply(ctx: Context): void {
     ['/terms', termsPageHtml()],
     ['/privacy', privacyPageHtml()],
     ['/aup', aupPageHtml()],
+    ['/support', supportPageHtml(process.env.KO_FI_URL ?? '')],
   ] as Array<[string, string]>) {
     ctx.webServer.register({
       kind: 'exact', path, auth: 'anonymous',
