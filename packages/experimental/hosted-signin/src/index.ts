@@ -19,12 +19,13 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
+import { aupPageHtml, privacyPageHtml, termsPageHtml } from './legal.ts'
 import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  creditLedger, databaseConfigured, databaseStatus, ensureSchema, grantCredit, guestCounters, readUsageRows, recordUsage,
+  creditLedger, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
@@ -415,6 +416,52 @@ export function apply(ctx: Context): void {
       if (wantsJson) { respond(res, 200, { ok: true, frozen: on }); return }
       res.writeHead(303, { location: '/admin', 'cache-control': 'no-store' })
       res.end()
+    },
+  })
+
+
+  // The pages the provider's terms require us to have: AI disclosure, privacy,
+  // acceptable use — plus the erasure route that makes the privacy one true.
+  for (const [path, html] of [
+    ['/terms', termsPageHtml()],
+    ['/privacy', privacyPageHtml()],
+    ['/aup', aupPageHtml()],
+  ] as Array<[string, string]>) {
+    ctx.webServer.register({
+      kind: 'exact', path, auth: 'anonymous',
+      handler: (req, res) => {
+        const body = Buffer.from(html)
+        res.writeHead(200, {
+          'content-type': 'text/html; charset=utf-8',
+          'content-length': String(body.byteLength),
+          'cache-control': 'public, max-age=600',
+        })
+        res.end(req.method === 'HEAD' ? undefined : body)
+      },
+    })
+  }
+
+  // Right to erasure: wipes this account's usage ledger, credit and counters.
+  // Projects and files follow when project storage lands.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/account/erase', auth: 'required',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const fields = await readFields(req)
+      const userId = (fields.get('userId') ?? '').trim()
+      const confirm = (fields.get('confirm') ?? '').trim()
+      if (userId === '' || confirm !== 'erase') {
+        respond(res, 400, { error: 'userId and confirm=erase are required' }); return
+      }
+      try {
+        const wiped = await eraseUserData(userId)
+        const wantsJson = String(req.headers.accept ?? '').includes('application/json')
+        if (wantsJson) { respond(res, 200, { ok: true, ...wiped }); return }
+        res.writeHead(303, { location: '/admin', 'cache-control': 'no-store' })
+        res.end()
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

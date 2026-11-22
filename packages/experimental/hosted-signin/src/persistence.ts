@@ -282,6 +282,22 @@ export async function creditLedger(): Promise<Array<{ userId: string; usd: numbe
 }
 
 /**
+ * Erase one account's data: the usage ledger, the credit history and (when the
+ * caller passes the hashed key) the guest counters. The right to erasure, made
+ * real rather than promised.
+ * @param userId - whose data to remove.
+ * @returns how many rows were removed from each table.
+ */
+export async function eraseUserData(userId: string): Promise<{ usage: number; credits: number }> {
+  if (!databaseConfigured()) return { usage: 0, credits: 0 }
+  await ensureOnce()
+  const usage = await runSql('DELETE FROM usage_points WHERE user_id = $1', [userId])
+  const credits = await runSql('DELETE FROM credits WHERE user_id = $1', [userId])
+  const memory = await runSql('DELETE FROM memory_records WHERE session LIKE $1', [`%${userId}%`])
+  return { usage: Number(usage.length ?? 0) + Number(memory.length ?? 0), credits: Number(credits.length ?? 0) }
+}
+
+/**
  * What the status route reports: configured, reachable, how much is stored, and
  * the last error if the last attempt failed.
  */
