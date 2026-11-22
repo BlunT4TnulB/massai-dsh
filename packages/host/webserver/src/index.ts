@@ -597,6 +597,23 @@ export class WebServer extends Service {
    * @param transform - pure html-to-html function.
    * @returns the disposer removing the transform.
    */
+
+  /**
+   * Whether a hostname is the hosting platform's own address rather than a
+   * domain someone chose. Only platform hosts are redirected to the canonical
+   * origin; a custom domain (or localhost) is left alone.
+   * @param hostname - the request's host, without port.
+   * @returns true for platform-provided hostnames.
+   */
+  private isPlatformHost(hostname: string): boolean {
+    return hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname.endsWith('.onrender.com')
+      || hostname.endsWith('.fly.dev')
+      || hostname.endsWith('.railway.app')
+      || hostname.endsWith('.herokuapp.com')
+  }
+
   tapIndex(transform: (html: string) => string): () => void {
     this.indexTaps.push(transform)
     return () => {
@@ -611,6 +628,23 @@ export class WebServer extends Service {
       /* v8 ignore next -- `?? '/'` arm: node:http always sets url on server
       requests; the field is only optional on the client-side IncomingMessage type */
       const target = new URL(req.url ?? '/', 'http://x')
+      // One canonical address. When the deployment names a public origin and a
+      // visitor arrives on the platform hostname instead, send them to the real
+      // domain — links, bookmarks and share cards should all agree. Liveness
+      // probes and API calls are exempt: they are machine traffic and a redirect
+      // there would break them rather than help anyone.
+      const canonical = (process.env.PUBLIC_ORIGIN ?? '').trim().replace(/\/+$/, '')
+      if (canonical !== ''
+        && (req.method === 'GET' || req.method === 'HEAD')
+        && req.headers.host !== undefined
+        && !target.pathname.startsWith('/api/')
+        && target.pathname !== '/healthz'
+        && target.hostname !== new URL(canonical).hostname
+        && this.isPlatformHost(target.hostname)) {
+        res.writeHead(301, { location: canonical + target.pathname + target.search, 'cache-control': 'no-store' })
+        res.end()
+        return
+      }
       const responder = this.responderFor(target.pathname)
       if (responder === undefined) {
         res.writeHead(404)
