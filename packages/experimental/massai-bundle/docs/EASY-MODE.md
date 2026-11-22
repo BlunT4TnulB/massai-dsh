@@ -67,3 +67,62 @@ Two further honest limits:
 - Not a way to avoid terms of service: Massai's accounts are for Massai's users, within each
   platform's rules.
 - Not a promise that a shared secret is unstealable: it is a promise that it is never in the room.
+
+# Nothing is lost: paused, not deleted
+
+The owner's requirement: running out of free balance must never lose a project. Not "archived",
+not "expired", not "contact support". Saved, visible, and resumable by three equally easy doors.
+
+## What a project actually is
+
+A project is three things, and all three have to survive a deploy:
+
+| Part | Where it lives today | Must live |
+|---|---|---|
+| the record (name, owner, status, spend) | — (does not exist yet) | **Neon** (`projects`) |
+| the files the agent wrote | container disk — **wiped on every deploy** | **R2**, one prefix per project |
+| the conversation | container disk — **wiped on every deploy** | **R2** (or Neon, as JSONL) |
+
+Two of those three are missing. That is the honest state: today a guest's work dies at the next
+deploy, no matter what the UI says. Building the shelf before the storage would be a lie with a
+nice page on it.
+
+## The status machine
+
+```
+active ──budget out──▶ paused ──owner opts in──▶ adoptable ──someone adopts──▶ forked
+   │                     │                          │
+   │                     └──owner returns───────────┘ (back to active)
+   └──owner deletes──▶ deleted  (the only destructive transition, explicit, typed)
+```
+
+- **paused** is the default landing place when money runs out. Nothing is removed.
+- **adoptable** is opt-in: the owner says "someone else may carry this". Default is **private**.
+- **forked** keeps the original owner's copy. Adoption copies, never moves.
+- **deleted** is only ever the owner's own action, and it never touches Massai's credentials.
+
+## The budget-out screen: three doors, equal weight
+
+1. **Keep going on your own key** — paste one at `/access`, resume the same project, same files.
+2. **Buy Massai a coffee** — a donation becomes credit on that account (e.g. $5 → an allowance
+   for that user for the month). This is the path that keeps the shared budget honest.
+3. **Take it with me** — download the project as a zip, or push it to your own GitHub. Leaves with
+   you; nothing is held hostage.
+
+Plus, quietly underneath: **it stays saved either way**, and there is a link to the shelf.
+
+## The shelf
+
+- Only **adoptable** projects appear. Nothing is published by default, ever.
+- Each card shows: name, one-line summary, what was built so far, the original author's handle,
+  and what it would need to continue (a key, a domain, time).
+- Adopting documents the fork: `forked_from`, original author credited on the project page.
+- A "finished" project can be offered to the shelf as a **template** — the community growth path
+  the owner wants, without giving away anyone's credentials or private work.
+
+## What has to be enabled first
+
+1. **R2 bucket** — Cloudflare → R2 → *Enable* (one click; the free tier covers 10 GB and this is
+   the difference between "saved" and "gone").
+2. Then: `projects` table in Neon, a mirror-on-change hook for the workspace, and the three-door
+   screen where the budget message currently is.
