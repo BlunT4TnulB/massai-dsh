@@ -24,7 +24,7 @@ import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  databaseConfigured, databaseStatus, ensureSchema, guestCounters, readUsageRows, recordUsage,
+  creditLedger, databaseConfigured, databaseStatus, ensureSchema, grantCredit, guestCounters, readUsageRows, recordUsage,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
@@ -237,7 +237,8 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       const spend = await budgetReport().catch(() => undefined)
       const guests = await guestCounters().catch(() => [])
-      const html = Buffer.from(adminPageHtml(spend, guests))
+      const credits = await creditLedger().catch(() => [])
+      const html = Buffer.from(adminPageHtml(spend, guests, credits))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
@@ -373,6 +374,48 @@ export function apply(ctx: Context): void {
       return { kind: 'enter', messages: [...((rest as { messages?: unknown[] }).messages ?? []), notice] }
     }
     return { kind: 'reject' }
+  })
+
+
+  // Credit ledger: a coffee becomes somebody's allowance. Owner-only, because it
+  // is money. Positive to top up, negative to correct.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/credits/grant', auth: 'required', methods: ['POST'],
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const fields = await readFields(req)
+        const userId = (fields.get('userId') ?? '').trim()
+        const usd = Number(fields.get('usd') ?? '0')
+        const note = (fields.get('note') ?? 'manual').slice(0, 120)
+        if (userId === '' || !Number.isFinite(usd) || usd === 0) {
+          respond(res, 400, { error: 'userId and a non-zero usd are required' }); return
+        }
+        const balance = await grantCredit(userId, usd, note)
+        const wantsJson = String(req.headers.accept ?? '').includes('application/json')
+        if (wantsJson) { respond(res, 200, { ok: true, userId, balance }); return }
+        res.writeHead(303, { location: '/admin', 'cache-control': 'no-store' })
+        res.end()
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  // One switch to stop new guests without a deploy: for when a link goes further
+  // than expected and the ledger needs a breath.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/guest/freeze', auth: 'required', methods: ['POST'],
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const fields = await readFields(req)
+      const on = (fields.get('on') ?? '1') !== '0'
+      process.env.DSH_GUEST_FROZEN = on ? '1' : ''
+      const wantsJson = String(req.headers.accept ?? '').includes('application/json')
+      if (wantsJson) { respond(res, 200, { ok: true, frozen: on }); return }
+      res.writeHead(303, { location: '/admin', 'cache-control': 'no-store' })
+      res.end()
+    },
   })
 
   // Is the database configured and reachable? One honest answer, owner-only.
@@ -540,6 +583,17 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/api/preview', auth: 'anonymous',
     handler: async (req, res) => {
       if (req.method !== 'POST' && req.method !== 'GET') { respond(res, 405, { error: 'method not allowed' }); return }
+      if ((process.env.DSH_GUEST_FROZEN ?? '') !== '') {
+        res.writeHead(503, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+        res.end('<!doctype html><meta charset="utf-8"><title>Massai — preview paused</title>'
+          + '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0e10;'
+          + 'color:#F2F2F4;font-family:system-ui,sans-serif;padding:2rem}a{color:#7ee2a8}</style>'
+          + '<div style="max-width:30rem"><h1 style="font-size:1.2rem">The free preview is paused</h1>'
+          + '<p style="color:#a9a9b3;line-height:1.6">Not because of you — the shared budget needed a breath. '
+          + 'Your own key works right now and is never affected.</p>'
+          + '<p><a href="/access">Continue with my own key →</a></p></div>')
+        return
+      }
       // Only possible when the deployment carries its own key to spend.
       if ((process.env.DEEPSEEK_API_KEY ?? '') === '') {
         respond(res, 503, { error: 'this deployment has no preview key' })

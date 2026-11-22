@@ -73,7 +73,8 @@ export function adminPageHtml(spend?: {
   ratio: number
   month: string
   users: Array<{ userId: string; calls: number; cost: number; last: number }>
-}, guests?: Array<{ guestKey: string; day: string; count: number }>): string {
+}, guests?: Array<{ guestKey: string; day: string; count: number }>,
+  credits?: Array<{ userId: string; usd: number; entries: number; last: number }>): string {
   const home = harnessHome()
   const hosted = process.env.DSH_ALLOW_WILDCARD_HOST !== undefined
   const ownerKey = process.env.DEEPSEEK_API_KEY !== undefined && process.env.DEEPSEEK_API_KEY !== ''
@@ -111,6 +112,30 @@ export function adminPageHtml(spend?: {
         + g.guestKey.slice(0, 16) + '…</td><td>' + g.day + '</td><td>'
         + (g.count >= 3 ? '<b style="color:#f0b46a">' + String(g.count) + '</b>' : String(g.count)) + '</td></tr>'),
       '</tbody></table>'].join('\n      ')
+  // Credit: a coffee becomes somebody's allowance. Listed plainly, with a form
+  // to add one by hand until a payment rail exists.
+  const creditRows = credits === undefined || credits.length === 0
+    ? '<p class="empty">Nobody has credit yet. A $5 coffee is roughly a month of light use.</p>'
+    : ['<table><thead><tr><th>who</th><th>balance</th><th>grants</th><th>last</th></tr></thead><tbody>',
+      ...credits.slice(0, 20).map(c => '<tr><td>' + c.userId + '</td><td>$'
+        + c.usd.toFixed(2) + '</td><td>' + String(c.entries) + '</td><td>'
+        + (c.last === 0 ? '—' : new Date(c.last).toISOString().slice(0, 16).replace('T', ' ')) + '</td></tr>'),
+      '</tbody></table>'].join('\n      ')
+  const creditSection = [
+    '<section><h2>Credit · coffee fund</h2>',
+    '<form method="POST" action="/api/credits/grant" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem">',
+    '<input name="userId" placeholder="guest-… / user id" required style="flex:1;min-width:12rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
+    '<input name="usd" placeholder="5.00" required style="width:7rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
+    '<input name="note" placeholder="ko-fi 1234" style="width:10rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
+    '<button type="submit" style="padding:.5rem .9rem;border-radius:.4rem;border:none;background:#C1440E;color:#fff;font-weight:700;cursor:pointer">Grant</button>',
+    '</form>',
+    creditRows,
+    '<form method="POST" action="/api/guest/freeze" style="margin-top:1rem">',
+    '<button type="submit" style="padding:.45rem .8rem;border-radius:.4rem;border:1px solid #31313a;background:#1f1f27;color:#f0b46a;font-weight:600;cursor:pointer">Pause new guest previews</button>',
+    '</form>',
+    '<p class="fine" style="margin:.6rem 0 0;color:#6f6f78;font-size:.72rem">Credit raises one person\'s ceiling on top of the shared allowance. A pause stops new guests without a deploy; existing keys are never affected.</p>',
+    '</section>',
+  ].join('\n')
   const vault = join(home, '.credentials.yaml')
   const facts: Fact[] = [
     { label: 'Hosted mode', value: hosted ? 'on — shell tools disabled for visitors' : 'off — local/trusted use', tone: hosted ? 'ok' : 'warn' },
@@ -169,6 +194,7 @@ export function adminPageHtml(spend?: {
 </header>
 <section><h2>Status</h2><table>${rows}</table></section>
 ${spendSection}
+${creditSection}
 <section><h2>Guest sessions per network</h2>${guestRows}
   <p class="fine" style="margin:.6rem 0 0;color:#6f6f78;font-size:.72rem">Three per day by default (<code>DSH_GUEST_SESSIONS_PER_DAY</code>). Highlighted rows are at the limit — that pattern is what a cookie-clearing loop looks like.</p></section>
 <section><h2>Notes wall (newest ${notes.length})</h2>${noteList}

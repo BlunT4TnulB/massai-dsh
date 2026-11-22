@@ -98,6 +98,16 @@ export async function ensureSchema(): Promise<void> {
   `)
   await runSql('ALTER TABLE usage_points ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT \'\'')
   await runSql(`
+    CREATE TABLE IF NOT EXISTS credits (
+      id      BIGSERIAL   PRIMARY KEY,
+      at      BIGINT      NOT NULL,
+      user_id TEXT        NOT NULL,
+      usd     DOUBLE PRECISION NOT NULL,
+      note    TEXT        NOT NULL DEFAULT ''
+    )
+  `)
+  await runSql('CREATE INDEX IF NOT EXISTS credits_user_idx ON credits (user_id)')
+  await runSql(`
     CREATE TABLE IF NOT EXISTS guest_sessions (
       guest_key TEXT    NOT NULL,
       day       TEXT    NOT NULL,
@@ -223,6 +233,52 @@ export async function guestCounters(day?: string): Promise<Array<{ guestKey: str
     ? await runSql('SELECT guest_key, day, count FROM guest_sessions ORDER BY day DESC, count DESC LIMIT 50')
     : await runSql('SELECT guest_key, day, count FROM guest_sessions WHERE day = $1 ORDER BY count DESC LIMIT 50', [day])
   return rows.map(row => ({ guestKey: String(row.guest_key), day: String(row.day), count: Number(row.count) }))
+}
+
+/**
+ * Add credit to one person's allowance — the "someone bought Massai a coffee"
+ * path. Positive to top up, negative to correct a mistake.
+ * @param userId - whose allowance to raise (`guest-…`, a Clerk id, or an email).
+ * @param usd - dollars to add.
+ * @param note - why, for the ledger (`ko-fi 1234`, `manual`, `refund`).
+ * @returns the new balance.
+ */
+export async function grantCredit(userId: string, usd: number, note = ''): Promise<number> {
+  if (!databaseConfigured()) return 0
+  await ensureOnce()
+  await runSql('INSERT INTO credits (at, user_id, usd, note) VALUES ($1, $2, $3, $4)', [Date.now(), userId, usd, note])
+  return creditTotal(userId)
+}
+
+/**
+ * One person's credit balance.
+ * @param userId - whose balance.
+ * @returns dollars available (0 when unknown or no database).
+ */
+export async function creditTotal(userId: string): Promise<number> {
+  if (!databaseConfigured()) return 0
+  await ensureOnce()
+  const rows = await runSql('SELECT COALESCE(SUM(usd), 0) AS total FROM credits WHERE user_id = $1', [userId])
+  return Number(rows[0]?.total ?? 0)
+}
+
+/**
+ * Everyone who has ever been granted credit, with their balance.
+ * @returns rows for the owner console, biggest balance first.
+ */
+export async function creditLedger(): Promise<Array<{ userId: string; usd: number; entries: number; last: number }>> {
+  if (!databaseConfigured()) return []
+  await ensureOnce()
+  const rows = await runSql(
+    `SELECT user_id, COALESCE(SUM(usd), 0) AS usd, COUNT(*)::int AS entries, MAX(at) AS last
+     FROM credits GROUP BY user_id ORDER BY usd DESC LIMIT 50`,
+  )
+  return rows.map(row => ({
+    userId: String(row.user_id),
+    usd: Number(row.usd),
+    entries: Number(row.entries),
+    last: Number(row.last),
+  }))
 }
 
 /**
