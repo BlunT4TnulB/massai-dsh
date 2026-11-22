@@ -197,6 +197,21 @@ export function providersPageHtml(summary?: { calls: number; cost: number; since
   const lessons = LESSONS.map(([title, body]) => `<div class="lesson">
     <h3>${esc(title)}</h3><p>${esc(body)}</p>
   </div>`).join('')
+  // Built outside the page template: a nested template literal inside another
+  // one is a syntax trap (it broke this file once), so the strip is concatenated.
+  const spendStrip = summary === undefined ? '' : [
+    '<section>',
+    '<h2>What this deployment has actually spent</h2>',
+    '<p class="lede" style="margin:0"><b style="font-size:1.35rem;color:#EFDCA4">$'
+      + summary.cost.toFixed(2) + '</b> across <b>' + summary.calls.toLocaleString('en-US')
+      + '</b> model calls'
+      + (summary.since === undefined ? '' : ' since ' + summary.since) + '. '
+      + 'Every figure on this page comes from the same meter.</p>',
+    '<p class="note">That is the whole point of the routing: cheap by default, quality bought only '
+      + 'where it changes the outcome. DeepSeek halves its prices off-peak (16:30–00:30 UTC).</p>',
+    '</section>',
+  ].join('\n')
+
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Massai — providers and what they cost</title>
@@ -250,15 +265,7 @@ rather than a surprise at 4pm on a Tuesday.</p>
   it is not offered in the model picker and cannot be chosen by mistake.</p>
 </section>
 
-${summary === undefined ? '' : `<section>
-  <h2>What this deployment has actually spent</h2>
-  <p class="lede" style="margin:0">
-    <b style="font-size:1.35rem;color:#EFDCA4">$${summary.cost.toFixed(2)}</b>
-    across <b>${summary.calls.toLocaleString('en-US')}</b> model calls${summary.since === undefined ? '' : ` since ${summary.since}`}.
-    Every figure on this page comes from the same meter.</p>
-  <p class="note">That is the whole point of the routing: cheap by default, quality bought only where it
-  changes the outcome. DeepSeek halves its prices off-peak (16:30–00:30 UTC).</p>
-</section>
+${spendStrip}
 
 <section><h2>Collect your keys — in this order</h2>
   <p class="note" style="margin-top:0">Each row gives the exact page, what to click, and the environment
