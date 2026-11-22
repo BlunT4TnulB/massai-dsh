@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="g" x1="0.2" y1="0" x2="0.8" y2="1">
+ <stop offset="0%" stop-color="#FFEFC6"/><stop offset="40%" stop-color="#D9B463"/>
+ <stop offset="78%" stop-color="#9C7422"/><stop offset="100%" stop-color="#6B4C10"/></linearGradient>
+<radialGradient id="eye" cx="0.5" cy="0.5" r="0.5">
+ <stop offset="0%" stop-color="#FFFFFF"/><stop offset="26%" stop-color="#FFE9A8"/>
+ <stop offset="60%" stop-color="#FF8A00"/><stop offset="100%" stop-color="#401600"/></radialGradient>
+<filter id="gl" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6"/></filter></defs><rect width="512" height="512" fill="#050506"/>
+<path d="M 256 34 L 316 150 L 256 236 L 196 150 Z" fill="url(#g)"/>
+<path d="M 150 150 L 214 236 L 176 402 L 108 330 Z" fill="url(#g)" opacity=".9"/>
+<path d="M 362 150 L 298 236 L 336 402 L 404 330 Z" fill="url(#g)" opacity=".9"/>
+<path d="M 214 236 L 256 214 L 298 236 L 256 320 Z" fill="#FFF3C6" opacity=".85"/>
+<path d="M 176 402 L 256 320 L 336 402 L 256 486 Z" fill="url(#g)"/>
+<g filter="url(#gl)" opacity=".85">
+  <rect x="196" y="272" width="40" height="12" rx="6" fill="#FF8A00"/>
+  <rect x="276" y="272" width="40" height="12" rx="6" fill="#FF8A00"/></g>
+<rect x="196" y="272" width="40" height="12" rx="6" fill="#0a0a0c"/>
+<rect x="276" y="272" width="40" height="12" rx="6" fill="#0a0a0c"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="g" x1="0.2" y1="0" x2="0.8" y2="1">
+ <stop offset="0%" stop-color="#FFEFC6"/><stop offset="40%" stop-color="#D9B463"/>
+ <stop offset="78%" stop-color="#9C7422"/><stop offset="100%" stop-color="#6B4C10"/></linearGradient>
+<radialGradient id="eye" cx="0.5" cy="0.5" r="0.5">
+ <stop offset="0%" stop-color="#FFFFFF"/><stop offset="26%" stop-color="#FFE9A8"/>
+ <stop offset="60%" stop-color="#FF8A00"/><stop offset="100%" stop-color="#401600"/></radialGradient>
+<filter id="gl" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6"/></filter></defs><rect width="512" height="512" fill="#050506"/>
+<path d="M 256 40 L 372 108 L 340 250 L 256 470 L 172 250 L 140 108 Z" fill="url(#g)"/>
+<path d="M 256 40 L 256 470 L 172 250 L 140 108 Z" fill="#FFF3C6" opacity=".14"/>
+<path d="M 256 40 L 372 108 L 340 250 L 256 470 Z" fill="#000" opacity=".14"/>
+<path d="M 176 208 H 336 L 300 258 L 256 300 L 212 258 Z" fill="#0a0a0c"/>
+<g filter="url(#gl)" opacity=".9">
+  <rect x="196" y="228" width="44" height="14" rx="7" fill="#FF8A00"/>
+  <rect x="272" y="228" width="44" height="14" rx="7" fill="#FF8A00"/></g>
+<rect x="196" y="228" width="44" height="14" rx="7" fill="url(#eye)"/>
+<rect x="272" y="228" width="44" height="14" rx="7" fill="url(#eye)"/>
+<path d="M 256 300 V 400" stroke="#0a0a0c" stroke-width="10" opacity=".45"/>
+</svg>
