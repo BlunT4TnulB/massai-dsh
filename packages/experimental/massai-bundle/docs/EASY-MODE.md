@@ -104,8 +104,8 @@ active ──budget out──▶ paused ──owner opts in──▶ adoptable �
 ## The budget-out screen: three doors, equal weight
 
 1. **Keep going on your own key** — paste one at `/access`, resume the same project, same files.
-2. **Buy Massai a coffee** — a donation becomes credit on that account (e.g. $5 → an allowance
-   for that user for the month). This is the path that keeps the shared budget honest.
+2. **Leave a tip / ask for a top-up** — a gift, and separately a discretionary credit top-up on that
+   account (e.g. $5 → an allowance for that person for the month). The two are deliberately distinct. This is the path that keeps the shared budget honest.
 3. **Take it with me** — download the project as a zip, or push it to your own GitHub. Leaves with
    you; nothing is held hostage.
 

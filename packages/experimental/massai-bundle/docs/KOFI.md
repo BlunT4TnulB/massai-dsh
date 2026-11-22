@@ -2,7 +2,7 @@
 
 ## What the supporter sees
 
-1. They run out of free allowance; the message says a coffee can keep it going.
+1. They run out of free allowance; the message says a tip or a top-up can keep it going.
 2. They open `/support` (linked from the door and every legal page).
 3. They tap the button, choose an amount, and put **their Massai id in the note**.
    The id is on `/me`; it looks like `guest-9f3c…`.
