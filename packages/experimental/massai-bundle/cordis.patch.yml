@@ -109,7 +109,8 @@
             displayName: Worker pool (local machines)
             apiKeyEnv: DSH_WORKER_TOKEN
             api: openai-completions
-            baseURL: https://massai-dsh.onrender.com/api/local/v1
+            # Follows the deployment: set PUBLIC_ORIGIN when the domain changes.
+            baseURL: !!js (process.env.PUBLIC_ORIGIN ?? "https://massai-dsh.onrender.com") + "/api/local/v1"
             models:
               - id: auto
                 name: Any connected machine

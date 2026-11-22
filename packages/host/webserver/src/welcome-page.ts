@@ -109,6 +109,18 @@ const SHELL_CSS = `
   .back:hover{color:#F2F2F4}
 `
 
+/**
+ * The deployment's public origin, for absolute URLs in social cards.
+ *
+ * The card image has to be absolute, and the deployment now answers on more than
+ * one hostname (the platform URL and the real domain). `PUBLIC_ORIGIN` names the
+ * one worth advertising; without it, the platform URL is assumed.
+ */
+function publicOrigin(): string {
+  const configured = (process.env.PUBLIC_ORIGIN ?? '').trim().replace(/\/+$/, '')
+  return configured === '' ? 'https://massai-dsh.onrender.com' : configured
+}
+
 /** The document shell both pages share. */
 function shell(title: string, description: string, body: string): string {
   return `<!doctype html>
@@ -124,13 +136,13 @@ function shell(title: string, description: string, body: string): string {
 <meta property="og:site_name" content="Massai">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
-<meta property="og:image" content="https://massai-dsh.onrender.com/og-image.png">
+<meta property="og:image" content="${publicOrigin()}/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${description}">
-<meta name="twitter:image" content="https://massai-dsh.onrender.com/og-image.png">
+<meta name="twitter:image" content="${publicOrigin()}/og-image.png">
 <meta name="description" content="${description}">
 <style>${SHELL_CSS}</style></head><body>
 <div class="win" role="dialog" aria-labelledby="door-title">

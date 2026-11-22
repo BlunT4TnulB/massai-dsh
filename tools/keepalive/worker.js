@@ -17,6 +17,7 @@
  * That is 288 pings a day against a free allowance of 100,000 requests.
  */
 
+// Follows the deployment: change this one line when the domain changes.
 const TARGET = 'https://massai-dsh.onrender.com/healthz'
 
 export default {
