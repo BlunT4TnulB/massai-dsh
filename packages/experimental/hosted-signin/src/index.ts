@@ -20,7 +20,7 @@ import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
 import {
-  countryForUser, countryOf, freeGeminiAllowed, REGION_GATED_PROVIDERS, rememberCountry,
+  countryForUser, countryHeaderOf, countryOf, freeGeminiAllowed, REGION_GATED_PROVIDERS, rememberCountry,
 } from './geo.ts'
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
@@ -553,7 +553,7 @@ export function apply(ctx: Context): void {
       const country = countryOf(req)
       respond(res, 200, {
         country: country === '' ? null : country,
-        source: country === '' ? 'no proxy header' : 'proxy header',
+        source: country === '' ? 'no proxy header' : `${countryHeaderOf(req)} header`,
         freeGemini: freeGeminiAllowed(country),
         strict: (process.env.DSH_GEO_STRICT ?? '') === '1',
       })

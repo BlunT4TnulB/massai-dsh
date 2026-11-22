@@ -34,6 +34,21 @@ export const FREE_GEMINI_BLOCKED: ReadonlySet<string> = new Set([
 export const REGION_GATED_PROVIDERS: ReadonlySet<string> = new Set(['google'])
 
 /**
+ * Which geo header actually supplied the country. Diagnostics only: it names the
+ * header, never the address.
+ * @param req - the incoming request.
+ * @returns the header name, or '' when none was present.
+ */
+export function countryHeaderOf(req: IncomingMessage): string {
+  for (const header of ['cf-ipcountry', 'x-vercel-ip-country', 'x-geo-country', 'x-country']) {
+    const value = req.headers[header]
+    const raw = Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+    if (/^[A-Za-z]{2}$/.test(raw.trim())) return header
+  }
+  return ''
+}
+
+/**
  * Read the visitor's country from the request headers a proxy may add.
  * @param req - the incoming request.
  * @returns a two-letter country code, or '' when nothing trustworthy is present.
