@@ -19,6 +19,9 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
+import {
+  countryForUser, countryOf, freeGeminiAllowed, REGION_GATED_PROVIDERS, rememberCountry,
+} from './geo.ts'
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -356,7 +359,13 @@ export function apply(ctx: Context): void {
   // the provider. One courtesy turn explains it, then the step is refused.
   const onPreStep = ctx.on.bind(ctx) as unknown as (
     name: string,
-    handler: (payload: { agent: { session: { header?: { userId?: string } } } }, next: () => Promise<unknown>) => Promise<unknown>,
+    handler: (
+      payload: {
+        agent: { session: { header?: { userId?: string } } }
+        modelSelection?: { provider?: string }
+      },
+      next: () => Promise<unknown>,
+    ) => Promise<unknown>,
   ) => void
   const explained = new Set<string>()
   onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
@@ -513,6 +522,24 @@ export function apply(ctx: Context): void {
         respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
       }
     },
+  })
+
+
+  // Regional gate for free-tier providers. Runs before the step decides anything
+  // else, and switches rather than rejects: a visitor in the EEA still gets a
+  // workshop, just not the one provider whose terms forbid the free tier there.
+  onPreStep('agent/pre-step', async ({ agent, modelSelection }, next) => {
+    const userId = String(agent.session.header?.userId ?? '')
+    const country = countryForUser(userId)
+    if (country === '' || freeGeminiAllowed(country)) return next()
+    const provider = modelSelection?.provider ?? ''
+    if (!REGION_GATED_PROVIDERS.has(provider)) return next()
+    try {
+      await (agent as unknown as {
+        model: { select: (selection: { provider: string; model: string }) => Promise<unknown> }
+      }).model.select({ provider: 'deepseek-official', model: 'deepseek-flash' })
+    } catch { /* if the switch fails, the step proceeds on the original route */ }
+    return next()
   })
 
   // Is the database configured and reachable? One honest answer, owner-only.
@@ -720,6 +747,10 @@ and costs cents.</p>
         return
       }
       const guest = `guest-${randomUUID()}`
+      // Free Gemini is not offered in the EEA, UK or Switzerland (Google's terms
+      // require the paid tier there). The country has to be captured now: model
+      // calls are made by this server, not by the visitor's browser.
+      rememberCountry(guest, countryOf(req))
       // Their own id, readable by the page so /me can display it and they can
       // paste it into a Ko-fi note. It is not a credential.
       res.setHeader('set-cookie', `dsh_uid=${guest}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`)
