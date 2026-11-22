@@ -10,7 +10,9 @@
  * Deploy (once, free):
  *   1. dash.cloudflare.com → Workers & Pages → Create → Worker
  *   2. paste this file, Deploy
- *   3. Settings → Trigger Events → Cron Triggers → Add: `*/5 * * * *`
+ *   3. Settings → Trigger Events → Cron Triggers → Add the five-minute cron
+ *      (the expression is "star-slash-5" followed by four stars; written out
+ *      here it would close this comment)
  *
  * That is 288 pings a day against a free allowance of 100,000 requests.
  */

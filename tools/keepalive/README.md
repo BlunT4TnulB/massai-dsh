@@ -21,7 +21,18 @@ which reads as a broken site.
 | **UptimeRobot** | free | 5-minute checks, plus downtime alerts |
 | **Render paid instance** | $7/mo | never sleeps — the only real fix |
 
-## Deploy the Worker
+## Deploy the Worker — one command
+
+```bash
+cd tools/keepalive
+npx wrangler deploy          # asks you to log in once, then deploys script + cron
+npx wrangler tail            # watch the pings land
+```
+
+`wrangler.toml` declares the five-minute cron, so this sets the trigger too — which the
+REST API refused to do with a Workers-Scripts-only token (error 10026).
+
+## Deploy the Worker — dashboard, if you prefer clicking
 
 1. dash.cloudflare.com → **Workers & Pages** → *Create* → *Worker*
 2. paste `worker.js`, **Deploy**
