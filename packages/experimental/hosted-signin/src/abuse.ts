@@ -45,9 +45,8 @@ export function dayKey(now = Date.now()): string {
  */
 export function guestKeyOf(req: IncomingMessage): string {
   const forwarded = req.headers['x-forwarded-for']
-  const address = (Array.isArray(forwarded) ? forwarded[0] : forwarded ?? '')
-    .split(',')[0]
-    ?.trim() ?? ''
+  const header = Array.isArray(forwarded) ? (forwarded[0] ?? '') : (forwarded ?? '')
+  const address = (header.split(',')[0] ?? '').trim()
   const agent = String(req.headers['user-agent'] ?? '')
   const material = `${address}|${agent}`
   if (address === '' && agent === '') return 'unknown'
