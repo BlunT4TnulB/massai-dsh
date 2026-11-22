@@ -70,3 +70,14 @@ overlay, multi-layer bloom, and a saturated ramp
 **The honest limit:** vector will not equal a raytrace. The correct split is
 *vector owns the geometry, the render owns the material* — use the vector at small sizes and
 for print, the render for hero art at large sizes.
+
+## Revision 3 — against a rendered reference
+
+`vs-grok.png` puts a rendered reference (left) beside SVG v4 (middle) and v5 (right). v5 took the
+reference's proportions: **leaf forks with sharp tips**, a thinner filament, a flatter pedestal
+with a square base, and eye rings with their own rims.
+
+What v5 still cannot do, and why: a render has **sculpted thickness** — bevels that catch light at
+an angle. SVG has gradients and strokes, not geometry with a normal. v5 fakes it with a bevel
+stroke on every top edge, which is convincing at 200px+ and honest at 16px once the shape is
+reduced to its three essential marks.
