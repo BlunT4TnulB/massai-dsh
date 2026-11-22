@@ -98,6 +98,14 @@ export async function ensureSchema(): Promise<void> {
   `)
   await runSql('ALTER TABLE usage_points ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT \'\'')
   await runSql(`
+    CREATE TABLE IF NOT EXISTS guest_sessions (
+      guest_key TEXT    NOT NULL,
+      day       TEXT    NOT NULL,
+      count     INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (guest_key, day)
+    )
+  `)
+  await runSql(`
     CREATE TABLE IF NOT EXISTS memory_records (
       at      BIGINT NOT NULL,
       cwd     TEXT   NOT NULL,
@@ -183,6 +191,38 @@ export async function readUsageSince(sinceMs: number): Promise<UsageRow[]> {
     cacheRead: Number(row.cache_read),
     cacheWrite: Number(row.cache_write),
   }))
+}
+
+/**
+ * Count one guest session for a key on a day, atomically.
+ * @param guestKey - the durable visitor-derived key.
+ * @param day - `YYYY-MM-DD`.
+ * @returns the count after this increment.
+ */
+export async function bumpGuestCounter(guestKey: string, day: string): Promise<number> {
+  if (!databaseConfigured()) return 0
+  await ensureOnce()
+  const rows = await runSql(
+    `INSERT INTO guest_sessions (guest_key, day, count) VALUES ($1, $2, 1)
+     ON CONFLICT (guest_key, day) DO UPDATE SET count = guest_sessions.count + 1
+     RETURNING count`,
+    [guestKey, day],
+  )
+  return Number(rows[0]?.count ?? 1)
+}
+
+/**
+ * Guest sessions per day, busiest first — the abuse report.
+ * @param day - `YYYY-MM-DD`; omit for every day recorded.
+ * @returns rows for the owner console.
+ */
+export async function guestCounters(day?: string): Promise<Array<{ guestKey: string; day: string; count: number }>> {
+  if (!databaseConfigured()) return []
+  await ensureOnce()
+  const rows = day === undefined
+    ? await runSql('SELECT guest_key, day, count FROM guest_sessions ORDER BY day DESC, count DESC LIMIT 50')
+    : await runSql('SELECT guest_key, day, count FROM guest_sessions WHERE day = $1 ORDER BY count DESC LIMIT 50', [day])
+  return rows.map(row => ({ guestKey: String(row.guest_key), day: String(row.day), count: Number(row.count) }))
 }
 
 /**

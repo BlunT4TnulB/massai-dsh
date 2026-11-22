@@ -73,7 +73,7 @@ export function adminPageHtml(spend?: {
   ratio: number
   month: string
   users: Array<{ userId: string; calls: number; cost: number; last: number }>
-}): string {
+}, guests?: Array<{ guestKey: string; day: string; count: number }>): string {
   const home = harnessHome()
   const hosted = process.env.DSH_ALLOW_WILDCARD_HOST !== undefined
   const ownerKey = process.env.DEEPSEEK_API_KEY !== undefined && process.env.DEEPSEEK_API_KEY !== ''
@@ -103,6 +103,15 @@ export function adminPageHtml(spend?: {
       '</section>',
     ].join('\n')
 
+  // Guest sessions per visitor-derived key: the shape an abuse loop makes.
+  const guestRows = guests === undefined || guests.length === 0
+    ? '<p class="empty">No guest sessions recorded yet.</p>'
+    : ['
+<table><thead><tr><th>visitor key</th><th>day</th><th>sessions</th></tr></thead><tbody>',
+      ...guests.slice(0, 20).map(g => '<tr><td style="font-family:ui-monospace,monospace;font-size:.74rem">'
+        + g.guestKey.slice(0, 16) + '…</td><td>' + g.day + '</td><td>'
+        + (g.count >= 3 ? '<b style="color:#f0b46a">' + String(g.count) + '</b>' : String(g.count)) + '</td></tr>'),
+      '</tbody></table>'].join('\n      ')
   const vault = join(home, '.credentials.yaml')
   const facts: Fact[] = [
     { label: 'Hosted mode', value: hosted ? 'on — shell tools disabled for visitors' : 'off — local/trusted use', tone: hosted ? 'ok' : 'warn' },
@@ -161,6 +170,8 @@ export function adminPageHtml(spend?: {
 </header>
 <section><h2>Status</h2><table>${rows}</table></section>
 ${spendSection}
+<section><h2>Guest sessions per network</h2>${guestRows}
+  <p class="fine" style="margin:.6rem 0 0;color:#6f6f78;font-size:.72rem">Three per day by default (<code>DSH_GUEST_SESSIONS_PER_DAY</code>). Highlighted rows are at the limit — that pattern is what a cookie-clearing loop looks like.</p></section>
 <section><h2>Notes wall (newest ${notes.length})</h2>${noteList}
   <p style="margin:.8rem 0 0"><a href="/feedback/export.jsonl" style="color:#7ee2a8;text-decoration:none;font-size:.82rem;font-weight:600">Download all notes →</a></p>
 </section>

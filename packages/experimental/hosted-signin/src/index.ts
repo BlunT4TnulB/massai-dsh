@@ -24,8 +24,9 @@ import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  databaseConfigured, databaseStatus, ensureSchema, readUsageRows, recordUsage,
+  databaseConfigured, databaseStatus, ensureSchema, guestCounters, readUsageRows, recordUsage,
 } from './persistence.ts'
+import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
 import { costOf, readUsage } from './usage.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
@@ -235,7 +236,8 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/admin', auth: 'required',
     handler: async (req, res) => {
       const spend = await budgetReport().catch(() => undefined)
-      const html = Buffer.from(adminPageHtml(spend))
+      const guests = await guestCounters().catch(() => [])
+      const html = Buffer.from(adminPageHtml(spend, guests))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
@@ -547,6 +549,25 @@ export function apply(ctx: Context): void {
         | { mintSessionCookie(req: IncomingMessage, res: { setHeader(name: string, value: string): void }, secure: boolean, userId: string): boolean }
         | undefined
       if (minter === undefined) { respond(res, 503, { error: 'session service unavailable' }); return }
+      // A cookie can be cleared; the visitor-derived key cannot. Three guest
+      // sessions per network+browser per day, so the "new incognito window"
+      // loop stops being free.
+      const admission = await admitGuestSession(guestKeyOf(req))
+      if (!admission.allowed) {
+        res.writeHead(429, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+        res.end(`<!doctype html><meta charset="utf-8"><title>Massai — preview limit</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0e10;color:#F2F2F4;
+font-family:system-ui,sans-serif;padding:2rem}div{max-width:30rem}a{color:#7ee2a8}</style>
+<div><h1 style="font-size:1.2rem">That is enough previews for today</h1>
+<p style="color:#a9a9b3;line-height:1.6">This network has used its ${admission.limit} free previews for today
+(${admission.used} requested). The workshop's budget is small and shared, so it is metered per network as
+well as per browser.</p>
+<p style="color:#a9a9b3;line-height:1.6">You can keep going right now with your own key — it takes a minute
+and costs cents.</p>
+<p><a href="/access">Continue with my own key →</a></p>
+<p style="color:#6f6f78;font-size:.8rem">The limit resets at midnight UTC.</p></div>`)
+        return
+      }
       const guest = `guest-${randomUUID()}`
       if (!minter.mintSessionCookie(req, res, ctx.webServer.protocol === 'https:', guest)) {
         respond(res, 400, { error: 'missing Host authority' }); return
