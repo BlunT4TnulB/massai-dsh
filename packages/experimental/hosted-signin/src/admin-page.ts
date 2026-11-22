@@ -99,7 +99,8 @@ export function adminPageHtml(): string {
   main{max-width:52rem;margin:0 auto}
   header{display:flex;align-items:center;gap:.65rem;margin-bottom:1.4rem}
   header svg{width:2rem;height:auto}
-  h1{margin:0;font-size:1.15rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+  .badge{width:1.6rem;height:1.6rem;flex:none}
+  h1{display:flex;align-items:center;gap:.55rem;margin:0;font-size:1.15rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
   .flag{margin-left:auto;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:#D9822B;font-weight:600}
   section{border:1px solid #2a2a31;border-radius:.8rem;background:#17171c;padding:1.1rem 1.2rem;margin-bottom:1rem}
   h2{margin:0 0 .8rem;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:#8a8a93;font-weight:700}
@@ -124,7 +125,7 @@ export function adminPageHtml(): string {
     <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
       fill="#151517" stroke="#C1440E" stroke-width="4.5"/>
   </svg>
-  <h1>Owner console</h1><span class="flag">open by default</span>
+  <h1><img class="badge" src="/massai-badge.svg" alt="" width="26" height="26">Owner console</h1><span class="flag">open by default</span>
 </header>
 <section><h2>Status</h2><table>${rows}</table></section>
 <section><h2>Notes wall (newest ${notes.length})</h2>${noteList}

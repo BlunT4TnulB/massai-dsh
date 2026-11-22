@@ -108,6 +108,7 @@ export function apply(ctx: Context): void {
   for (const [path, file, type] of [
     [MARK_PATH, 'massai-mark.jpg', 'image/jpeg'],
     [CREST_PATH, 'massai-crest.svg', 'image/svg+xml'],
+    ['/massai-badge.svg', 'massai-badge.svg', 'image/svg+xml'],
     ['/favicon-16.png', 'icons/favicon-16.png', 'image/png'],
     ['/favicon-32.png', 'icons/favicon-32.png', 'image/png'],
     ['/favicon-48.png', 'icons/favicon-48.png', 'image/png'],

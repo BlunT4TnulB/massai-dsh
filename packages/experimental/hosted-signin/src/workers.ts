@@ -104,7 +104,7 @@ export function workersPageHtml(relay?: { queued: number; inFlight: number; poll
     background-image:radial-gradient(60rem 40rem at 15% 0%,rgba(193,68,14,.13),transparent 70%)}
   main{max-width:56rem;margin:0 auto}
   header{display:flex;align-items:center;gap:.6rem;margin-bottom:1.3rem}
-  h1{margin:0;font-size:1.1rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
+  h1{display:flex;align-items:center;gap:.55rem;margin:0;font-size:1.1rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700}
   .flag{margin-left:auto;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:#D9822B;font-weight:600}
   section{border:1px solid #2a2a31;border-radius:.8rem;background:#17171c;padding:1.1rem 1.2rem;margin-bottom:1rem}
   h2{margin:0 0 .8rem;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:#8a8a93;font-weight:700}
@@ -123,7 +123,7 @@ export function workersPageHtml(relay?: { queued: number; inFlight: number; poll
   .btn2:disabled{opacity:.55;cursor:default}
   a{color:#7ee2a8;text-decoration:none}
 </style></head><body><main>
-<header><h1>Local agents</h1><span class="flag">open by default</span></header>
+<header><h1><img class="badge" src="/massai-badge.svg" alt="" width="26" height="26">Local agents</h1><span class="flag">open by default</span></header>
 <section><h2>Machines reporting in</h2>
   ${configured ? '' : '<p class="note" style="color:#f0b46a;margin-top:0">Worker heartbeats are not configured: set <code>DSH_WORKER_TOKEN</code> on this service and on each machine.</p>'}
   <table><thead><tr><th>machine</th><th>model</th><th>endpoint</th><th>latency</th><th>last seen</th><th>jobs</th><th>note</th></tr></thead>
