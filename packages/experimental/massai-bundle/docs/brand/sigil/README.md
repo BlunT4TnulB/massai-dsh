@@ -81,3 +81,21 @@ What v5 still cannot do, and why: a render has **sculpted thickness** — bevels
 an angle. SVG has gradients and strokes, not geometry with a normal. v5 fakes it with a bevel
 stroke on every top edge, which is convincing at 200px+ and honest at 16px once the shape is
 reduced to its three essential marks.
+
+## Revision 4 — two families, honestly labelled
+
+The owner noticed the mark drifting away from their own studies. They were right: v4/v5 chased the
+**totem** (eyes bar, pedestal foot) because the petroglyph reference has it, while the gold study they
+actually picked is the **horn stack** — three tapered horns and a column. Both now exist:
+
+| Family | Files | Character | Icon reduction |
+|---|---|---|---|
+| **Horn stack** | `gold-v10.svg`, `gold-v10-1024.png` | elegant, sacred, minimal; closest to the owner's study | one horn + the column |
+| **Totem** | `gold-v5.svg`, `gold-v5-1024.png` | the plasma figure: forks, eyes, filament, foot | the eyes bar |
+
+`v10-vs-reference.png` puts the study, v9 and v10 side by side. `v6-totem-drift.png` shows where the
+drift happened (v6 was material-right, geometry-wrong).
+
+What changed between v9 and v10: the horns became **filled tapered shapes** — pointed tips, a belly
+of thickness at the apex — instead of uniform round-capped strokes. That single change is what makes
+it read as engraved gold rather than drawn lines.
