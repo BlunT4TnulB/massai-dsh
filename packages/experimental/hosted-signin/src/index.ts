@@ -24,6 +24,7 @@ import {
 } from './geo.ts'
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
+import { limitsPageHtml } from './limits-page.ts'
 import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
@@ -437,6 +438,7 @@ export function apply(ctx: Context): void {
     ['/privacy', privacyPageHtml()],
     ['/aup', aupPageHtml()],
     ['/support', supportPageHtml(process.env.KO_FI_URL ?? '')],
+    ['/limits', limitsPageHtml()],
   ] as Array<[string, string]>) {
     ctx.webServer.register({
       kind: 'exact', path, auth: 'anonymous',
@@ -715,7 +717,7 @@ export function apply(ctx: Context): void {
           + '<div style="max-width:30rem"><h1 style="font-size:1.2rem">The free preview is paused</h1>'
           + '<p style="color:#a9a9b3;line-height:1.6">Not because of you — the shared budget needed a breath. '
           + 'Your own key works right now and is never affected.</p>'
-          + '<p><a href="/access">Continue with my own key →</a></p></div>')
+          + '<p><a href="/access">Continue with my own key →</a> &nbsp;·&nbsp; <a href="/limits">what this can and cannot do →</a></p></div>')
         return
       }
       // Only possible when the deployment carries its own key to spend.
@@ -742,7 +744,7 @@ font-family:system-ui,sans-serif;padding:2rem}div{max-width:30rem}a{color:#7ee2a
 well as per browser.</p>
 <p style="color:#a9a9b3;line-height:1.6">You can keep going right now with your own key — it takes a minute
 and costs cents.</p>
-<p><a href="/access">Continue with my own key →</a></p>
+<p><a href="/access">Continue with my own key →</a> &nbsp;·&nbsp; <a href="/limits">what this can and cannot do →</a></p>
 <p style="color:#6f6f78;font-size:.8rem">The limit resets at midnight UTC.</p></div>`)
         return
       }

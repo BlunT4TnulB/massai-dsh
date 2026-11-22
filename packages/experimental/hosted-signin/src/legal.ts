@@ -53,7 +53,7 @@ function shell(title: string, body: string): string {
 <div class="brand"><img src="/massai-crest.svg" alt=""><span>MASSAI</span></div>
 ${body}
 <p class="foot"><a href="/">The door</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a>
-· <a href="/aup">Acceptable use</a> · <a href="/support">Support</a> · <a href="/access">Sign in</a></p>
+· <a href="/aup">Acceptable use</a> · <a href="/support">Support</a> · <a href="/limits">What this can and cannot do</a> · <a href="/access">Sign in</a></p>
 </main></body></html>`
 }
 

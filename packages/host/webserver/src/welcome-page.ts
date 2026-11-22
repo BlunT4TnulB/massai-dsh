@@ -58,6 +58,8 @@ const SHELL_CSS = `
   .brandline{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
   .crest-sm{width:2.5rem;height:auto;flex:none}
   .word{font-family:Georgia,'Times New Roman',serif;font-size:1.16rem;font-weight:400;letter-spacing:.28em;color:#EFDCA4}
+  .tagline{margin:-.1rem 0 .7rem;font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;
+    color:#D9822B;font-weight:700}
   h1{margin:.2rem 0 .5rem;font-size:1.85rem;line-height:1.1;font-weight:700;letter-spacing:-.015em}
   .sub{color:#9a9aa3;font-size:.94rem;line-height:1.6;font-weight:500;margin:0 0 1.3rem}
   .sub b{color:#E7E7EC;font-weight:600}
@@ -178,6 +180,7 @@ export function welcomePage(line?: number): string {
   const headline = headlineOf(line)
   return shell('Massai — into the unknown', 'Point at what you want and it gets built. Start free.', `
     <div class="brandline">${CREST}<span class="word">Massai</span></div>
+    <p class="tagline">Into the Unknown</p>
     <h1 id="door-title">${headline}</h1>
     <p class="sub">Point at what you want — <b>a tool, a site, an app, a workflow</b> — and it gets
     built in front of you. You do not need to know anything to start.</p>
@@ -204,7 +207,7 @@ export function welcomePage(line?: number): string {
       Independent project, not affiliated with or endorsed by any model provider.
       Fork it, branch it, build on it: that is the point.</p>
       <p class="fine" style="margin-top:.5rem">
-        <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/aup">Acceptable use</a> · <a href="/support">Support the free tier</a></p>
+        <a href="/limits">What this can and cannot do</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/aup">Acceptable use</a> · <a href="/support">Support</a></p>
     </div>`)
 }
 
@@ -267,6 +270,7 @@ export function accessPageHtml(line?: number): string {
 
     <div class="foot">
       <p class="ask">Prefer an AI that runs on your own machine? <a href="/local">That is free forever →</a></p>
+      <p class="ask" style="margin-bottom:.5rem"><a href="/limits" style="color:#8a8a93;font-size:.82rem">Every limit and requirement, before you start →</a></p>
       <p class="fine">Costs and capabilities of every backend:
       <a href="/providers">the providers page</a>. Nothing here is required if you started free.</p>
     </div>
