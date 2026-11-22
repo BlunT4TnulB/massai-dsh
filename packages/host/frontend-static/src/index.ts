@@ -104,7 +104,11 @@ async function serveStatic(
       const html = await readFile(distIndex, 'utf8')
       request.signal.throwIfAborted()
       body = renderIndex(html)
-      headers = { 'content-type': HTML_MIME }
+      // The shell must never be reused from cache: it lists content-hashed
+      // plugin bundles and one script tag. A stale copy asks for bundles from an
+      // older revision, which 404 — the visitor then sees plugin warnings and
+      // RPC calls that no longer exist ("transport failure on client API").
+      headers = { 'content-type': HTML_MIME, 'cache-control': 'no-store' }
     } else {
       body = await readFile(target)
       // Weak: gzip changes the transferred bytes.
