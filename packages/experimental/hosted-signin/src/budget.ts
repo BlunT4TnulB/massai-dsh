@@ -15,7 +15,7 @@
  * @module @deepseek-ai/dsh-hosted-signin/budget
  */
 
-import { databaseConfigured, readUsageSince, type UsageRow } from './persistence.ts'
+import { databaseConfigured, readUsageSince } from './persistence.ts'
 import { costOf, rateFor } from './usage.ts'
 
 /** One person's share of the month. */
