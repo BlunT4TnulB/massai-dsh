@@ -1,7 +1,6 @@
-# Keeps the free Render instance warm so visitors never hit a 30-60s cold start.
-# Render sleeps a free service after ~15 minutes idle; a hit every 10 minutes
-# keeps it inside the free 750 instance-hour allowance (~730 h/month for one
-# always-on service) while making the first click instant.
+# The free Render instance sleeps after ~15 minutes idle, and the first request
+# then takes ~22 s to wake it — which reads as "the site is broken". One ping
+# every ten minutes keeps it warm inside the free instance-hours budget.
 name: keepalive
 
 on:
@@ -9,20 +8,16 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
-concurrency:
-  group: keepalive
-  cancel-in-progress: true
-
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Warm the app
+      - name: ping healthz
         run: |
-          for attempt in 1 2 3; do
-            CODE=$(curl -s -o /dev/null -m 90 -w '%{http_code}' https://massai-dsh.onrender.com/healthz || echo 000)
-            echo "attempt $attempt: $CODE"
-            [ "$CODE" = "200" ] && break
-            sleep 15
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -m 90 -w '%{http_code}' https://massai-dsh.onrender.com/healthz || true)
+            echo "attempt $i → $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
           done
+          echo "service did not answer"; exit 1
