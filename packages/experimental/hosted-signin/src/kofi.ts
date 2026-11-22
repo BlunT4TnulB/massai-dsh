@@ -1,5 +1,5 @@
 /**
- * Ko-fi webhook: a coffee becomes an allowance without anyone typing anything.
+ * Ko-fi webhook: a tip becomes an allowance without anyone typing anything.
  *
  * Ko-fi posts `application/x-www-form-urlencoded` with a single `data` field
  * holding JSON. The `verification_token` in that payload is the only

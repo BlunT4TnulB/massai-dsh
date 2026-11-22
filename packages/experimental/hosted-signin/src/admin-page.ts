@@ -112,21 +112,21 @@ export function adminPageHtml(spend?: {
         + g.guestKey.slice(0, 16) + '…</td><td>' + g.day + '</td><td>'
         + (g.count >= 3 ? '<b style="color:#f0b46a">' + String(g.count) + '</b>' : String(g.count)) + '</td></tr>'),
       '</tbody></table>'].join('\n      ')
-  // Credit: a coffee becomes somebody's allowance. Listed plainly, with a form
+  // Credit: a tip becomes somebody's allowance, as a discretionary thank-you. Listed plainly, with a form
   // to add one by hand until a payment rail exists.
   const creditRows = credits === undefined || credits.length === 0
-    ? '<p class="empty">Nobody has credit yet. A $5 coffee is roughly a month of light use.</p>'
+    ? '<p class="empty">Nobody has credit yet. $5 of top-up is roughly a month of light use.</p>'
     : ['<table><thead><tr><th>who</th><th>balance</th><th>grants</th><th>last</th></tr></thead><tbody>',
       ...credits.slice(0, 20).map(c => '<tr><td>' + c.userId + '</td><td>$'
         + c.usd.toFixed(2) + '</td><td>' + String(c.entries) + '</td><td>'
         + (c.last === 0 ? '—' : new Date(c.last).toISOString().slice(0, 16).replace('T', ' ')) + '</td></tr>'),
       '</tbody></table>'].join('\n      ')
   const creditSection = [
-    '<section><h2>Credit · coffee fund</h2>',
+    '<section><h2>Credit · top-ups</h2>',
     '<form method="POST" action="/api/credits/grant" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem">',
     '<input name="userId" placeholder="guest-… / user id" required style="flex:1;min-width:12rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
     '<input name="usd" placeholder="5.00" required style="width:7rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
-    '<input name="note" placeholder="ko-fi 1234" style="width:10rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
+    '<input name="note" placeholder="kofi ref" style="width:10rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
     '<button type="submit" style="padding:.5rem .9rem;border-radius:.4rem;border:none;background:#C1440E;color:#fff;font-weight:700;cursor:pointer">Grant</button>',
     '</form>',
     creditRows,

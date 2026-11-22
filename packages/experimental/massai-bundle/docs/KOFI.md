@@ -18,7 +18,7 @@ Ko-fi → POST /api/kofi/webhook
 ```
 
 Nothing is typed by hand. Unmatched donations are parked under
-`unmatched:<transaction id>` and show up in the owner console's credit table, where the coffee-fund
+`unmatched:<transaction id>` and show up in the owner console's credit table, where the top-up
 form can move them to the right person.
 
 ## Setup, once

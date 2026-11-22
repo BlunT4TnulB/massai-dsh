@@ -236,7 +236,7 @@ export async function guestCounters(day?: string): Promise<Array<{ guestKey: str
 }
 
 /**
- * Add credit to one person's allowance — the "someone bought Massai a coffee"
+ * Add credit to one person's allowance — the "someone left a tip"
  * path. Positive to top up, negative to correct a mistake.
  * @param userId - whose allowance to raise (`guest-…`, a Clerk id, or an email).
  * @param usd - dollars to add.

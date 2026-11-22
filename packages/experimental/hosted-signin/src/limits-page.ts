@@ -93,7 +93,7 @@ and nothing will surprise you later — not the caps, not the costs, not what ha
   <tr><th>thing</th><th>number</th><th>what happens at the limit</th></tr>
   <tr><td>messages per session</td><td><b>${f.guestPrompts}</b></td><td>the assistant says the preview has ended and where to continue</td></tr>
   <tr><td>preview sessions per network, per day</td><td><b>${f.guestSessions}</b></td><td>a page explains it and offers your own key — resets at midnight UTC</td></tr>
-  <tr><td>free allowance per person, per month</td><td><b>${money(f.userCap)}</b></td><td>you can keep going with your own key, or with credit from a coffee</td></tr>
+  <tr><td>free allowance per person, per month</td><td><b>${money(f.userCap)}</b></td><td>you can keep going with your own key, or with a credit top-up</td></tr>
   <tr><td>whole workshop, per month</td><td><b>${money(f.monthlyCap)}</b></td><td>the free tier pauses until the 1st; your own key is never affected</td></tr>
 </table>
 <p>Who pays: the operator, out of pocket. That is why the numbers are small and why they are printed here.</p>

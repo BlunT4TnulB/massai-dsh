@@ -100,8 +100,9 @@ harms someone.</p>
 
 <h2>6. Limits, credits and money</h2>
 <p>Free usage is capped, per person and per month, and those numbers can change. Prepaid credit or a gift
-("a coffee") raises one person's allowance; it is not a purchase of model API access and it carries no
-guarantee of availability. Nothing here is a subscription unless we have explicitly sold you one.</p>
+("a tip") is a gift and carries no product; a credit top-up, when granted, is a discretionary thank-you
+rather than a purchase of model API access, and it carries no guarantee of availability. Nothing here is a
+subscription unless we have explicitly sold you one.</p>
 
 <h2>7. Availability and changes</h2>
 <p>The service may go down, may change, and may be discontinued. We aim to keep your projects available and
@@ -225,10 +226,11 @@ export function supportPageHtml(koFiUrl: string): string {
     ? '<p class="callout">The tip jar is not open yet. When it is, this is where it will live — and the wording below is what it will say.</p>'
     : `<p style="margin:1.2rem 0"><a href="${esc(koFiUrl)}" rel="noopener"
         style="display:inline-block;padding:.75rem 1.15rem;border-radius:.5rem;background:#C1440E;color:#fff;
-        font-weight:700;text-decoration:none">Buy the workshop a coffee →</a></p>`
+        font-weight:700;text-decoration:none">Leave a tip →</a></p>`
   return shell('Support', `
 <h1>Support the workshop</h1>
-<p class="meta">The free tier runs on the operator's own money. This is the tip jar.</p>
+<p class="meta">The free tier runs on the operator's own money. This is the tip jar — a honeypot for
+generosity, nothing more.</p>
 
 ${button}
 
@@ -236,6 +238,9 @@ ${button}
 <p>A <b>gift</b>. You are not buying software, credits, tokens, storage or a subscription — there is no
 product attached to this button and nothing is owed back. You are helping cover the bills that keep the
 free preview switched on for strangers.</p>
+<p>If you would also like a <b>credit top-up</b> on your own allowance, ask through the
+<a href="/feedback">feedback form</a> and it will be granted if the jar can cover it. A tip and a top-up
+are two separate things on purpose: one is a gift, the other is a thank-you. Neither is a purchase.</p>
 
 <h2>What you get</h2>
 <p>Our thanks, and the free tier staying alive. If the operator decides to thank supporters with a little
@@ -250,9 +255,9 @@ sales tax. Mixing the two is how a tip jar accidentally becomes a shop.</p>
 
 <h2>Why it is worded this carefully</h2>
 <p>Because a gift and a sale are different in law, and the difference protects both sides. Selling
-prepaid access would make this a shop with refund rights, tax registration, and prepaid-balance rules
-attached. A tip jar has none of those, and it can be honest about what it is: one person covering a
-shared bill.</p>
+prepaid access would make this a shop with refund rights, tax registration and prepaid-balance rules
+attached — and it would make the operator a middleman taking a cut, which is not what this is. A tip
+jar has none of those, and it can be honest about what it is: one person covering a shared bill.</p>
 
 <h2>If you would rather not give money</h2>
 <p>Completely fine — and there are better gifts than money:</p>

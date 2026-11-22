@@ -389,7 +389,7 @@ export function apply(ctx: Context): void {
   })
 
 
-  // Credit ledger: a coffee becomes somebody's allowance. Owner-only, because it
+  // Credit ledger: a tip becomes somebody's allowance, as a thank-you. Owner-only, because it
   // is money. Positive to top up, negative to correct.
   ctx.webServer.register({
     kind: 'exact', path: '/api/credits/grant', auth: 'required',
@@ -479,7 +479,7 @@ export function apply(ctx: Context): void {
   })
 
 
-  // Ko-fi webhook: a coffee becomes an allowance with nobody typing anything.
+  // Ko-fi webhook: a tip becomes an allowance with nobody typing anything.
   // Ko-fi can only authenticate with the verification token in the payload, so
   // that is checked before a dollar is credited; anything unmatched lands under
   // `unmatched:<tx>` for the owner to assign in the console.

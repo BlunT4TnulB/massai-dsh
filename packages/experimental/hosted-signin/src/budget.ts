@@ -127,7 +127,7 @@ export async function checkBudget(userId: string, now = Date.now()): Promise<Bud
     }
   }
   // A person's ceiling is the shared allowance plus whatever credit they were
-  // given: a coffee becomes somebody's month.
+  // given: a tip becomes somebody's month, as a thank-you.
   const key = userId === '' ? '(unattributed)' : userId
   const credit = userId === '' ? 0 : await creditTotal(userId).catch(() => 0)
   const ceiling = report.userCap + credit
@@ -138,7 +138,7 @@ export async function checkBudget(userId: string, now = Date.now()): Promise<Bud
       return {
         allowed: false,
         reason: `your allowance for ${report.month} is used ($${mine.cost.toFixed(2)} of $${ceiling.toFixed(2)}${extra}). `
-          + 'Add your own key at /access, or top up with a coffee — nothing you built is lost either way.',
+          + 'Add your own key at /access, or ask for a credit top-up — nothing you built is lost either way.',
       }
     }
   }
