@@ -61,16 +61,7 @@ export function startPageHtml(): string {
   .foot b{color:#8f8f97}
 </style></head><body><div class="wrap">
   <div class="brandbar">
-    <svg viewBox="0 0 120 132" aria-hidden="true" class="mini">
-      <ellipse cx="60" cy="10" rx="21" ry="5.6" fill="none" stroke="#C9A227" stroke-width="3"/>
-      <path d="M16 100L104 22M104 100L16 22" stroke="#C1440E" stroke-width="3.2" stroke-linecap="round" opacity=".6"/>
-      <path d="M60 16c24 0 35 14 35 33 0 24-17 40-28 46 4 6 8 11 8 11s-9-4-15-4-15 4-15 4 4-5 8-11c-11-6-28-22-28-46 0-19 11-33 35-33z"
-        fill="#151517" stroke="#C1440E" stroke-width="5"/>
-      <g fill="#4D6BFE" transform="translate(35 48) scale(2.6)">
-        <rect x="2" y="4" width="9" height="1"/><rect x="2" y="5" width="10" height="1"/>
-        <rect x="3" y="6" width="7" height="1"/><rect x="2" y="3" width="4" height="1"/>
-      </g>
-    </svg>
+    <img class="face" src="/massai-face.svg" alt="" width="32" height="32">
     <span class="minibrand">Massai</span>
   </div>
   <h1>What would you like to <b>make?</b></h1>
