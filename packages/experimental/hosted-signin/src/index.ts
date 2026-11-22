@@ -13,7 +13,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import { accessPageHtml } from '@deepseek-ai/dsh-host-webserver'
-import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
@@ -321,7 +320,14 @@ export function apply(ctx: Context): void {
   if (databaseConfigured()) {
     void ensureSchema().catch(() => { /* reported by /api/db/status */ })
   }
-  ctx.on('session/event', (session: { id: string }, event: unknown) => {
+  // `session/event` is a real harness hook; typed through a narrow cast so this
+  // package does not have to import the agent type graph (which drags the
+  // attachment packages into its tsconfig project).
+  const onSessionEvent = ctx.on.bind(ctx) as unknown as (
+    name: string,
+    handler: (session: { id: string }, event: unknown) => void,
+  ) => void
+  onSessionEvent('session/event', (session, event) => {
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
     const usage = data?.usage
