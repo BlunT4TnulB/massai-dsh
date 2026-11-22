@@ -751,12 +751,15 @@ and costs cents.</p>
       // require the paid tier there). The country has to be captured now: model
       // calls are made by this server, not by the visitor's browser.
       rememberCountry(guest, countryOf(req))
-      // Their own id, readable by the page so /me can display it and they can
-      // paste it into a Ko-fi note. It is not a credential.
-      res.setHeader('set-cookie', `dsh_uid=${guest}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`)
       if (!minter.mintSessionCookie(req, res, ctx.webServer.protocol === 'https:', guest)) {
         respond(res, 400, { error: 'missing Host authority' }); return
       }
+      // Their own id, readable by the page so /me can show it and they can paste
+      // it into a Ko-fi note. Appended, not set: the session cookie was written
+      // with setHeader a moment ago and would otherwise be replaced. Not a
+      // credential — it is just their own name for themselves.
+      res.appendHeader('set-cookie',
+        `dsh_uid=${guest}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`)
       res.writeHead(303, { location: '/', 'cache-control': 'no-store' })
       res.end()
     },
