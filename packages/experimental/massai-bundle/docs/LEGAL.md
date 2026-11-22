@@ -39,9 +39,14 @@ to a client, never logs it, never echoes it in an error.
    answers. Currently the contact path is the feedback form.
 3. **Trademark search on "Massai".** "Maasai" is an ethnonym (a people, not a brand), which is legal
    to use but culturally loaded; a search of CIPO/USPTO/EUIPO before printing merch is cheap insurance.
-4. **Regional exposure.** Google's Gemini API terms require **paid** services when an API client is
-   made available to users in the EEA, UK or Switzerland — while this deployment enables Gemini with a
-   free-tier key. Either drop Gemini for those regions or move it to a paid key.
+4. **Regional exposure — MITIGATED.** Google's Gemini API terms require **paid** services when an API
+   client is made available to users in the EEA, UK or Switzerland. `packages/experimental/hosted-signin/src/geo.ts`
+   now refuses the *free* Gemini route for those countries: the visitor's country is read from the proxy
+   header at session mint (`cf-ipcountry` / `x-vercel-ip-country` / `x-geo-country` / `x-country`), remembered
+   per session, and the pre-step gate **switches them to DeepSeek** rather than refusing service. Unknown
+   country is allowed, because the exposure is identical and refusing the world would break the product.
+   Remaining gap: this only works once a proxy supplies the header — direct Render traffic reports no
+   country, so nothing is blocked today. Putting Cloudflare in front (a domain, then orange-cloud) closes it.
 5. **Export control and sanctions (§9).** Not currently implemented; a geo block is the eventual answer.
 6. **Age.** `/terms` and `/privacy` state the service is not directed at children; a jurisdiction-aware
    age gate would harden it.
