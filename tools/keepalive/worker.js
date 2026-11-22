@@ -18,7 +18,7 @@
  */
 
 // Follows the deployment: change this one line when the domain changes.
-const TARGET = 'https://massai-dsh.onrender.com/healthz'
+const TARGET = 'https://massai-itu.ca/healthz'
 
 export default {
   /** @param {ScheduledController} controller */
