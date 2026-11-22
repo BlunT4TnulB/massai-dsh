@@ -33,3 +33,18 @@ ring with a lit centre reads at a glance, whereas nineteen thin circles read as 
   earlier `c2-petal` study) — never as decoration.
 - The geometry must stay exact: 19 centres on a hexagonal lattice at radius r, r√3 and 2r.
   Never hand-place the circles.
+
+## Revision 2 — the umph problem
+
+The owner's note: the flat gold "lost all its umph". Correct diagnosis — a flat fill has no *light* in
+it. Two treatments fix that without abandoning vector:
+
+| File | Treatment | Use |
+|---|---|---|
+| `plasma2.svg` → `plasma-1024.png` | the pattern as **light**: hot core strokes, two bloom layers, bright ring, heavy vignette | app icon, tile, splash — punch at any size |
+| `embossed2.svg` → `embossed-1024.png` | the pattern as **metal**: shadow + metal + highlight per circle, hammered band via `feTurbulence`, lit from upper-left | door, hero, print-quality renders |
+
+Both keep the exact nineteen-circle geometry; only the lighting differs. The flat `logo-512.svg`
+remains the file to use for one-colour print and for the ≤32px reductions, where light is pointless.
+
+`ladder.png` shows the plasma treatment from 512px down to 16px, so nothing is flattered.
