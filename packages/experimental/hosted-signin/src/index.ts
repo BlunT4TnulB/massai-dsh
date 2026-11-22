@@ -23,6 +23,9 @@ import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
+import {
+  databaseConfigured, databaseStatus, ensureSchema, readUsageRows, recordUsage,
+} from './persistence.ts'
 import { costOf, readUsage } from './usage.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
@@ -311,6 +314,40 @@ export function apply(ctx: Context): void {
       res.end(req.method === 'HEAD' ? undefined : html)
     },
   })
+
+  // Durable usage: the container's disk is wiped on every deploy, so each
+  // measured call is also written to the database when one is configured.
+  if (databaseConfigured()) {
+    void ensureSchema().catch(() => { /* reported by /api/db/status */ })
+  }
+  ctx.on('session/event', (session, event) => {
+    if (!databaseConfigured()) return
+    const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
+    const usage = data?.usage
+    if (usage === undefined) return
+    void recordUsage({
+      at: Number((event as { time?: number }).time ?? Date.now()),
+      session: String(session.id),
+      model: data?.message?.source?.model ?? data?.model ?? 'unknown',
+      input: Number(usage.inputTokens ?? 0),
+      output: Number(usage.outputTokens ?? 0),
+      cacheRead: Number(usage.cacheReadTokens ?? 0),
+      cacheWrite: Number(usage.cacheWriteTokens ?? 0),
+    }).catch(() => { /* reported by /api/db/status */ })
+  })
+
+  // Is the database configured and reachable? One honest answer, owner-only.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/db/status', auth: 'required',
+    handler: async (_req, res) => {
+      try {
+        respond(res, 200, await databaseStatus())
+      } catch (error) {
+        respond(res, 500, { ok: false, error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
   // The access room: keys, accounts and sign-in, moved off the front door.
   ctx.webServer.register({
     kind: 'exact', path: '/access', auth: 'anonymous',
@@ -331,7 +368,10 @@ export function apply(ctx: Context): void {
       // A running total, straight from the usage meter the router writes.
       let summary: { calls: number; cost: number; since?: string } | undefined
       try {
-        const points = readUsage()
+        // Prefer the durable rows; the local logs are the pre-database fallback
+        // and reset on every deploy.
+        const durable = databaseConfigured() ? await readUsageRows() : []
+        const points = durable.length > 0 ? durable : readUsage()
         if (points.length > 0) {
           const oldest = points.reduce((a, b) => (a.at <= b.at ? a : b))
           summary = {
