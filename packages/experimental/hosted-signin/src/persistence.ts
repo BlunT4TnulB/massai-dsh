@@ -104,12 +104,25 @@ export async function ensureSchema(): Promise<void> {
   `)
 }
 
+/** The in-flight or finished schema creation, so it runs at most once. */
+let ensured: Promise<void> | undefined
+
+/**
+ * Ensure the schema before the first real use. Idempotent; failures are
+ * swallowed here and reported by {@link databaseStatus}.
+ */
+async function ensureOnce(): Promise<void> {
+  ensured ??= ensureSchema().catch(() => { /* reported by /api/db/status */ })
+  await ensured
+}
+
 /**
  * Store one measured call. Re-sending the same point is harmless.
  * @param row - the point to persist.
  */
 export async function recordUsage(row: UsageRow): Promise<void> {
   if (!databaseConfigured()) return
+  await ensureOnce()
   await runSql(
     `INSERT INTO usage_points (at, session, user_id, model, input, output, cache_read, cache_write)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -125,6 +138,7 @@ export async function recordUsage(row: UsageRow): Promise<void> {
  */
 export async function readUsageRows(limit = 20000): Promise<UsageRow[]> {
   if (!databaseConfigured()) return []
+  await ensureOnce()
   const rows = await runSql(
     `SELECT at, session, user_id, model, input, output, cache_read, cache_write
      FROM usage_points ORDER BY at ASC LIMIT $1`,
@@ -149,6 +163,7 @@ export async function readUsageRows(limit = 20000): Promise<UsageRow[]> {
  */
 export async function readUsageSince(sinceMs: number): Promise<UsageRow[]> {
   if (!databaseConfigured()) return []
+  await ensureOnce()
   const rows = await runSql(
     `SELECT at, session, user_id, model, input, output, cache_read, cache_write
      FROM usage_points WHERE at >= $1 ORDER BY at ASC LIMIT 20000`,
@@ -179,6 +194,7 @@ export async function databaseStatus(): Promise<{
 }> {
   if (!databaseConfigured()) return { configured: false, ok: false, error: 'DATABASE_URL is not set' }
   try {
+    await ensureOnce()
     const rows = await runSql('SELECT count(*)::int AS n FROM usage_points')
     const reported = lastOk === undefined
       ? { configured: true, ok: true, usageRows: Number(rows[0]?.n ?? 0) }
