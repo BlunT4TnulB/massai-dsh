@@ -13,6 +13,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
 import { accessPageHtml } from '@deepseek-ai/dsh-host-webserver'
+import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
@@ -320,7 +321,7 @@ export function apply(ctx: Context): void {
   if (databaseConfigured()) {
     void ensureSchema().catch(() => { /* reported by /api/db/status */ })
   }
-  ctx.on('session/event', (session, event) => {
+  ctx.on('session/event', (session: { id: string }, event: unknown) => {
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
     const usage = data?.usage
@@ -364,7 +365,7 @@ export function apply(ctx: Context): void {
   // Every backend, what it costs, and where its free tier ends.
   ctx.webServer.register({
     kind: 'exact', path: '/providers', auth: 'anonymous',
-    handler: (req, res) => {
+    handler: async (req, res) => {
       // A running total, straight from the usage meter the router writes.
       let summary: { calls: number; cost: number; since?: string } | undefined
       try {

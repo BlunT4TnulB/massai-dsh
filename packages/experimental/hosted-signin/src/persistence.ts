@@ -152,12 +152,10 @@ export async function databaseStatus(): Promise<{
   if (!databaseConfigured()) return { configured: false, ok: false, error: 'DATABASE_URL is not set' }
   try {
     const rows = await runSql('SELECT count(*)::int AS n FROM usage_points')
-    return {
-      configured: true,
-      ok: true,
-      usageRows: Number(rows[0]?.n ?? 0),
-      lastOk: lastOk === undefined ? undefined : new Date(lastOk).toISOString(),
-    }
+    const reported = lastOk === undefined
+      ? { configured: true, ok: true, usageRows: Number(rows[0]?.n ?? 0) }
+      : { configured: true, ok: true, usageRows: Number(rows[0]?.n ?? 0), lastOk: new Date(lastOk).toISOString() }
+    return reported
   } catch (error) {
     return { configured: true, ok: false, error: error instanceof Error ? error.message : String(error) }
   }
