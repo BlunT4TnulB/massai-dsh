@@ -46,7 +46,7 @@ prints a reply containing "ready", the model is on the machine and working.
 ## Show the machine up inside Massai
 
 ```bash
-./tools/massai-worker.sh --hub https://massai-dsh.onrender.com \
+./tools/massai-worker.sh --hub https://massai-itu.ca \
   --token <DSH_WORKER_TOKEN> --name workshop-pc
 ```
 

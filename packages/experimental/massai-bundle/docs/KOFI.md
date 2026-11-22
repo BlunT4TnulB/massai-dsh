@@ -26,7 +26,7 @@ form can move them to the right person.
 1. **ko-fi.com** → sign up → choose a page name (this becomes `ko-fi.com/<name>`).
 2. **Settings → Payments** → connect **Stripe** (Canada supported) or PayPal for payouts.
 3. **Settings → API / Webhooks** → set the webhook URL to
-   `https://massai-dsh.onrender.com/api/kofi/webhook`
+   `https://massai-itu.ca/api/kofi/webhook`
 4. Copy the **verification token** Ko-fi shows there.
 5. Set it in Render as `KO_FI_VERIFICATION_TOKEN` (the deployment currently holds a generated one —
    replace it with Ko-fi's own value, otherwise every real donation is refused with `401`).

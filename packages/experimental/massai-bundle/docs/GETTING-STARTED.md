@@ -46,7 +46,7 @@ cents, not dollars. Two things make it go further:
 
 ## Step 3 — Open Massai and paste the key
 
-1. Open **https://massai-dsh.onrender.com**
+1. Open **https://massai-itu.ca**
 2. Paste your key into the box and press **Sign in**.
 3. You are in. If you happen to be signed in with Google, it can use your
    account instead of a pasted key — but the key is the universal path.
