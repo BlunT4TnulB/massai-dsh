@@ -106,8 +106,7 @@ export function adminPageHtml(spend?: {
   // Guest sessions per visitor-derived key: the shape an abuse loop makes.
   const guestRows = guests === undefined || guests.length === 0
     ? '<p class="empty">No guest sessions recorded yet.</p>'
-    : ['
-<table><thead><tr><th>visitor key</th><th>day</th><th>sessions</th></tr></thead><tbody>',
+    : ['<table><thead><tr><th>visitor key</th><th>day</th><th>sessions</th></tr></thead><tbody>',
       ...guests.slice(0, 20).map(g => '<tr><td style="font-family:ui-monospace,monospace;font-size:.74rem">'
         + g.guestKey.slice(0, 16) + '…</td><td>' + g.day + '</td><td>'
         + (g.count >= 3 ? '<b style="color:#f0b46a">' + String(g.count) + '</b>' : String(g.count)) + '</td></tr>'),
