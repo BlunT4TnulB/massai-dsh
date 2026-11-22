@@ -52,13 +52,17 @@ let lastOk: number | undefined
 async function runSql(query: string, params: readonly unknown[] = []): Promise<Array<Record<string, unknown>>> {
   const url = databaseUrl()
   if (url === '') throw new Error('DATABASE_URL is not set')
-  let origin: string
+  // `postgresql://` is not a special scheme, so `new URL(conn).origin` is the
+  // string "null" — the host has to be taken from `hostname` and the endpoint
+  // built as https, which is what Neon's SQL-over-HTTP expects.
+  let host: string
   try {
-    origin = new URL(url).origin
+    host = new URL(url).hostname
   } catch {
     throw new Error('DATABASE_URL is not a valid URL')
   }
-  const response = await fetch(`${origin}/sql`, {
+  if (host === '') throw new Error('DATABASE_URL has no host')
+  const response = await fetch(`https://${host}/sql`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'neon-connection-string': url },
     body: JSON.stringify({ query, params }),
