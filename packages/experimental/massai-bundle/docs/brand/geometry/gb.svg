@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+ <stop offset="0%" stop-color="#9C7A2C"/><stop offset="48%" stop-color="#D9B463"/><stop offset="100%" stop-color="#8A6A24"/></linearGradient>
+<radialGradient id="iris" cx="0.5" cy="0.5" r="0.5">
+ <stop offset="0%" stop-color="#FFFFFF"/><stop offset="18%" stop-color="#FFF8D8"/>
+ <stop offset="46%" stop-color="#FFCE5C"/><stop offset="78%" stop-color="#FF8A00"/><stop offset="100%" stop-color="#7A2E00"/></radialGradient>
+<radialGradient id="amb" cx="0.5" cy="0.45" r="0.58">
+ <stop offset="0%" stop-color="#FFE2A8" stop-opacity=".14"/><stop offset="70%" stop-color="#FF9A00" stop-opacity=".035"/>
+ <stop offset="100%" stop-color="#FF9A00" stop-opacity="0"/></radialGradient>
+<filter id="gl" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="6"/></filter>
+<filter id="gr" x="-6%" y="-6%" width="112%" height="112%">
+ <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="3" seed="5" result="n"/>
+ <feDiffuseLighting in="n" lighting-color="#FFF0C8" surfaceScale=".8" result="l"><feDistantLight azimuth="235" elevation="62"/></feDiffuseLighting>
+ <feComposite in="l" in2="SourceGraphic" operator="in" result="t"/><feBlend in="SourceGraphic" in2="t" mode="soft-light"/></filter></defs><rect width="512" height="512" fill="#040405"/>
+<circle cx="256" cy="256" r="240" fill="url(#amb)"/>
+<g transform="translate(256 168) scale(0.46) translate(-256 -256)" filter="url(#gr)"><circle cx="256.0" cy="256.0" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="318.0" cy="256.0" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="287.0" cy="309.7" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="225.0" cy="309.7" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="194.0" cy="256.0" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="225.0" cy="202.3" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="287.0" cy="202.3" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="349.0" cy="309.7" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="256.0" cy="363.4" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="163.0" cy="309.7" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="163.0" cy="202.3" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="256.0" cy="148.6" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="349.0" cy="202.3" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="380.0" cy="256.0" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="318.0" cy="363.4" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="194.0" cy="363.4" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="132.0" cy="256.0" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="194.0" cy="148.6" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/><circle cx="318.0" cy="148.6" r="62" fill="none" stroke="url(#g)" stroke-width="1.7"/></g>
+<circle cx="256" cy="168" r="58" fill="none" stroke="url(#g)" stroke-width="2.4"/>
+<path d="M 164 300 C 194 286 222 288 236 300 C 222 314 194 316 164 300 Z" fill="none" stroke="url(#g)" stroke-width="2.6"/><circle cx="200" cy="300" r="9" fill="url(#iris)"/><path d="M 348 300 C 318 286 290 288 276 300 C 290 314 318 316 348 300 Z" fill="none" stroke="url(#g)" stroke-width="2.6"/><circle cx="312" cy="300" r="9" fill="url(#iris)"/>
+<path d="M 256 312 V 372" stroke="url(#g)" stroke-width="2.4"/>
+<path d="M 256 372 C 236 392 220 404 196 410" stroke="url(#g)" stroke-width="2.2" fill="none"/>
+<path d="M 256 372 C 276 392 292 404 316 410" stroke="url(#g)" stroke-width="2.2" fill="none"/>
+<path d="M 256 410 C 246 432 240 446 236 462" stroke="url(#g)" stroke-width="2" fill="none"/>
+<path d="M 256 410 C 266 432 272 446 276 462" stroke="url(#g)" stroke-width="2" fill="none"/>
+<path d="M 150 262 L 210 246" stroke="url(#g)" stroke-width="2" opacity=".85"/>
+<path d="M 362 262 L 302 246" stroke="url(#g)" stroke-width="2" opacity=".85"/>
+</svg>
