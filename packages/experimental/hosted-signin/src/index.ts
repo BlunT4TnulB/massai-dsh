@@ -26,6 +26,7 @@ import { complete, enqueue, nextJob, relayStatus, workerConnected } from './work
 import {
   databaseConfigured, databaseStatus, ensureSchema, readUsageRows, recordUsage,
 } from './persistence.ts'
+import { budgetReport, checkBudget } from './budget.ts'
 import { costOf, readUsage } from './usage.ts'
 import { modelsPageHtml, ratesPageHtml, usagePageHtml } from './usage-page.ts'
 import { frontendApiOf, verifyClerkSession } from './clerk.ts'
@@ -232,8 +233,9 @@ export function apply(ctx: Context): void {
   // Owner console: presence-only status, notes wall, session census, quick links.
   ctx.webServer.register({
     kind: 'exact', path: '/admin', auth: 'required',
-    handler: (req, res) => {
-      const html = Buffer.from(adminPageHtml())
+    handler: async (req, res) => {
+      const spend = await budgetReport().catch(() => undefined)
+      const html = Buffer.from(adminPageHtml(spend))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
@@ -335,12 +337,40 @@ export function apply(ctx: Context): void {
     void recordUsage({
       at: Number((event as { time?: number }).time ?? Date.now()),
       session: String(session.id),
+      userId: String((session as { header?: { userId?: string } }).header?.userId ?? ''),
       model: data?.message?.source?.model ?? data?.model ?? 'unknown',
       input: Number(usage.inputTokens ?? 0),
       output: Number(usage.outputTokens ?? 0),
       cacheRead: Number(usage.cacheReadTokens ?? 0),
       cacheWrite: Number(usage.cacheWriteTokens ?? 0),
     }).catch(() => { /* reported by /api/db/status */ })
+  })
+
+
+  // The money gate. Runs before the step so an over-budget call never reaches
+  // the provider. One courtesy turn explains it, then the step is refused.
+  const onPreStep = ctx.on.bind(ctx) as unknown as (
+    name: string,
+    handler: (payload: { agent: { session: { header?: { userId?: string } } } }, next: () => Promise<unknown>) => Promise<unknown>,
+  ) => void
+  const explained = new Set<string>()
+  onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
+    if (!databaseConfigured()) return next()
+    const userId = String(agent.session.header?.userId ?? '')
+    const verdict = await checkBudget(userId).catch(() => ({ allowed: true }))
+    if (verdict.allowed) return next()
+    const key = userId === '' ? '(unattributed)' : userId
+    if (!explained.has(key)) {
+      explained.add(key)
+      const notice = {
+        role: 'user' as const,
+        source: { kind: 'user' as const },
+        content: [{ type: 'text' as const, text: `[budget note — not the user speaking] ${verdict.reason} `
+          + 'Reply in at most two short sentences with that, and do not attempt the request.' }],
+      }
+      return { kind: 'enter', messages: [...((rest as { messages?: unknown[] }).messages ?? []), notice] }
+    }
+    return { kind: 'reject' }
   })
 
   // Is the database configured and reachable? One honest answer, owner-only.

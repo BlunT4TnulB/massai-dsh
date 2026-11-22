@@ -65,12 +65,44 @@ function sessionCensus(): { count: number; newest: string; megabytes: string } {
 }
 
 /** Compose the owner console. */
-export function adminPageHtml(): string {
+export function adminPageHtml(spend?: {
+  tracked: boolean
+  spent: number
+  cap: number
+  userCap: number
+  ratio: number
+  month: string
+  users: Array<{ userId: string; calls: number; cost: number; last: number }>
+}): string {
   const home = harnessHome()
   const hosted = process.env.DSH_ALLOW_WILDCARD_HOST !== undefined
   const ownerKey = process.env.DEEPSEEK_API_KEY !== undefined && process.env.DEEPSEEK_API_KEY !== ''
   const notes = recentNotes(8)
   const sessions = sessionCensus()
+  // The ledger section. Concatenated, not templated inside the page string:
+  // a nested template literal here once broke this file's sibling.
+  const spendSection = spend === undefined || !spend.tracked
+    ? '<section><h2>Spend</h2><p class="empty">No database configured — the ledger needs DATABASE_URL.</p></section>'
+    : [
+      '<section><h2>Spend · ' + spend.month + '</h2>',
+      '<p class="empty" style="margin:0 0 .6rem">$' + spend.spent.toFixed(2)
+        + (spend.cap > 0 ? ' of $' + spend.cap.toFixed(2) + ' monthly cap' : ' — no monthly cap set')
+        + ' · per-person cap ' + (spend.userCap > 0 ? '$' + spend.userCap.toFixed(2) : 'none') + '</p>',
+      spend.cap > 0
+        ? '<div style="height:.5rem;border-radius:.3rem;background:#22222a;overflow:hidden;margin:0 0 1rem">'
+          + '<div style="height:100%;width:' + Math.round(spend.ratio * 100) + '%;background:'
+          + (spend.ratio > 0.9 ? '#C4121A' : spend.ratio > 0.7 ? '#D9822B' : '#7ee2a8') + '"></div></div>'
+        : '',
+      spend.users.length === 0
+        ? '<p class="empty">Nobody has spent anything this month yet.</p>'
+        : '<table><thead><tr><th>who</th><th>calls</th><th>spent</th><th>last seen</th></tr></thead><tbody>'
+          + spend.users.slice(0, 25).map(user => '<tr><td>' + user.userId + '</td><td>' + String(user.calls)
+            + '</td><td>$' + user.cost.toFixed(3) + '</td><td>'
+            + (user.last === 0 ? '—' : new Date(user.last).toISOString().slice(0, 16).replace('T', ' ')) + '</td></tr>').join('')
+          + '</tbody></table>',
+      '</section>',
+    ].join('\n')
+
   const vault = join(home, '.credentials.yaml')
   const facts: Fact[] = [
     { label: 'Hosted mode', value: hosted ? 'on — shell tools disabled for visitors' : 'off — local/trusted use', tone: hosted ? 'ok' : 'warn' },
@@ -128,6 +160,7 @@ export function adminPageHtml(): string {
   <h1><img class="badge" src="/massai-badge.svg" alt="" width="26" height="26">Owner console</h1><span class="flag">open by default</span>
 </header>
 <section><h2>Status</h2><table>${rows}</table></section>
+${spendSection}
 <section><h2>Notes wall (newest ${notes.length})</h2>${noteList}
   <p style="margin:.8rem 0 0"><a href="/feedback/export.jsonl" style="color:#7ee2a8;text-decoration:none;font-size:.82rem;font-weight:600">Download all notes →</a></p>
 </section>

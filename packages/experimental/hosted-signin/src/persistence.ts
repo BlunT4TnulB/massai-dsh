@@ -18,6 +18,8 @@
 export interface UsageRow {
   at: number
   session: string
+  /** Whose prompt this was: `guest-<uuid>`, a Clerk user id, or the owner. */
+  userId: string
   model: string
   input: number
   output: number
@@ -90,6 +92,7 @@ export async function ensureSchema(): Promise<void> {
       PRIMARY KEY (at, session, model)
     )
   `)
+  await runSql('ALTER TABLE usage_points ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT \'\'')
   await runSql(`
     CREATE TABLE IF NOT EXISTS memory_records (
       at      BIGINT NOT NULL,
@@ -108,10 +111,10 @@ export async function ensureSchema(): Promise<void> {
 export async function recordUsage(row: UsageRow): Promise<void> {
   if (!databaseConfigured()) return
   await runSql(
-    `INSERT INTO usage_points (at, session, model, input, output, cache_read, cache_write)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO usage_points (at, session, user_id, model, input, output, cache_read, cache_write)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (at, session, model) DO NOTHING`,
-    [row.at, row.session, row.model, row.input, row.output, row.cacheRead, row.cacheWrite],
+    [row.at, row.session, row.userId, row.model, row.input, row.output, row.cacheRead, row.cacheWrite],
   )
 }
 
@@ -123,13 +126,38 @@ export async function recordUsage(row: UsageRow): Promise<void> {
 export async function readUsageRows(limit = 20000): Promise<UsageRow[]> {
   if (!databaseConfigured()) return []
   const rows = await runSql(
-    `SELECT at, session, model, input, output, cache_read, cache_write
+    `SELECT at, session, user_id, model, input, output, cache_read, cache_write
      FROM usage_points ORDER BY at ASC LIMIT $1`,
     [limit],
   )
   return rows.map(row => ({
     at: Number(row.at),
     session: String(row.session),
+    userId: String(row.user_id ?? ''),
+    model: String(row.model),
+    input: Number(row.input),
+    output: Number(row.output),
+    cacheRead: Number(row.cache_read),
+    cacheWrite: Number(row.cache_write),
+  }))
+}
+
+/**
+ * Every row since a timestamp — the shape the budget gate and the spend table use.
+ * @param sinceMs - epoch ms lower bound (inclusive).
+ * @returns rows, oldest first.
+ */
+export async function readUsageSince(sinceMs: number): Promise<UsageRow[]> {
+  if (!databaseConfigured()) return []
+  const rows = await runSql(
+    `SELECT at, session, user_id, model, input, output, cache_read, cache_write
+     FROM usage_points WHERE at >= $1 ORDER BY at ASC LIMIT 20000`,
+    [sinceMs],
+  )
+  return rows.map(row => ({
+    at: Number(row.at),
+    session: String(row.session),
+    userId: String(row.user_id ?? ''),
     model: String(row.model),
     input: Number(row.input),
     output: Number(row.output),
