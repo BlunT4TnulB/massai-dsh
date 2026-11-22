@@ -19,13 +19,14 @@ import { adminPageHtml } from './admin-page.ts'
 import { guidePageHtml } from './guide.ts'
 import { localGuidePageHtml } from './local-guide.ts'
 import { appendImported, IMPORTED_PROJECT, importPageHtml } from './import-page.ts'
+import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  creditLedger, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage,
+  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
@@ -466,6 +467,54 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // Ko-fi webhook: a coffee becomes an allowance with nobody typing anything.
+  // Ko-fi can only authenticate with the verification token in the payload, so
+  // that is checked before a dollar is credited; anything unmatched lands under
+  // `unmatched:<tx>` for the owner to assign in the console.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/kofi/webhook', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const raw = await readBody(req)
+        const event = parseKoFiBody(raw, String(req.headers['content-type'] ?? ''))
+        if (event === undefined) { respond(res, 400, { error: 'unparseable body' }); return }
+        const outcome = await applyKoFiEvent(event)
+        respond(res, outcome.accepted ? 200 : 401, outcome)
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  // What a supporter needs in order to be credited: their id, their spend, their
+  // credit. `?userId=` is a UUID-shaped key, and only aggregates are returned.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/me', auth: 'anonymous',
+    handler: async (req, res) => {
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const userId = (url.searchParams.get('userId') ?? '').trim()
+      if (!/^(guest-[0-9a-f-]{8,}|email:.+|user_[A-Za-z0-9]+)$/.test(userId)) {
+        respond(res, 400, { error: 'a valid userId is required' }); return
+      }
+      try {
+        const report = await budgetReport()
+        const mine = report.users.find(user => user.userId === userId)
+        respond(res, 200, {
+          userId,
+          month: report.month,
+          spentUsd: Number((mine?.cost ?? 0).toFixed(4)),
+          calls: mine?.calls ?? 0,
+          creditUsd: Number((await creditTotal(userId)).toFixed(2)),
+          allowanceUsd: report.userCap,
+        })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
   // Is the database configured and reachable? One honest answer, owner-only.
   ctx.webServer.register({
     kind: 'exact', path: '/api/db/status', auth: 'required',
@@ -671,6 +720,9 @@ and costs cents.</p>
         return
       }
       const guest = `guest-${randomUUID()}`
+      // Their own id, readable by the page so /me can display it and they can
+      // paste it into a Ko-fi note. It is not a credential.
+      res.setHeader('set-cookie', `dsh_uid=${guest}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`)
       if (!minter.mintSessionCookie(req, res, ctx.webServer.protocol === 'https:', guest)) {
         respond(res, 400, { error: 'missing Host authority' }); return
       }
