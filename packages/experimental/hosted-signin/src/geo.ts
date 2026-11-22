@@ -52,12 +52,25 @@ export function countryOf(req: IncomingMessage): string {
 }
 
 /**
+ * Whether an unknown country counts as blocked.
+ *
+ * Once the site sits behind a proxy that always supplies the header, an unknown
+ * country means the visitor bypassed the proxy (or the header was stripped) — and
+ * that is exactly the traffic the gate exists to catch. `DSH_GEO_STRICT=1` turns
+ * that on: fail closed rather than serve the free tier to whoever dodged the
+ * proxy. Off by default, because with no proxy nothing would work.
+ */
+export function geoStrict(): boolean {
+  return (process.env.DSH_GEO_STRICT ?? '') === '1'
+}
+
+/**
  * May this visitor be offered the free Gemini route?
  * @param country - two-letter code, or '' when unknown.
- * @returns false only for a known blocked region.
+ * @returns false for a known blocked region, and for unknown regions in strict mode.
  */
 export function freeGeminiAllowed(country: string): boolean {
-  if (country === '') return true
+  if (country === '') return !geoStrict()
   return !FREE_GEMINI_BLOCKED.has(country)
 }
 
