@@ -642,8 +642,8 @@ export class WebServer extends Service {
         && requestHost !== ''
         && !target.pathname.startsWith('/api/')
         && target.pathname !== '/healthz'
-        && requestHost !== new URL(canonical).hostname.toLowerCase()
-        && this.isPlatformHost(requestHost)) {
+        && (requestHost === `www.${new URL(canonical).hostname.toLowerCase()}`
+          || this.isPlatformHost(requestHost))) {
         res.writeHead(301, { location: canonical + target.pathname + target.search, 'cache-control': 'no-store' })
         res.end()
         return
