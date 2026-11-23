@@ -24,7 +24,8 @@ const SCRIPT_HINTS = ['script', 'rename', 'csv', 'clean', 'folder', 'backup', 'd
 /** Words that suggest a view over data. */
 const DATA_HINTS = ['dashboard', 'chart', 'graph', 'table', 'heatmap', 'csv file', 'this csv', 'this json', 'sort and filter']
 /** Words that suggest a document. */
-const DOC_HINTS = ['resume', 'cv', 'invoice', 'readme', 'contract', 'letter', 'one-pager', 'proposal']
+const DOC_HINTS = ['resume', 'cv', 'invoice', 'readme', 'contract', 'letter', 'one-pager', 'proposal',
+  'parts list', 'cutting plan', 'spec sheet', 'bill of materials', 'manual', 'guide', 'checklist', 'instructions', 'plan']
 
 /** Requests that are plainly outside one turn; matched before anything else. */
 const IMPOSSIBLE_HINTS: readonly { readonly match: RegExp; readonly why: string }[] = [

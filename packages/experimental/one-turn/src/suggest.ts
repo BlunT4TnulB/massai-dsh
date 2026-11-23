@@ -239,7 +239,35 @@ export function nextStep(
     return Array.isArray(value) ? value.length > 0 : typeof value === 'string' && value.trim() !== ''
   }))
 
-  const earned = probes({ goal: context.goal, ...(context.shape === undefined ? {} : { shape: context.shape }) })
+  const goalAnswered = context.goal.trim() !== '' && answered.has('goal')
+  if (!goalAnswered) {
+    const first = interview()[0]
+    return {
+      key: first.key,
+      ask: first.ask,
+      hint: first.hint ?? '',
+      fallback: first.fallback,
+      prevents: first.prevents,
+      canSkip: false,
+      position: 1,
+    }
+  }
+
+  // The shape decides which probes are worth asking, so it comes before them.
+  if (shape === undefined && !answered.has('shape')) {
+    const shapeQuestion = interview()[1]
+    return {
+      key: shapeQuestion.key,
+      ask: shapeQuestion.ask,
+      hint: shapeQuestion.hint ?? '',
+      fallback: shapeQuestion.fallback,
+      prevents: shapeQuestion.prevents,
+      canSkip: false,
+      position: answered.size + 1,
+    }
+  }
+
+  const earned = probes({ goal: context.goal, ...(context.shape === undefined && shape === undefined ? {} : { shape: shape ?? context.shape ?? '' }) })
   let position = answered.size + 1
 
   for (const probe of earned) {
