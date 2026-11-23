@@ -14,6 +14,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { CompiledMask } from './compile.ts'
 import { bucketOfCheck, recordLesson } from './lessons.ts'
+import { saveTrial } from './store.ts'
 import type { OneTurnSpec } from './spec.ts'
 
 /** One check's outcome. */
@@ -282,6 +283,11 @@ export async function runTrial(options: {
       parsed = extractJson(text) as { report?: unknown }
       files = parseFiles(parsed)
     } catch (parseError) {
+      void saveTrial({
+        id, shape: options.spec.shape, accepted: false, costUsd, inputTokens, outputTokens,
+        buckets: ['broken-run'], checks: [], files: [],
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+      }).catch(() => undefined)
       return {
         id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
         inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
@@ -319,11 +325,17 @@ export async function runTrial(options: {
       inputTokens, outputTokens, costUsd, accepted, checks,
     }, null, 2), 'utf8')
 
-    return {
+    const record: TrialRecord = {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
       inputTokens, outputTokens, costUsd, model: options.model, files, checks, accepted, buckets,
       ...(typeof parsed.report === 'string' ? { report: parsed.report } : {}),
     }
+    // Evidence outlives the container now.
+    void saveTrial({
+      id, shape: options.spec.shape, accepted, costUsd, inputTokens, outputTokens,
+      buckets, checks, files,
+    }).catch(() => undefined)
+    return record
   } catch (error) {
     return {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,

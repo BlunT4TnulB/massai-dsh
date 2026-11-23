@@ -17,8 +17,9 @@ import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
 import { interview, probes, shapeChoices } from './intake.ts'
 import { isAmbiguous, readings } from './ambiguity.ts'
 import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
-import { lessonsFor, readLessons, recordLesson } from './lessons.ts'
-import { readVoice, writeVoice, type Voice } from './voice.ts'
+import { hydrateLessons, lessonsFor, readLessons, recordLesson } from './lessons.ts'
+import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
+import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
 import type { IntakeAnswers } from './spec.ts'
@@ -69,6 +70,19 @@ function list(source: Record<string, unknown>, key: string): string[] {
  * @param ctx - the plugin context.
  */
 export function apply(ctx: Context): void {
+  // One boot step: the tables exist, and the learning shelf is in memory so the
+  // mask compiler can stay a pure synchronous function.
+  void (async () => {
+    try {
+      await ensureStoreSchema()
+      const lessons = await hydrateLessons()
+      await hydrateVoice()
+      process.stderr.write(`one-turn: store ${storeConfigured() ? 'durable' : 'file-only'}, ${lessons} lesson(s) loaded\n`)
+    } catch (error) {
+      process.stderr.write(`one-turn: store boot failed: ${error instanceof Error ? error.message : String(error)}\n`)
+    }
+  })()
+
   // The interview as data, so any surface can render it and never drift.
   ctx.webServer.register({
     kind: 'exact', path: '/api/one-turn/intake', auth: 'anonymous',
@@ -335,6 +349,25 @@ export function apply(ctx: Context): void {
         marked: filled.filter(item => item.marked).length,
         spentUsd: 0,
       })
+    },
+  })
+
+
+  // Storage status: is the learning loop durable, and what has it learned?
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/store', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const stats = await trialStats()
+        respond(res, 200, {
+          ...stats,
+          lessonsInMemory: readLessons().length,
+          voiceStored: readVoice().name,
+        })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

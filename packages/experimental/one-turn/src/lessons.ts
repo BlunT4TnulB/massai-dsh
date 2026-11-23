@@ -16,6 +16,14 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { loadLessons, saveLesson, storeConfigured, type StoredLesson } from './store.ts'
+
+/**
+ * The in-memory shelf. Reads stay synchronous because the mask compiler is a pure
+ * function; the database is the durable copy, loaded once at boot and written
+ * through on every new lesson.
+ */
+let cache: StoredLesson[] | undefined
 
 /** One remembered failure, aggregated by shape and bucket. */
 export interface Lesson {
@@ -36,8 +44,44 @@ export function lessonsPath(): string {
   return join(process.env.DSH_HOME ?? join(process.env.HOME ?? '/tmp', '.dsh'), 'one-turn', 'lessons.json')
 }
 
+/**
+ * Load the shelf from the database into memory, falling back to the file when no
+ * database is configured. Called once at startup.
+ */
+export async function hydrateLessons(): Promise<number> {
+  try {
+    if (storeConfigured()) {
+      const fromDb = await loadLessons()
+      // Merge in anything the file knows that the database does not yet, so a
+      // deployment that predates storage does not lose its history.
+      const file = readFileLessons()
+      const merged = new Map<string, StoredLesson>()
+      for (const row of file) merged.set(`${row.shape}|${row.bucket}`, row)
+      for (const row of fromDb) merged.set(`${row.shape}|${row.bucket}`, row)
+      cache = [...merged.values()]
+      return cache.length
+    }
+    cache = readFileLessons()
+    return cache.length
+  } catch {
+    cache = readFileLessons()
+    return cache.length
+  }
+}
+
+/** Read the file copy, used for the fallback and for the one-time merge. */
+function readFileLessons(): Lesson[] {
+  return readFileFromDisk()
+}
+
 /** Read everything remembered. Never throws: a missing or broken file is an empty shelf. */
 export function readLessons(): Lesson[] {
+  if (cache !== undefined) return cache
+  return readFileFromDisk()
+}
+
+/** The file-backed read, used when nothing is configured and for hydration. */
+function readFileFromDisk(): Lesson[] {
   try {
     const parsed = JSON.parse(readFileSync(lessonsPath(), 'utf8')) as unknown
     if (!Array.isArray(parsed)) return []
@@ -76,13 +120,16 @@ export function recordLesson(lesson: { shape: string; bucket: string; note?: str
   const lessons = readLessons()
   const existing = lessons.find(row => row.shape === lesson.shape && row.bucket === lesson.bucket)
   const note = (lesson.note ?? '').slice(0, 160)
-  if (existing === undefined) {
-    writeLessons([...lessons, { shape: lesson.shape, bucket: lesson.bucket, count: 1, at: Date.now(), note }])
-    return
+  const next = existing === undefined
+    ? [...lessons, { shape: lesson.shape, bucket: lesson.bucket, count: 1, at: Date.now(), note }]
+    : lessons.map(row => row === existing
+        ? { ...row, count: row.count + 1, at: Date.now(), note: note === '' ? row.note : note }
+        : row)
+  cache = next
+  writeLessons(next)
+  if (storeConfigured()) {
+    void saveLesson({ shape: lesson.shape, bucket: lesson.bucket, note }).catch(() => undefined)
   }
-  writeLessons(lessons.map(row => row === existing
-    ? { ...row, count: row.count + 1, at: Date.now(), note: note === '' ? row.note : note }
-    : row))
 }
 
 /**

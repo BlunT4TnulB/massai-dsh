@@ -18,6 +18,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { loadVoice, saveVoice as saveVoiceRow, storeConfigured } from './store.ts'
+
+/** The voice in memory, hydrated once at boot so reads stay synchronous. */
+let cache: Voice | undefined
 
 /** A stored voice: who it belongs to, and how it should be used. */
 export interface Voice {
@@ -62,10 +66,52 @@ export function voicePath(): string {
 }
 
 /**
+ * Load the stored voice into memory. Called once at startup.
+ * @returns whether a stored voice was found.
+ */
+export async function hydrateVoice(): Promise<boolean> {
+  try {
+    if (storeConfigured()) {
+      const body = await loadVoice()
+      if (body !== undefined) {
+        cache = coerce(body)
+        return true
+      }
+    }
+    cache = readFileVoice()
+    return true
+  } catch {
+    cache = readFileVoice()
+    return false
+  }
+}
+
+/** Turn an unknown payload into a valid voice, keeping the shipped defaults. */
+function coerce(parsed: unknown): Voice {
+  const raw = (parsed ?? {}) as Partial<Voice>
+  const base = defaultVoice()
+  const strings = (value: unknown, fallback: readonly string[]): readonly string[] =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : fallback
+  return {
+    name: typeof raw.name === 'string' ? raw.name : base.name,
+    character: typeof raw.character === 'string' ? raw.character : base.character,
+    references: strings(raw.references, base.references),
+    enabled: raw.enabled !== false,
+    neverPrint: strings(raw.neverPrint, base.neverPrint),
+  }
+}
+
+/**
  * Read the stored voice, falling back to the shipped one.
  * @returns the voice in effect.
  */
 export function readVoice(): Voice {
+  if (cache !== undefined) return cache
+  return readFileVoice()
+}
+
+/** The file-backed read, used before hydration and when nothing is configured. */
+function readFileVoice(): Voice {
   try {
     if (!existsSync(voicePath())) return defaultVoice()
     const parsed = JSON.parse(readFileSync(voicePath(), 'utf8')) as Partial<Voice>
@@ -87,9 +133,17 @@ export function readVoice(): Voice {
  * @param voice - what to remember.
  */
 export function writeVoice(voice: Voice): void {
-  const path = voicePath()
-  mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, JSON.stringify(voice, null, 2), 'utf8')
+  cache = voice
+  try {
+    const path = voicePath()
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, JSON.stringify(voice, null, 2), 'utf8')
+  } catch {
+    /* the durable copy below is the one that matters */
+  }
+  if (storeConfigured()) {
+    void saveVoiceRow(voice).catch(() => undefined)
+  }
 }
 
 /**
