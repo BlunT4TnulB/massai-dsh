@@ -16,6 +16,7 @@ import { compile, maskAudit } from './compile.ts'
 import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
 import { interview, probes, shapeChoices } from './intake.ts'
 import { isAmbiguous, readings } from './ambiguity.ts'
+import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { lessonsFor, readLessons, recordLesson } from './lessons.ts'
 import { readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
@@ -303,6 +304,37 @@ export function apply(ctx: Context): void {
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }
+    },
+  })
+
+
+  // The Extrapolator, on its own: what would be filled in for this request, and
+  // which parts would stay visibly blank. Free, and the fastest way to judge
+  // whether a request is ready for a paid build.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/extrapolate', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const goal = url.searchParams.get('goal') ?? ''
+      const shapeParam = url.searchParams.get('shape')
+      const normalised = normalise({
+        goal,
+        ...(shapeParam === null || shapeParam === '' ? {} : { shape: shapeParam }),
+      })
+      if (!normalised.ok) {
+        respond(res, 422, { ok: false, refusal: normalised.refusal, spentUsd: 0 })
+        return
+      }
+      const filled = extrapolate({ goal, ...(shapeParam === null ? {} : { shape: shapeParam }) }, normalised.spec.shape)
+      respond(res, 200, {
+        ok: true,
+        shape: normalised.spec.shape,
+        filled,
+        block: extrapolationBlock(filled),
+        marked: filled.filter(item => item.marked).length,
+        spentUsd: 0,
+      })
     },
   })
 

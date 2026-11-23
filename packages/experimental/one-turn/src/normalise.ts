@@ -11,6 +11,7 @@
 
 import { decisionBlock, readings } from './ambiguity.ts'
 import { lessonBlock } from './lessons.ts'
+import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { readVoice, voiceBlock } from './voice.ts'
 import {
   MAX_MUST_HAVE, SHAPE_CONTRACT, SUPPORTED_SHAPES,
@@ -194,6 +195,7 @@ export function normalise(answers: IntakeAnswers): Normalised {
         return taken === undefined ? '' : decisionBlock(taken, all.slice(1))
       })(),
       voice: voiceBlock(readVoice(), false),
+      extrapolated: extrapolationBlock(extrapolate(answers, shape)),
       techLimits: clean(answers.techLimits) === ''
         ? `one file, opened directly by the person; no build step, no network at run time (${spec_shape_hint(shape)})`
         : clean(answers.techLimits),

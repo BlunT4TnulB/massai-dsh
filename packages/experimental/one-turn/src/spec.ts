@@ -88,6 +88,8 @@ export interface OneTurnSpec {
   readonly decision: string
   /** The workshop voice, used as material rather than text. */
   readonly voice: string
+  /** What the Extrapolator filled in, and which parts must stay visibly blank. */
+  readonly extrapolated: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */

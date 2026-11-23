@@ -110,6 +110,8 @@ export function compile(spec: OneTurnSpec): CompiledMask {
     spec.data === '' ? 'No data file is supplied; the artifact must carry its own content.' : `DATA FILE SUPPLIED: ${spec.data}`,
   ].join('\n'))
 
+  if (spec.extrapolated !== '') add('extrapolated', spec.extrapolated)
+
   add('particulars', spec.details.length === 0
     ? [
         'NO PARTICULARS WERE SUPPLIED.',
