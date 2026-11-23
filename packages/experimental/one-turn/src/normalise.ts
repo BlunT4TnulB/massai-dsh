@@ -62,6 +62,11 @@ function inferShape(goal: string, chosen: string | undefined): Shape | undefined
   return top[0]
 }
 
+/** How this shape is opened, for the default runtime line. */
+function spec_shape_hint(shape: Shape): string {
+  return shape === 'script' ? 'run from a terminal' : 'opened in a browser'
+}
+
 /** Turn "I want a page that has X" into a bare requirement, without inventing content. */
 function tidyRequirement(value: string): string {
   return clean(value)
