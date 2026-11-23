@@ -14,7 +14,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { compile, maskAudit } from './compile.ts'
 import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
-import { interview, shapeChoices } from './intake.ts'
+import { interview, probes, shapeChoices } from './intake.ts'
 import { normalise, refusalText } from './normalise.ts'
 import type { IntakeAnswers } from './spec.ts'
 
@@ -86,6 +86,10 @@ export function apply(ctx: Context): void {
           ...(str(parsed, 'audience') === '' ? {} : { audience: str(parsed, 'audience') }),
           mustHave: list(parsed, 'mustHave'),
           nonGoals: list(parsed, 'nonGoals'),
+          details: list(parsed, 'details'),
+          neverInvent: list(parsed, 'neverInvent'),
+          styleWords: list(parsed, 'styleWords'),
+          ...(str(parsed, 'techLimits') === '' ? {} : { techLimits: str(parsed, 'techLimits') }),
           ...(str(parsed, 'reference') === '' ? {} : { reference: str(parsed, 'reference') }),
           ...(str(parsed, 'data') === '' ? {} : { data: str(parsed, 'data') }),
           acceptance: list(parsed, 'acceptance'),
@@ -138,6 +142,10 @@ export function apply(ctx: Context): void {
           ...(str(parsed, 'audience') === '' ? {} : { audience: str(parsed, 'audience') }),
           mustHave: list(parsed, 'mustHave'),
           nonGoals: list(parsed, 'nonGoals'),
+          details: list(parsed, 'details'),
+          neverInvent: list(parsed, 'neverInvent'),
+          styleWords: list(parsed, 'styleWords'),
+          ...(str(parsed, 'techLimits') === '' ? {} : { techLimits: str(parsed, 'techLimits') }),
           ...(str(parsed, 'reference') === '' ? {} : { reference: str(parsed, 'reference') }),
           ...(str(parsed, 'data') === '' ? {} : { data: str(parsed, 'data') }),
           acceptance: list(parsed, 'acceptance'),
@@ -164,6 +172,24 @@ export function apply(ctx: Context): void {
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }
+    },
+  })
+
+
+  // Follow-up questions earned by what was answered so far. The interview is the
+  // cheapest part of the system and the one that decides whether the build fails,
+  // so it is allowed to ask more — never more than three times.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/probe', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      respond(res, 200, {
+        probes: probes({
+          goal: url.searchParams.get('goal') ?? '',
+          ...(url.searchParams.get('shape') === null ? {} : { shape: url.searchParams.get('shape') ?? '' }),
+        }),
+      })
     },
   })
 

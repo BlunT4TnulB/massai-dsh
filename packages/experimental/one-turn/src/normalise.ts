@@ -70,14 +70,39 @@ function tidyRequirement(value: string): string {
     .replace(/[.;]+$/, '')
 }
 
-/** Default acceptance checks for a style with no reference: honest, not aspirational. */
+/**
+ * Adjectives are guesses; numbers are instructions. This turns the words a person
+ * used into values the build can obey, which is the difference between "calm" and
+ * a page that is actually calm.
+ */
 function styleOf(answers: IntakeAnswers): OneTurnSpec['style'] {
   const reference = clean(answers.reference)
+  const words = (answers.styleWords ?? []).join(' ').toLowerCase()
+
+  const palette = reference !== ''
+    ? 'derived from the reference'
+    : /warm|cosy|cozy|friendly|sun|bakery/.test(words)
+      ? 'cream #FAF3E7 ground, ink #1C1A17 text, terracotta #C1440E accent'
+      : /calm|quiet|minimal|clean|restrained/.test(words)
+        ? 'off-white #F7F6F3 ground, slate #2B2B2B text, one muted accent'
+        : 'off-white ground, near-black text, one saturated accent used at most twice'
+
+  const type = /bold|loud|strong|dramatic/.test(words)
+    ? 'three sizes only: 48/20/15px, heavy weight for headings, generous line-height 1.5'
+    : 'three sizes only: 36/18/15px, one serif for headings and one sans for body, line-height 1.6'
+
+  const spacing = /airy|spacious|generous|calm/.test(words)
+    ? 'vertical rhythm of 24/48/96px; never two margins inside one block'
+    : 'vertical rhythm of 16/32/64px; never two margins inside one block'
+
+  const radius = /soft|round|friendly|warm/.test(words) ? '10px on cards, 999px on pills' : '4px on cards, 4px on buttons'
+
   return {
     reference,
-    palette: reference === ''
-      ? 'a restrained two-colour palette with one accent; no gradients, no stock-photo feel'
-      : 'derived from the reference',
+    palette,
+    type,
+    spacing,
+    radius,
     avoid: 'lorem ipsum, placeholder images with watermarks, smiley emoji, three-column feature grids',
   }
 }
@@ -143,6 +168,13 @@ export function normalise(answers: IntakeAnswers): Normalised {
         'no external accounts, no backend, no sign-in'],
       acceptance: acceptance.length === 0 ? contract.defaultAcceptance : acceptance,
       style: styleOf(answers),
+      details: (answers.details ?? []).map(clean).filter(item => item !== ''),
+      neverInvent: (answers.neverInvent ?? []).map(clean).filter(item => item !== '').length === 0
+        ? ['testimonials, customer names, prices, dates, credentials, addresses that were not supplied']
+        : (answers.neverInvent ?? []).map(clean).filter(item => item !== ''),
+      techLimits: clean(answers.techLimits) === ''
+        ? `one file, opened directly by the person; no build step, no network at run time (${spec_shape_hint(shape)})`
+        : clean(answers.techLimits),
       data: clean(answers.data),
       outputContract: { files: contract.files, entry: contract.entry },
       limits: { maxFiles: contract.maxFiles, maxBytes: contract.maxBytes },

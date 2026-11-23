@@ -110,6 +110,28 @@ export function compile(spec: OneTurnSpec): CompiledMask {
     spec.data === '' ? 'No data file is supplied; the artifact must carry its own content.' : `DATA FILE SUPPLIED: ${spec.data}`,
   ].join('\n'))
 
+  add('particulars', spec.details.length === 0
+    ? [
+        'NO PARTICULARS WERE SUPPLIED.',
+        'Use only what the brief states. Where a specific value would be needed (a price, a phone number,',
+        'a size, a date), leave a visible marker instead of inventing one: [your price].',
+      ].join('\n')
+    : [
+        'THE PARTICULARS. Use these exactly; invent nothing beyond them:',
+        bullets(spec.details),
+      ].join('\n'))
+
+  add('never-invent', [
+    'NEVER INVENT ANY OF THE FOLLOWING. Leave a visible marker such as [your review] instead:',
+    bullets(spec.neverInvent),
+    'A visible blank is a correct answer. A plausible invention is a failed build.',
+  ].join('\n'))
+
+  add('runtime', [
+    'WHERE IT RUNS — this decides whether it works at all:',
+    spec.techLimits,
+  ].join('\n'))
+
   add('constraints', ENVIRONMENT)
 
   add('style', [
@@ -117,6 +139,9 @@ export function compile(spec: OneTurnSpec): CompiledMask {
       ? 'No visual reference was given, so the fallback applies:'
       : `MATCH THIS REFERENCE: ${spec.style.reference}`,
     `Palette: ${spec.style.palette}`,
+    `Type: ${spec.style.type}`,
+    `Spacing: ${spec.style.spacing}`,
+    `Corners: ${spec.style.radius}`,
     `AVOID: ${spec.style.avoid}`,
     'Type sizes and spacing must be stated in numbers in the file, not left to taste.',
   ].join('\n'))

@@ -33,6 +33,14 @@ export interface IntakeAnswers {
   readonly mustHave?: readonly string[]
   /** Things it must not do. */
   readonly nonGoals?: readonly string[]
+  /** The particulars: names, numbers, sizes, materials, part numbers, exact wording. */
+  readonly details?: readonly string[]
+  /** What must be left as a blank rather than invented. */
+  readonly neverInvent?: readonly string[]
+  /** Words for how it should feel; mapped to concrete values. */
+  readonly styleWords?: readonly string[]
+  /** Where it will be opened, and any hard technical limits. */
+  readonly techLimits?: string
   /** A look to match: a link or an image reference. */
   readonly reference?: string
   /** Where data comes from, when there is data. */
@@ -60,7 +68,20 @@ export interface OneTurnSpec {
   /** Observable checks the artifact must satisfy. */
   readonly acceptance: readonly string[]
   /** Look and feel, in concrete values rather than adjectives. */
-  readonly style: { readonly reference: string; readonly palette: string; readonly avoid: string }
+  readonly style: {
+    readonly reference: string
+    readonly palette: string
+    readonly type: string
+    readonly spacing: string
+    readonly radius: string
+    readonly avoid: string
+  }
+  /** The particulars the build must use rather than invent. */
+  readonly details: readonly string[]
+  /** What to leave blank instead of inventing. */
+  readonly neverInvent: readonly string[]
+  /** Where it will run; the constraint that decides whether it works at all. */
+  readonly techLimits: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */
