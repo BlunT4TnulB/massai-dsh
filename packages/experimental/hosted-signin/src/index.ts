@@ -24,6 +24,7 @@ import {
 } from './geo.ts'
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
+import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -245,7 +246,15 @@ export function apply(ctx: Context): void {
       const spend = await budgetReport().catch(() => undefined)
       const guests = await guestCounters().catch(() => [])
       const credits = await creditLedger().catch(() => [])
-      const html = Buffer.from(adminPageHtml(spend, guests, credits))
+      // Visiting the console refreshes the gauge; the interval below keeps it warm.
+      const fuel = await refreshBalance(process.env.DEEPSEEK_API_KEY ?? '').catch(() => undefined)
+      const html = Buffer.from(adminPageHtml(spend, guests, credits, fuel === undefined
+        ? undefined
+        : {
+            available: fuel.available, usd: fuel.usd, currency: fuel.currency,
+            low: lowBalanceUsd(), at: fuel.at,
+            ...(fuel.error === undefined ? {} : { error: fuel.error }),
+          }))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
@@ -621,6 +630,18 @@ export function apply(ctx: Context): void {
       res.end(req.method === 'HEAD' ? undefined : body)
     },
   })
+
+
+  // Refresh the balance every ten minutes and publish it for the door. A door
+  // that knows the tank is empty can say so instead of letting people walk into
+  // a failure they cannot explain.
+  const balanceTimer = setInterval(() => {
+    void refreshBalance(process.env.DEEPSEEK_API_KEY ?? '').catch(() => undefined)
+  }, 10 * 60 * 1000)
+  ctx.on('dispose', () => { clearInterval(balanceTimer) })
+  void deepSeekBalance(process.env.DEEPSEEK_API_KEY ?? '')
+    .then(reading => publishBalance(reading))
+    .catch(() => undefined)
 
   // Is the database configured and reachable? One honest answer, owner-only.
   ctx.webServer.register({

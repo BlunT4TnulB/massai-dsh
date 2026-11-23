@@ -65,6 +65,30 @@ function sessionCensus(): { count: number; newest: string; megabytes: string } {
 }
 
 /** Compose the owner console. */
+/** One line about the thing that decides whether the free preview can run at all. */
+function fuelSection(fuel?: {
+  available: boolean; usd: number; currency: string; low: number; at: number; error?: string
+}): string {
+  if (fuel === undefined) {
+    return '<p class="empty">Balance unknown yet — it is read on the first console visit, then every ten minutes.</p>'
+  }
+  const age = Math.max(0, Math.round((Date.now() - fuel.at) / 60000))
+  if (fuel.error !== undefined) {
+    return `<p class="warn">Could not read the balance: <code>${fuel.error}</code>. Until it is readable the free`
+      + ' preview may fail for visitors without explanation.</p>'
+  }
+  const money = `${fuel.usd.toFixed(2)} ${fuel.currency}`
+  if (!fuel.available || fuel.usd <= 0) {
+    return `<p class="warn"><b>EMPTY — the free preview cannot answer right now.</b> Top up the DeepSeek account;`
+      + ' visitors are being told the preview is paused, not left to hit an error.</p>'
+  }
+  if (fuel.usd <= fuel.low) {
+    return `<p class="warn"><b>Low: ${money}.</b> The door already warns visitors. Roughly `
+      + `${Math.floor(fuel.usd / 0.002)} short conversations left at flash prices.</p>`
+  }
+  return `<p class="ok"><b>${money}</b> available — read ${age} min ago. The free preview is running.</p>`
+}
+
 export function adminPageHtml(spend?: {
   tracked: boolean
   spent: number
@@ -74,7 +98,8 @@ export function adminPageHtml(spend?: {
   month: string
   users: Array<{ userId: string; calls: number; cost: number; last: number }>
 }, guests?: Array<{ guestKey: string; day: string; count: number }>,
-  credits?: Array<{ userId: string; usd: number; entries: number; last: number }>): string {
+  credits?: Array<{ userId: string; usd: number; entries: number; last: number }>,
+  fuel?: { available: boolean; usd: number; currency: string; low: number; at: number; error?: string }): string {
   const home = harnessHome()
   const hosted = process.env.DSH_ALLOW_WILDCARD_HOST !== undefined
   const ownerKey = process.env.DEEPSEEK_API_KEY !== undefined && process.env.DEEPSEEK_API_KEY !== ''
@@ -122,7 +147,8 @@ export function adminPageHtml(spend?: {
         + (c.last === 0 ? '—' : new Date(c.last).toISOString().slice(0, 16).replace('T', ' ')) + '</td></tr>'),
       '</tbody></table>'].join('\n      ')
   const creditSection = [
-    '<section><h2>Credit · top-ups</h2>',
+    '<section><h2>Fuel · the DeepSeek balance</h2>${fuelSection(fuel)}</section>
+<section><h2>Credit · top-ups</h2>',
     '<form method="POST" action="/api/credits/grant" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem">',
     '<input name="userId" placeholder="guest-… / user id" required style="flex:1;min-width:12rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
     '<input name="usd" placeholder="5.00" required style="width:7rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',

@@ -1,3 +1,7 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
 /**
  * The door, and the room behind it.
  *
@@ -64,6 +68,7 @@ const SHELL_CSS = `
   .sub{color:#9a9aa3;font-size:.94rem;line-height:1.6;font-weight:500;margin:0 0 1.3rem}
   .sub b{color:#E7E7EC;font-weight:600}
   /* the one button */
+  .paused{border:1px solid #5a3a12;background:#1d1710;color:#E8D3A8;border-radius:.6rem;padding:.85rem 1rem;font-size:.92rem;line-height:1.6;margin:0 0 1rem}
   .hero{display:block;text-align:center;padding:.85rem 1rem;border-radius:.6rem;background:#C1440E;
     color:#fff;font-weight:700;font-size:1.02rem;text-decoration:none;letter-spacing:.01em}
   .hero:hover{background:#d4531a}
@@ -123,6 +128,27 @@ function publicOrigin(): string {
   return configured === '' ? 'https://massai-dsh.onrender.com' : configured
 }
 
+/**
+ * Read the fuel gauge the hosted layer publishes for the door.
+ *
+ * The door renders synchronously and lives in this package, which cannot import
+ * the hosting layer — so the number arrives as a small file. A missing or stale
+ * file is not an error: it means "unknown", and unknown shows the normal door.
+ */
+function fuelGauge(): { available: boolean; usd: number } | undefined {
+  try {
+    const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
+    const path = join(home, 'health', 'deepseek-balance.json')
+    if (!existsSync(path)) return undefined
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as { available?: boolean; usd?: number; at?: number }
+    // Older than 30 minutes is a guess, not a reading.
+    if (typeof parsed.at === 'number' && Date.now() - parsed.at > 30 * 60 * 1000) return undefined
+    return { available: parsed.available === true, usd: Number(parsed.usd ?? 0) }
+  } catch {
+    return undefined
+  }
+}
+
 /** The document shell both pages share. */
 function shell(title: string, description: string, body: string): string {
   return `<!doctype html>
@@ -176,6 +202,8 @@ function headlineOf(line?: number): string {
 export function welcomePage(line?: number): string {
   // A deployment that carries its own key can let visitors start immediately;
   // without one, the honest first button is "get a key".
+  const fuel = fuelGauge()
+  const tankEmpty = fuel !== undefined && (!fuel.available || fuel.usd <= 0)
   const previewEnabled = (process.env.DEEPSEEK_API_KEY ?? '') !== ''
   const headline = headlineOf(line)
   return shell('Massai — into the unknown', 'Point at what you want and it gets built. Start free.', `
@@ -185,7 +213,10 @@ export function welcomePage(line?: number): string {
     <p class="sub">Point at what you want — <b>a tool, a site, an app, a workflow</b> — and it gets
     built in front of you. You do not need to know anything to start.</p>
 
-    ${previewEnabled ? `
+    ${tankEmpty ? `
+    <p class="paused"><b>The free preview is paused.</b> The workshop's model credit has run out, so
+    nothing would happen if you started now. You can still <a href="/access">bring your own key</a> and
+    work right away — or <a href="/support">leave a tip</a> and come back.</p>` : previewEnabled ? `
     <a class="hero" href="/api/preview">Start free — no account needed →</a>
     <p class="heronote">A dozen messages on us. No card, no sign-up, no tutorial.
     Bring your own key when you want to keep going.</p>` : `
@@ -219,6 +250,8 @@ export function welcomePage(line?: number): string {
 export function accessPageHtml(line?: number): string {
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY ?? ''
   const clerkReady = publishableKey !== '' && (process.env.CLERK_SECRET_KEY ?? '') !== ''
+  const fuel = fuelGauge()
+  const tankEmpty = fuel !== undefined && (!fuel.available || fuel.usd <= 0)
   const previewEnabled = (process.env.DEEPSEEK_API_KEY ?? '') !== ''
   const headline = headlineOf(line)
   return shell('Massai — get in', 'How to get into Massai: try it free, sign in, or bring a key.', `
@@ -228,7 +261,7 @@ export function accessPageHtml(line?: number): string {
     <p class="sub">Three ways in. Start free, sign in with an account, or bring your own
     DeepSeek key — whatever suits you.</p>
 
-    ${previewEnabled ? `<a class="hero" href="/api/preview" style="margin-bottom:1.1rem">Start free — no account needed →</a>` : ''}
+    ${tankEmpty ? '<p class="paused" style="text-align:left"><b>The free preview is paused</b> — the model credit has run out. Bring your own key below and keep working.</p>' : previewEnabled ? `<a class="hero" href="/api/preview" style="margin-bottom:1.1rem">Start free — no account needed →</a>` : ''}
 
     <div class="notice">
       <h2>If you bring your own key</h2>
