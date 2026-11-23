@@ -241,7 +241,8 @@ export function nextStep(
 
   const goalAnswered = context.goal.trim() !== '' && answered.has('goal')
   if (!goalAnswered) {
-    const first = interview()[0]
+    const first = interview().find(question => question.key === 'goal')
+    if (first === undefined) return { done: true, asked: answered.size }
     return {
       key: first.key,
       ask: first.ask,
@@ -255,7 +256,8 @@ export function nextStep(
 
   // The shape decides which probes are worth asking, so it comes before them.
   if (shape === undefined && !answered.has('shape')) {
-    const shapeQuestion = interview()[1]
+    const shapeQuestion = interview().find(question => question.key === 'shape')
+    if (shapeQuestion === undefined) return { done: true, asked: answered.size }
     return {
       key: shapeQuestion.key,
       ask: shapeQuestion.ask,
