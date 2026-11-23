@@ -44,8 +44,14 @@ function clean(value: string | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim()
 }
 
-/** Pick the shape from explicit choice, then keywords, then nothing. */
-function inferShape(goal: string, chosen: string | undefined): Shape | undefined {
+/**
+ * Pick the shape from an explicit choice, then from the words used.
+ * Exported because the interview needs it before the person has chosen anything.
+ * @param goal - the request as typed.
+ * @param chosen - the shape the person picked, when they picked one.
+ * @returns the shape, or undefined when the words do not decide it.
+ */
+export function detectShape(goal: string, chosen?: string): Shape | undefined {
   const explicit = SUPPORTED_SHAPES.find(shape => shape === clean(chosen))
   if (explicit !== undefined) return explicit
   const haystack = ` ${goal.toLowerCase()} `
@@ -145,7 +151,7 @@ export function normalise(answers: IntakeAnswers): Normalised {
     }
   }
 
-  const shape = inferShape(goal, answers.shape)
+  const shape = detectShape(goal, answers.shape)
   if (shape === undefined) {
     return {
       ok: false,

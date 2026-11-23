@@ -17,6 +17,7 @@
 
 import { interview, probes, type Question } from './intake.ts'
 import { lessonsFor } from './lessons.ts'
+import { detectShape } from './normalise.ts'
 import { SHAPE_CONTRACT, SUPPORTED_SHAPES, type Shape } from './spec.ts'
 
 /** A suggestion the person can accept, or type over. */
@@ -70,6 +71,42 @@ const DEFAULT_SUGGESTIONS: Readonly<Record<string, string>> = {
   dataSource: 'none — the artifact carries its own content',
 }
 
+/** Templates for probes: the shape of a good answer, so nobody faces a blank box. */
+const PROBE_TEMPLATES: Readonly<Record<string, { readonly value: string; readonly reason: string }>> = {
+  dimensions: {
+    value: '[OD] × [ID] × [length] × [qty] — fill what you know, leave the rest as [brackets]',
+    reason: 'sizes are the details people most often get wrong, so the template keeps them explicit',
+  },
+  prices: {
+    value: '[price] per [what], [tax included?] — or a range if it varies',
+    reason: 'an invented price is the most expensive mistake in this shape',
+  },
+  wording: {
+    value: 'paste the exact clause, or write "paraphrase only, no legal claims"',
+    reason: 'legal wording must never be improvised',
+  },
+  brandTokens: {
+    value: '[hex] ground, [hex] text, [hex] accent, [font] for headings',
+    reason: 'codes and font names are obeyed; adjectives are guessed at',
+  },
+  contact: {
+    value: '[phone] · [hours] · [address]',
+    reason: 'invented contact details send real people nowhere',
+  },
+  facts: {
+    value: '[employer] · [dates] · [exact title] · [amount]',
+    reason: 'anything not listed here becomes a visible blank instead of a plausible invention',
+  },
+  columns: {
+    value: '[field], [field], [field] — requested view first, the rest after',
+    reason: 'naming the fields is what makes a data view correct rather than generic',
+  },
+  units: {
+    value: '[currency] [thousands?] [decimals?]',
+    reason: 'units are where silent wrongness hides',
+  },
+}
+
 /** Shape-specific pre-fills that make the interview feel like it read the request. */
 const SHAPE_SUGGESTIONS: Readonly<Record<Shape, Readonly<Record<string, string>>>> = {
   'single-page-site': {
@@ -102,6 +139,11 @@ const SHAPE_SUGGESTIONS: Readonly<Record<Shape, Readonly<Record<string, string>>
  * @returns the suggestion, or undefined when there is nothing honest to say.
  */
 export function suggestFor(key: string, goal: string, shape: Shape | undefined): Suggestion | undefined {
+  const template = PROBE_TEMPLATES[key]
+  if (template !== undefined) {
+    return { value: template.value, confidence: 'medium', reason: template.reason }
+  }
+
   if (key === 'shape' && shape !== undefined) {
     const confidence = shapeConfidence(goal, shape)
     return { value: shape, confidence, reason: 'read from the words you used' }
@@ -177,6 +219,7 @@ export function nextStep(
   context: { readonly goal: string; readonly shape?: string },
 ): InterviewStep | { readonly done: true; readonly asked: number } {
   const shape = SUPPORTED_SHAPES.find(candidate => candidate === context.shape)
+    ?? detectShape(context.goal)
   const answered = new Set(Object.keys(answers).filter(key => {
     const value = answers[key]
     return Array.isArray(value) ? value.length > 0 : typeof value === 'string' && value.trim() !== ''
