@@ -88,10 +88,9 @@ Massai stores it to make calls for you and never displays it back to anyone else
 <h2>4. Your projects — and important storage notice</h2>
 <p>You own what you build. Outputs produced through Massai are yours to use, publish, sell or delete. If a
 project is published to the community shelf, you chose that, and you can withdraw it.</p>
-<div class="callout"><b>Storage notice.</b> Projects and conversations are currently kept on ephemeral
-infrastructure: <b>they can be lost when the service is redeployed or restarted.</b> Durable project storage
-is planned but not yet in place. Until it is, treat Massai as a workbench, not a vault — copy out anything
-you need to keep.</div>
+<div class="callout"><b>Storage notice.</b> <b>Projects are stored durably</b> in object storage and survive
+restarts and redeploys. <b>Conversations are not</b>: the transcript lives in memory and is lost on restart.
+Nothing is deleted because an allowance ran out; deletion is always your choice.</div>
 
 <h2>5. Acceptable use</h2>
 <p>You must follow the <a href="/aup">acceptable use policy</a>. In short: nothing illegal, nothing that attacks

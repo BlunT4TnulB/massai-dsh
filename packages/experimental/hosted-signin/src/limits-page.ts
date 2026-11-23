@@ -107,13 +107,14 @@ and nothing will surprise you later — not the caps, not the costs, not what ha
   <tr><td>keeping work outside Massai</td><td>copy or export it — see the storage notice below</td></tr>
 </table>
 
-<h2>⚠ Storage: read this before you build something big</h2>
-<div class="box warn">
-<p><b>Projects and conversations live on ephemeral infrastructure right now.</b> They can be lost when
-the service restarts or is redeployed. Durable storage is planned; it is not in place yet.</p>
-<p>Treat Massai as a <b>workbench, not a vault</b>. Copy out anything you would be upset to lose.
-The operator is not liable for lost work — that is stated plainly in the <a href="/terms">terms</a>,
-which is exactly why it is stated plainly here too.</p>
+<h2>Storage: what is kept, and what is not</h2>
+<div class="box">
+<p><b>Projects are kept.</b> When a build succeeds it is saved to real object storage, and it survives
+restarts and redeploys. Your <a href="/projects">projects page</a> lists everything you have made.</p>
+<p><b>Conversations are not kept yet.</b> The chat transcript itself lives in memory and is lost when the
+service restarts. If a conversation matters, build from it — the artifact is what gets saved.</p>
+<p><b>Nothing is deleted because you ran out of allowance.</b> Running out pauses; it never removes.
+Deleting is always something you choose.</p>
 </div>
 
 <h2>Tips that save you money and time</h2>
