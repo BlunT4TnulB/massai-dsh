@@ -139,6 +139,35 @@ function checkFiles(spec: OneTurnSpec, files: readonly BuiltFile[]): CheckResult
   return results
 }
 
+/**
+ * Escape raw control characters that appear *inside* string literals.
+ *
+ * Models emit real newlines inside JSON strings often enough that a strict parse
+ * fails on a perfectly usable reply. A small state machine fixes exactly that and
+ * nothing else, so malformed JSON is still caught rather than silently accepted.
+ * @param text - the candidate JSON.
+ * @returns the same text with in-string control characters escaped.
+ */
+function repairControlChars(text: string): string {
+  let out = ''
+  let inString = false
+  let escaped = false
+  for (const char of text) {
+    if (escaped) { out += char; escaped = false; continue }
+    if (char === '\\' && inString) { out += char; escaped = true; continue }
+    if (char === '"') { inString = !inString; out += char; continue }
+    if (inString) {
+      const code = char.codePointAt(0) ?? 0
+      if (code < 0x20) {
+        out += char === '\n' ? '\\n' : char === '\r' ? '\\r' : char === '\t' ? '\\t' : `\\u${code.toString(16).padStart(4, '0')}`
+        continue
+      }
+    }
+    out += char
+  }
+  return out
+}
+
 /** Pull a JSON object out of a model reply that may be wrapped in prose or fences. */
 function extractJson(text: string): unknown {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text)
@@ -146,7 +175,12 @@ function extractJson(text: string): unknown {
   const start = candidate.indexOf('{')
   const end = candidate.lastIndexOf('}')
   if (start === -1 || end <= start) throw new Error('no JSON object in reply')
-  return JSON.parse(candidate.slice(start, end + 1))
+  const slice = candidate.slice(start, end + 1)
+  try {
+    return JSON.parse(slice)
+  } catch {
+    return JSON.parse(repairControlChars(slice))
+  }
 }
 
 /** Ask the model for files, and bound what comes back to something safe to write. */
@@ -228,11 +262,30 @@ export async function runTrial(options: {
     const outputTokens = body.usage?.completion_tokens ?? 0
     const costUsd = estimateCost(inputTokens, outputTokens)
 
-    if (body.error !== undefined) throw new Error(body.error.message ?? 'provider error')
+    // From here on every return carries the real cost: a failed trial that spent
+    // money must still report what it spent, or the ledger lies.
+    if (body.error !== undefined) {
+      return {
+        id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
+        inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
+        accepted: false, error: body.error.message ?? 'provider error',
+      }
+    }
 
     const text = body.choices?.[0]?.message?.content ?? ''
-    const parsed = extractJson(text) as { report?: unknown }
-    const files = parseFiles(parsed)
+    let parsed: { report?: unknown }
+    let files: BuiltFile[]
+    try {
+      parsed = extractJson(text) as { report?: unknown }
+      files = parseFiles(parsed)
+    } catch (parseError) {
+      return {
+        id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
+        inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
+        accepted: false,
+        error: `could not read the reply: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+      }
+    }
     const checks = checkFiles(options.spec, files)
     const accepted = checks.every(check => check.pass)
 
