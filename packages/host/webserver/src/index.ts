@@ -650,9 +650,36 @@ export class WebServer extends Service {
       }
       const responder = this.responderFor(target.pathname)
       if (responder === undefined) {
+        const wantsHtml = String(req.headers.accept ?? '').includes('text/html')
+        if (wantsHtml) {
+          const body = Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8">`
+            + `<meta name="viewport" content="width=device-width, initial-scale=1"><title>Not found — Massai</title>`
+            + `<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">`
+            + `<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0e10;`
+            + `color:#F2F2F4;font-family:system-ui,sans-serif;padding:2rem}main{max-width:32rem}`
+            + `h1{font-size:1.3rem;margin:0 0 .5rem}p{color:#a9a9b3;line-height:1.6}a{color:#7ee2a8}`
+            + `img{width:2.4rem;height:2.4rem;margin-bottom:1rem}</style></head><body><main>`
+            + `<img src="/massai-crest.svg" alt=""><h1>That page is not here</h1>`
+            + `<p>Either it moved or it never existed. The workshop is still at the door.</p>`
+            + `<p><a href="/">← The door</a> &nbsp;·&nbsp; <a href="/limits">What this can do</a>`
+            + ` &nbsp;·&nbsp; <a href="/support">Support</a></p></main></body></html>`)
+          res.writeHead(404, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(body.byteLength) })
+          res.end(req.method === 'HEAD' ? undefined : body)
+          return
+        }
         res.writeHead(404)
         res.end()
         return
+      }
+      // Baseline hardening for every response. Cheap, and it closes the class of
+      // findings that show up in any review: MIME sniffing, referrer leakage,
+      // framing, and silent device permissions.
+      res.setHeader('x-content-type-options', 'nosniff')
+      res.setHeader('referrer-policy', 'strict-origin-when-cross-origin')
+      res.setHeader('x-frame-options', 'SAMEORIGIN')
+      res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()')
+      if (this.protocol === 'https:') {
+        res.setHeader('strict-transport-security', 'max-age=15552000; includeSubDomains')
       }
       const abort = new AbortController()
       const cleanup = (): void => {

@@ -201,7 +201,7 @@ ${creditSection}
   <p style="margin:.8rem 0 0"><a href="/feedback/export.jsonl" style="color:#7ee2a8;text-decoration:none;font-size:.82rem;font-weight:600">Download all notes →</a></p>
 </section>
 <section><h2>Owner pages</h2><div class="links">
-  <a href="/usage">Usage timeline</a><a href="/rates">Rates &amp; happy hour</a><a href="/models">Model guide</a><a href="/workers">Local agents</a><a href="/memory">Memory</a><a href="/import">Import a chat</a>
+  <a href="/usage">Usage timeline</a><a href="/rates">Rates &amp; happy hour</a><a href="/models">Model guide</a><a href="/workers">Local agents</a><a href="/memory">Memory</a><a href="/import">Import a chat</a><a href="/limits">Limits (public)</a><a href="/me">Your id &amp; spend</a>
   <a href="/">Door</a><a href="/start">Guided start</a><a href="/feedback">Leave-note form</a>
   <a href="/feedback/recent">Notes (full)</a><a href="/logo-preview">Logo concepts</a>
   <a href="/login-preview">Sign-in card preview</a><a href="/healthz">Health</a>

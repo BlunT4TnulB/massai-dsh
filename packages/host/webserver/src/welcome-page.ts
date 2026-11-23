@@ -207,7 +207,7 @@ export function welcomePage(line?: number): string {
       Independent project, not affiliated with or endorsed by any model provider.
       Fork it, branch it, build on it: that is the point.</p>
       <p class="fine" style="margin-top:.5rem">
-        <a href="/limits">What this can and cannot do</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/aup">Acceptable use</a> · <a href="/support">Support</a></p>
+        <a href="/limits">What this can and cannot do</a> · <a href="/me">Your id &amp; spend</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/aup">Acceptable use</a> · <a href="/support">Support</a></p>
     </div>`)
 }
 

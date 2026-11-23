@@ -25,6 +25,7 @@ import {
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { limitsPageHtml } from './limits-page.ts'
+import { mePageHtml } from './me-page.ts'
 import { providersPageHtml } from './providers-page.ts'
 import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
@@ -557,6 +558,67 @@ export function apply(ctx: Context): void {
         freeGemini: freeGeminiAllowed(country),
         strict: (process.env.DSH_GEO_STRICT ?? '') === '1',
       })
+    },
+  })
+
+
+  // The personal page: your id (needed for a tip to reach you), your spend, your
+  // credit. Client-side, because the id lives in a readable cookie.
+  ctx.webServer.register({
+    kind: 'exact', path: '/me', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(mePageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
+  // Crawlers: the public pages only. Signed-in areas are excluded.
+  ctx.webServer.register({
+    kind: 'exact', path: '/robots.txt', auth: 'anonymous',
+    handler: (req, res) => {
+      const origin = (process.env.PUBLIC_ORIGIN ?? '').trim().replace(/\/+$/, '')
+      const body = Buffer.from([
+        'User-agent: *',
+        'Allow: /$',
+        'Allow: /limits',
+        'Allow: /support',
+        'Allow: /terms',
+        'Allow: /privacy',
+        'Allow: /aup',
+        'Allow: /providers',
+        'Allow: /local',
+        'Allow: /guide',
+        'Allow: /models',
+        'Allow: /rates',
+        'Disallow: /admin',
+        'Disallow: /api/',
+        'Disallow: /memory',
+        'Disallow: /me',
+        '',
+      ].join('\n'))
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'content-length': String(body.byteLength) })
+      res.end(req.method === 'HEAD' ? undefined : body)
+      void origin
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/sitemap.xml', auth: 'anonymous',
+    handler: (req, res) => {
+      const origin = ((process.env.PUBLIC_ORIGIN ?? 'https://massai-dsh.onrender.com').trim().replace(/\/+$/, ''))
+      const paths = ['/', '/limits', '/support', '/guide', '/local', '/providers', '/models', '/rates', '/terms', '/privacy', '/aup']
+      const body = Buffer.from(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + paths.map(p => `  <url><loc>${origin}${p}</loc></url>`).join('\n')
+        + '\n</urlset>\n')
+      res.writeHead(200, { 'content-type': 'application/xml; charset=utf-8', 'content-length': String(body.byteLength) })
+      res.end(req.method === 'HEAD' ? undefined : body)
     },
   })
 
