@@ -638,7 +638,11 @@ export function apply(ctx: Context): void {
   const balanceTimer = setInterval(() => {
     void refreshBalance(process.env.DEEPSEEK_API_KEY ?? '').catch(() => undefined)
   }, 10 * 60 * 1000)
-  ctx.on('dispose', () => { clearInterval(balanceTimer) })
+  // `dispose` is a lifecycle event that the narrow Events map in this package's
+  // type graph does not declare, so the listener registers through a cast rather
+  // than dragging the whole agent package in (same reason as the session hooks).
+  const onDispose = ctx.on.bind(ctx) as unknown as (event: 'dispose', listener: () => void) => () => void
+  onDispose('dispose', () => { clearInterval(balanceTimer) })
   void deepSeekBalance(process.env.DEEPSEEK_API_KEY ?? '')
     .then(reading => publishBalance(reading))
     .catch(() => undefined)
