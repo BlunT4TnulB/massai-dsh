@@ -11926,6 +11926,9 @@ importers:
       '@deepseek-ai/dsh-model-router':
         specifier: workspace:*
         version: link:../model-router
+      '@deepseek-ai/dsh-one-turn':
+        specifier: workspace:*
+        version: link:../one-turn
       '@deepseek-ai/dsh-session-memory':
         specifier: workspace:*
         version: link:../session-memory
@@ -11959,6 +11962,18 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:*
         version: link:../../core/tools
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+
+  packages/experimental/one-turn:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: workspace:*
+        version: link:../../host/webserver
       '@deepseek-ai/schemastery':
         specifier: link:../../../vendor/schemastery
         version: link:../../../vendor/schemastery
