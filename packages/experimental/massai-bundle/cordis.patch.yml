@@ -74,7 +74,10 @@
       name: "@deepseek-ai/dsh-user-credentials"
 
 # Hosted-link BYOK sign-in (POST /api/signin stores the visitor's key).
+# One-turn: compile a sealed mask from intake answers, for free.
 - insert:
+    - id: one-turn
+      name: "@deepseek-ai/dsh-one-turn"
     - id: hosted-signin
       name: "@deepseek-ai/dsh-hosted-signin"
 

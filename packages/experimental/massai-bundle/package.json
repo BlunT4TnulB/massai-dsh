@@ -31,6 +31,7 @@
     "@deepseek-ai/dsh-user-credentials": "workspace:*",
     "@deepseek-ai/dsh-model-router": "workspace:*",
     "@deepseek-ai/dsh-hosted-signin": "workspace:*",
+    "@deepseek-ai/dsh-one-turn": "workspace:*",
     "@deepseek-ai/dsh-client-ui-quickstart": "workspace:*",
     "@deepseek-ai/dsh-session-memory": "workspace:*",
     "@deepseek-ai/dsh-llm-pi-ai": "workspace:*",
