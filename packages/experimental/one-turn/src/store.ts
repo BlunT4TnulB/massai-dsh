@@ -17,7 +17,7 @@
  */
 
 /** Postgres over HTTP, which is how the Neon connection string is usable here. */
-async function runSql<T = Record<string, unknown>>(query: string, params: unknown[] = []): Promise<T[]> {
+export async function runSql<T = Record<string, unknown>>(query: string, params: unknown[] = []): Promise<T[]> {
   const url = process.env.DATABASE_URL ?? ''
   if (url === '') throw new Error('DATABASE_URL is not set')
   // `postgresql://` is not a special scheme, so `new URL(uri).origin` is "null".
@@ -69,6 +69,20 @@ export async function ensureStoreSchema(): Promise<void> {
        checks jsonb NOT NULL DEFAULT '[]',
        files jsonb NOT NULL DEFAULT '[]',
        error text)`,
+    `CREATE TABLE IF NOT EXISTS one_turn_projects (
+       id text PRIMARY KEY,
+       owner text NOT NULL,
+       name text NOT NULL,
+       shape text NOT NULL DEFAULT 'single-page-site',
+       status text NOT NULL DEFAULT 'active',
+       entry text NOT NULL DEFAULT '',
+       manifest jsonb NOT NULL DEFAULT '[]',
+       bytes integer NOT NULL DEFAULT 0,
+       origin text,
+       created_at timestamptz NOT NULL DEFAULT now(),
+       updated_at timestamptz NOT NULL DEFAULT now())`,
+    `CREATE INDEX IF NOT EXISTS one_turn_projects_owner ON one_turn_projects (owner, updated_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS one_turn_projects_status ON one_turn_projects (status, updated_at DESC)`,
   ]
   for (const statement of statements) await runSql(statement)
 }

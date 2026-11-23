@@ -20,6 +20,11 @@ import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { hydrateLessons, lessonsFor, readLessons, recordLesson } from './lessons.ts'
 import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
 import { listObjects, r2Configured, storageCheck } from './r2.ts'
+import {
+  adoptProject, createProject, deleteProject, listProjects, projectsConfigured, readProject,
+  saveProjectFiles, setProjectStatus, shelf, usageOf, type ProjectFile, type ProjectStatus,
+} from './projects.ts'
+import { projectsPageHtml } from './projects-page.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
@@ -27,6 +32,43 @@ import type { IntakeAnswers } from './spec.ts'
 
 /** Required services: the HTTP server the routes hang off. */
 export const inject = ['webServer']
+
+
+/** Read one cookie value from the request. */
+function cookieValue(req: IncomingMessage, name: string): string {
+  const raw = String(req.headers.cookie ?? '')
+  for (const part of raw.split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return decodeURIComponent(rest.join('='))
+  }
+  return ''
+}
+
+/**
+ * Who is asking. A guest has an id in a readable cookie; the operator has the
+ * owner token. Everyone else has nothing, and gets nothing but the shelf.
+ */
+function callerOf(req: IncomingMessage): { readonly id: string; readonly owner: boolean } | undefined {
+  const ownerToken = process.env.DSH_WEB_TOKEN ?? ''
+  if (ownerToken !== '' && String(req.headers['x-one-turn-token'] ?? '') === ownerToken) {
+    return { id: 'owner', owner: true }
+  }
+  const uid = cookieValue(req, 'dsh_uid')
+  if (uid !== '') return { id: uid, owner: false }
+  return undefined
+}
+
+/** Parse a file list from an unknown body field. */
+function filesFrom(value: unknown): ProjectFile[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    const file = item as { path?: unknown; content?: unknown }
+    if (typeof file.path !== 'string' || typeof file.content !== 'string') return []
+    const path = file.path.replace(/^\.\//, '')
+    if (path === '' || path.startsWith('/') || path.includes('..')) return []
+    return [{ path, content: file.content }]
+  })
+}
 
 /** Answer one JSON request. */
 function respond(res: ServerResponse, status: number, body: unknown): void {
@@ -182,12 +224,29 @@ export function apply(ctx: Context): void {
           model: str(parsed, 'model') === '' ? 'deepseek-chat' : str(parsed, 'model'),
           id: str(parsed, 'id') === '' ? `trial-${Date.now()}` : str(parsed, 'id'),
         })
+        // A successful build is saved immediately when storage is available, so
+        // "it worked" and "it is kept" are the same moment.
+        let saved: { id: string; name: string } | undefined
+        if (record.accepted && projectsConfigured()) {
+          try {
+            const project = await createProject({
+              owner: str(parsed, 'owner') === '' ? 'owner' : str(parsed, 'owner'),
+              name: str(parsed, 'name') === '' ? (normalised.spec.goal.slice(0, 60) || 'Untitled build') : str(parsed, 'name'),
+              shape: normalised.spec.shape,
+              entry: normalised.spec.outputContract.entry,
+              files: record.files.map(file => ({ path: file.path, content: file.content })),
+              origin: `trial:${record.id}`,
+            })
+            if (project !== undefined) saved = { id: project.id, name: project.name }
+          } catch { /* a save failure must not fail the build */ }
+        }
         respond(res, 200, {
           ok: true,
           trial: record,
           audit: maskAudit(compiled),
           trialsRoot: trialsRoot(),
           ceilingUsd: maxTrialUsd(),
+          ...(saved === undefined ? {} : { savedProject: saved }),
         })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
@@ -401,6 +460,155 @@ export function apply(ctx: Context): void {
       } catch (error) {
         respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
       }
+    },
+  })
+
+
+  // Projects: the durable home for the thing a person made.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/create', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 401, { error: 'no session: start a free preview first' }); return }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const files = filesFrom(parsed['files'])
+        if (files.length === 0) { respond(res, 400, { error: 'no files supplied' }); return }
+        const project = await createProject({
+          owner: caller.id,
+          name: str(parsed, 'name') === '' ? 'Untitled' : str(parsed, 'name'),
+          shape: str(parsed, 'shape') === '' ? 'single-page-site' : str(parsed, 'shape'),
+          entry: str(parsed, 'entry') === '' ? (files[0]?.path ?? 'index.html') : str(parsed, 'entry'),
+          files,
+          ...(str(parsed, 'origin') === '' ? {} : { origin: str(parsed, 'origin') }),
+        })
+        if (project === undefined) { respond(res, 503, { error: 'storage is not configured yet' }); return }
+        respond(res, 200, { ok: true, project })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/list', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 200, { projects: [], usage: { projects: 0, bytes: 0 } }); return }
+      try {
+        respond(res, 200, { projects: await listProjects(caller.id), usage: await usageOf(caller.id) })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/detail', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const id = url.searchParams.get('id') ?? ''
+      if (id === '') { respond(res, 400, { error: 'id is required' }); return }
+      try {
+        const project = await readProject(id)
+        if (project === undefined) { respond(res, 404, { error: 'no such project' }); return }
+        const caller = callerOf(req)
+        const mine = caller !== undefined && (caller.id === project.owner || caller.owner)
+        // A paused or adoptable project is readable — that is what makes it a shelf.
+        if (!mine && project.status !== 'adoptable' && project.status !== 'paused') {
+          respond(res, 403, { error: 'this project is private' }); return
+        }
+        respond(res, 200, { ok: true, project, mine })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/save', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 401, { error: 'no session' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const project = await saveProjectFiles(
+          url.searchParams.get('id') ?? str(parsed, 'id'), caller.id, filesFrom(parsed['files']))
+        if (project === undefined) { respond(res, 404, { error: 'not found, or not yours' }); return }
+        respond(res, 200, { ok: true, project })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/status', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 401, { error: 'no session' }); return }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const id = str(parsed, 'id')
+        const status = str(parsed, 'status') as ProjectStatus
+        const allowed: readonly ProjectStatus[] = ['active', 'paused', 'adoptable', 'deleted']
+        if (!allowed.includes(status)) { respond(res, 400, { error: 'unknown status' }); return }
+        const ok = status === 'deleted'
+          ? await deleteProject(id, caller.id)
+          : await setProjectStatus(id, caller.id, status)
+        respond(res, ok ? 200 : 404, ok ? { ok: true, status } : { error: 'not found, or not yours' })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/shelf', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        respond(res, 200, { projects: await shelf(), configured: projectsConfigured() })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/adopt', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 401, { error: 'no session' }); return }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const project = await adoptProject(str(parsed, 'id'), caller.id)
+        respond(res, project === undefined ? 404 : 200,
+          project === undefined ? { error: 'not adoptable' } : { ok: true, project })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  // The page: the same data as the API, rendered so a person can actually see it.
+  ctx.webServer.register({
+    kind: 'exact', path: '/projects', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(projectsPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
     },
   })
 
