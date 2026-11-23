@@ -19,6 +19,7 @@ import { isAmbiguous, readings } from './ambiguity.ts'
 import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { hydrateLessons, lessonsFor, readLessons, recordLesson } from './lessons.ts'
 import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
+import { listObjects, r2Configured, storageCheck } from './r2.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
@@ -365,6 +366,38 @@ export function apply(ctx: Context): void {
           lessonsInMemory: readLessons().length,
           voiceStored: readVoice().name,
         })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+
+  // Storage health: write a probe, read it back, delete it. Owner-only because it
+  // costs an operation and names the bucket.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/storage', auth: 'anonymous',
+    handler: async (req, res) => {
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const isOwner = owner !== '' && String(req.headers['x-one-turn-token'] ?? '') === owner
+      if (req.method === 'GET' && !isOwner) { respond(res, 401, { error: 'owner token required' }); return }
+      if (req.method === 'GET') {
+        try {
+          respond(res, 200, {
+            configured: r2Configured(),
+            bucket: process.env.R2_BUCKET ?? '',
+            keys: r2Configured() ? await listObjects(url.searchParams.get('prefix') ?? '', 20) : [],
+          })
+        } catch (error) {
+          respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+        }
+        return
+      }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      if (!isOwner) { respond(res, 401, { error: 'owner token required' }); return }
+      try {
+        respond(res, 200, await storageCheck())
       } catch (error) {
         respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
       }
