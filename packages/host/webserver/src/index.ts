@@ -702,7 +702,8 @@ export class WebServer extends Service {
         if (admission.kind === 'deny') {
           // Friendly branded welcome instead of a bare 401 on the index: the
           // shared access link carries the token, so tell the visitor exactly that.
-          if (admission.status === 401 && req.method === 'GET' && target.pathname === '/') {
+          const wantsHtml = String(req.headers.accept ?? '').includes('text/html')
+          if (admission.status === 401 && req.method === 'GET' && (target.pathname === '/' || wantsHtml)) {
             const override = target.searchParams.get('line')
             const requested = override === null ? undefined : Number(override)
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })

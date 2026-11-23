@@ -120,6 +120,23 @@ async function serveStatic(
     // Only absent or non-file targets are 404; other filesystem failures reach
     // the caller, which the webserver answers with 400 over HTTP.
     if (!STATIC_MISS_CODES.has((error as NodeJS.ErrnoException).code)) throw error
+    // A missing file behind an HTML request is a person following a stale link,
+    // so answer with a page that offers the way back instead of an empty 404.
+    if (String(request.headers.get('accept') ?? '').includes('text/html')
+      && !/\.[a-z0-9]{2,5}$/i.test(target)) {
+      const body = Buffer.from('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Not found — Massai</title>'
+        + '<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">'
+        + '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0e10;'
+        + 'color:#F2F2F4;font-family:system-ui,sans-serif;padding:2rem}main{max-width:32rem}'
+        + 'h1{font-size:1.3rem;margin:0 0 .5rem}p{color:#a9a9b3;line-height:1.6}a{color:#7ee2a8}'
+        + 'img{width:2.4rem;height:2.4rem;margin-bottom:1rem}</style></head><body><main>'
+        + '<img src="/massai-crest.svg" alt=""><h1>That page is not here</h1>'
+        + '<p>Either it moved or it never existed. The workshop is still at the door.</p>'
+        + '<p><a href="/">← The door</a> &nbsp;·&nbsp; <a href="/limits">What this can do</a>'
+        + ' &nbsp;·&nbsp; <a href="/support">Support</a></p></main></body></html>')
+      return new Response(body, { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } })
+    }
     return new Response(null, { status: 404 })
   }
   if (request.method === 'HEAD') return new Response(null, { status: 200, headers })
