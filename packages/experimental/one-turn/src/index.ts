@@ -13,6 +13,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { compile, maskAudit } from './compile.ts'
+import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
 import { interview, shapeChoices } from './intake.ts'
 import { normalise, refusalText } from './normalise.ts'
 import type { IntakeAnswers } from './spec.ts'
@@ -110,6 +111,55 @@ export function apply(ctx: Context): void {
           tokens: compiled.tokens,
           characters: compiled.characters,
           spentUsd: 0,
+        })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+
+  // Run one trial: the only route in this package that spends money, so it is
+  // guarded by the owner token rather than by a session cookie, and it reports
+  // cost whether it succeeded or failed.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/run', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
+        respond(res, 401, { error: 'owner token required' }); return
+      }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const normalised = normalise({
+          goal: str(parsed, 'goal'),
+          ...(str(parsed, 'shape') === '' ? {} : { shape: str(parsed, 'shape') }),
+          ...(str(parsed, 'audience') === '' ? {} : { audience: str(parsed, 'audience') }),
+          mustHave: list(parsed, 'mustHave'),
+          nonGoals: list(parsed, 'nonGoals'),
+          ...(str(parsed, 'reference') === '' ? {} : { reference: str(parsed, 'reference') }),
+          ...(str(parsed, 'data') === '' ? {} : { data: str(parsed, 'data') }),
+          acceptance: list(parsed, 'acceptance'),
+        })
+        if (!normalised.ok) {
+          respond(res, 422, { ok: false, refusal: normalised.refusal, spentUsd: 0 })
+          return
+        }
+        const compiled = compile(normalised.spec)
+        const record = await runTrial({
+          spec: normalised.spec,
+          mask: compiled,
+          apiKey: process.env.DEEPSEEK_API_KEY ?? '',
+          model: str(parsed, 'model') === '' ? 'deepseek-chat' : str(parsed, 'model'),
+          id: str(parsed, 'id') === '' ? `trial-${Date.now()}` : str(parsed, 'id'),
+        })
+        respond(res, 200, {
+          ok: true,
+          trial: record,
+          audit: maskAudit(compiled),
+          trialsRoot: trialsRoot(),
+          ceilingUsd: maxTrialUsd(),
         })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
