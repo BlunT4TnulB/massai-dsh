@@ -154,6 +154,8 @@ export function compile(spec: OneTurnSpec): CompiledMask {
     bullets(contract.defaultAcceptance),
   ].join('\n'))
 
+  if (spec.lessons !== '') add('lessons', spec.lessons)
+
   add('protocol', OUTPUT_PROTOCOL)
 
   add('self-check', SELF_CHECK.join('\n'))

@@ -15,6 +15,8 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import { compile, maskAudit } from './compile.ts'
 import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
 import { interview, probes, shapeChoices } from './intake.ts'
+import { lessonsFor, readLessons, recordLesson } from './lessons.ts'
+import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
 import type { IntakeAnswers } from './spec.ts'
 
@@ -190,6 +192,63 @@ export function apply(ctx: Context): void {
           ...(url.searchParams.get('shape') === null ? {} : { shape: url.searchParams.get('shape') ?? '' }),
         }),
       })
+    },
+  })
+
+
+  // One question at a time, leading with an opinion. The interview should feel
+  // like a colleague who has built this before — because it has, and it remembers.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/next', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const goal = url.searchParams.get('goal') ?? ''
+      const shape = url.searchParams.get('shape') ?? undefined
+      // `answered` is a comma list of keys already filled in.
+      const answered: Record<string, string> = {}
+      for (const key of (url.searchParams.get('answered') ?? '').split(',')) {
+        if (key.trim() !== '') answered[key.trim()] = 'answered'
+      }
+      const step = nextStep(answered, { goal, ...(shape === undefined || shape === '' ? {} : { shape }) })
+      respond(res, 200, { step })
+    },
+  })
+
+  // The shelf: what this shape has taught us, and what it is still learning.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/lessons', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const shape = url.searchParams.get('shape')
+      respond(res, 200, {
+        shape: shape ?? null,
+        lessons: shape === null ? readLessons() : lessonsFor(shape),
+      })
+    },
+  })
+
+  // Record a lesson by hand, for the failures a check cannot see (a human saying
+  // "no, that is not it" is a lesson too).
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/lesson', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
+        respond(res, 401, { error: 'owner token required' }); return
+      }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const shape = str(parsed, 'shape')
+        const bucket = str(parsed, 'bucket')
+        if (shape === '' || bucket === '') { respond(res, 400, { error: 'shape and bucket are required' }); return }
+        recordLesson({ shape, bucket, ...(str(parsed, 'note') === '' ? {} : { note: str(parsed, 'note') }) })
+        respond(res, 200, { ok: true, lessons: lessonsFor(shape) })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

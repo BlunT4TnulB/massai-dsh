@@ -82,6 +82,8 @@ export interface OneTurnSpec {
   readonly neverInvent: readonly string[]
   /** Where it will run; the constraint that decides whether it works at all. */
   readonly techLimits: string
+  /** What has gone wrong on this shape before, from the shelf. Empty when new. */
+  readonly lessons: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */

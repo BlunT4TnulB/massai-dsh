@@ -13,6 +13,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { CompiledMask } from './compile.ts'
+import { bucketOfCheck, recordLesson } from './lessons.ts'
 import type { OneTurnSpec } from './spec.ts'
 
 /** One check's outcome. */
@@ -61,6 +62,8 @@ export interface TrialRecord {
   readonly error?: string
   /** Model's own report, if it followed the protocol. */
   readonly report?: string
+  /** Failure buckets this trial taught the shelf. */
+  readonly buckets: readonly string[]
 }
 
 /** Where trial artifacts live. */
@@ -220,7 +223,7 @@ export async function runTrial(options: {
     return {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
       inputTokens: 0, outputTokens: 0, costUsd: 0, model: options.model, files: [], checks: [],
-      accepted: false,
+      accepted: false, buckets: [],
       error: `refused before spending: projected $${projected.toFixed(3)} exceeds ceiling $${ceiling.toFixed(2)}`,
     }
   }
@@ -268,7 +271,7 @@ export async function runTrial(options: {
       return {
         id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
         inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
-        accepted: false, error: body.error.message ?? 'provider error',
+        accepted: false, buckets: [], error: body.error.message ?? 'provider error',
       }
     }
 
@@ -282,12 +285,26 @@ export async function runTrial(options: {
       return {
         id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
         inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
-        accepted: false,
+        accepted: false, buckets: ['broken-run'],
         error: `could not read the reply: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
       }
     }
     const checks = checkFiles(options.spec, files)
     const accepted = checks.every(check => check.pass)
+
+    // Learning: every failed check becomes a lesson for the shape, so the next
+    // interview on this shape asks differently and the next mask carries a warning.
+    const buckets = accepted
+      ? []
+      : checks.filter(check => !check.pass)
+          .flatMap(check => {
+            const bucket = bucketOfCheck(check.check, check.detail)
+            return bucket === undefined ? [] : [bucket]
+          })
+    for (const bucket of new Set(buckets)) {
+      const failing = checks.find(check => !check.pass && bucketOfCheck(check.check, check.detail) === bucket)
+      recordLesson({ shape: options.spec.shape, bucket, ...(failing === undefined ? {} : { note: failing.detail }) })
+    }
 
     // Keep the artifacts; they are the evidence a later human review depends on.
     rmSync(dir, { recursive: true, force: true })
@@ -304,15 +321,14 @@ export async function runTrial(options: {
 
     return {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
-      inputTokens, outputTokens, costUsd, model: options.model, files, checks, accepted,
+      inputTokens, outputTokens, costUsd, model: options.model, files, checks, accepted, buckets,
       ...(typeof parsed.report === 'string' ? { report: parsed.report } : {}),
     }
   } catch (error) {
     return {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
       inputTokens: 0, outputTokens: 0, costUsd: 0, model: options.model, files: [], checks: [],
-      accepted: false,
-      error: error instanceof Error ? error.message : String(error),
+      accepted: false, buckets: [], error: error instanceof Error ? error.message : String(error),
     }
   }
 }

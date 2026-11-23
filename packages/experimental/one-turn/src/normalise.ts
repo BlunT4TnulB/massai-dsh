@@ -9,6 +9,7 @@
  * @module @deepseek-ai/dsh-one-turn/normalise
  */
 
+import { lessonBlock } from './lessons.ts'
 import {
   MAX_MUST_HAVE, SHAPE_CONTRACT, SUPPORTED_SHAPES,
   type IntakeAnswers, type Normalised, type OneTurnSpec, type Shape,
@@ -177,6 +178,7 @@ export function normalise(answers: IntakeAnswers): Normalised {
       neverInvent: (answers.neverInvent ?? []).map(clean).filter(item => item !== '').length === 0
         ? ['testimonials, customer names, prices, dates, credentials, addresses that were not supplied']
         : (answers.neverInvent ?? []).map(clean).filter(item => item !== ''),
+      lessons: lessonBlock(shape),
       techLimits: clean(answers.techLimits) === ''
         ? `one file, opened directly by the person; no build step, no network at run time (${spec_shape_hint(shape)})`
         : clean(answers.techLimits),
