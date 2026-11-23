@@ -43,34 +43,34 @@ export function storeConfigured(): boolean {
 /** Create the tables this package owns. Safe to call on every boot. */
 export async function ensureStoreSchema(): Promise<void> {
   if (!storeConfigured()) return
-  await runSql(`
-    CREATE TABLE IF NOT EXISTS one_turn_lessons (
-      shape text NOT NULL,
-      bucket text NOT NULL,
-      note text NOT NULL DEFAULT '',
-      count integer NOT NULL DEFAULT 1,
-      at timestamptz NOT NULL DEFAULT now(),
-      PRIMARY KEY (shape, bucket)
-    );
-    CREATE TABLE IF NOT EXISTS one_turn_voice (
-      id integer PRIMARY KEY DEFAULT 1,
-      body jsonb NOT NULL,
-      at timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS one_turn_trials (
-      id text PRIMARY KEY,
-      at timestamptz NOT NULL DEFAULT now(),
-      shape text NOT NULL,
-      accepted boolean NOT NULL DEFAULT false,
-      cost_usd numeric(12,6) NOT NULL DEFAULT 0,
-      input_tokens integer NOT NULL DEFAULT 0,
-      output_tokens integer NOT NULL DEFAULT 0,
-      buckets text[] NOT NULL DEFAULT '{}',
-      checks jsonb NOT NULL DEFAULT '[]',
-      files jsonb NOT NULL DEFAULT '[]',
-      error text
-    );
-  `)
+  // One statement per request: the HTTP endpoint prepares each query, and a
+  // prepared statement cannot carry two commands.
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS one_turn_lessons (
+       shape text NOT NULL,
+       bucket text NOT NULL,
+       note text NOT NULL DEFAULT '',
+       count integer NOT NULL DEFAULT 1,
+       at timestamptz NOT NULL DEFAULT now(),
+       PRIMARY KEY (shape, bucket))`,
+    `CREATE TABLE IF NOT EXISTS one_turn_voice (
+       id integer PRIMARY KEY DEFAULT 1,
+       body jsonb NOT NULL,
+       at timestamptz NOT NULL DEFAULT now())`,
+    `CREATE TABLE IF NOT EXISTS one_turn_trials (
+       id text PRIMARY KEY,
+       at timestamptz NOT NULL DEFAULT now(),
+       shape text NOT NULL,
+       accepted boolean NOT NULL DEFAULT false,
+       cost_usd numeric(12,6) NOT NULL DEFAULT 0,
+       input_tokens integer NOT NULL DEFAULT 0,
+       output_tokens integer NOT NULL DEFAULT 0,
+       buckets text[] NOT NULL DEFAULT '{}',
+       checks jsonb NOT NULL DEFAULT '[]',
+       files jsonb NOT NULL DEFAULT '[]',
+       error text)`,
+  ]
+  for (const statement of statements) await runSql(statement)
 }
 
 /** One remembered failure row. */
