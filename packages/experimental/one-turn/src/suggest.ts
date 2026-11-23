@@ -187,6 +187,20 @@ export function suggestFor(key: string, goal: string, shape: Shape | undefined):
   return undefined
 }
 
+/**
+ * Which answers make a probe unnecessary.
+ *
+ * The particulars box is the catch-all: if someone has already written their
+ * sizes, prices and wording there, re-asking for them one at a time is exactly
+ * the "guided form" feeling this interview is trying to avoid.
+ */
+const PROBE_SATISFIED_BY: Readonly<Record<string, readonly string[]>> = {
+  dimensions: ['details', 'particulars'],
+  prices: ['details', 'particulars'],
+  wording: ['details', 'particulars'],
+  brandTokens: ['details', 'particulars', 'styleWords'],
+}
+
 /** Turn one question and its suggestion into a step. */
 function toStep(question: Question, position: number, goal: string, shape: Shape | undefined): InterviewStep {
   const suggestion = suggestFor(question.key, goal, shape)
@@ -230,6 +244,8 @@ export function nextStep(
 
   for (const probe of earned) {
     if (answered.has(probe.key)) continue
+    const covered = (PROBE_SATISFIED_BY[probe.key] ?? []).some(key => answered.has(key))
+    if (covered) continue
     const suggestion = suggestFor(probe.key, context.goal, shape)
     return {
       key: probe.key,
