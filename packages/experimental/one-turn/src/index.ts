@@ -15,7 +15,9 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import { compile, maskAudit } from './compile.ts'
 import { maxTrialUsd, runTrial, trialsRoot } from './run.ts'
 import { interview, probes, shapeChoices } from './intake.ts'
+import { isAmbiguous, readings } from './ambiguity.ts'
 import { lessonsFor, readLessons, recordLesson } from './lessons.ts'
+import { readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
 import type { IntakeAnswers } from './spec.ts'
@@ -246,6 +248,58 @@ export function apply(ctx: Context): void {
         if (shape === '' || bucket === '') { respond(res, 400, { error: 'shape and bucket are required' }); return }
         recordLesson({ shape, bucket, ...(str(parsed, 'note') === '' ? {} : { note: str(parsed, 'note') }) })
         respond(res, 200, { ok: true, lessons: lessonsFor(shape) })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+
+  // What this request could mean. Free, and the fastest way to see whether a
+  // request needs one question or can be decided and recorded.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/readings', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const goal = url.searchParams.get('goal') ?? ''
+      const shape = url.searchParams.get('shape')
+      const list = readings(goal, shape === null || shape === '' ? undefined : shape as never)
+      respond(res, 200, {
+        ambiguous: isAmbiguous(goal, shape === null || shape === '' ? undefined : shape as never),
+        readings: list,
+        decision: list[0] === undefined ? '' : `interpretation taken: ${list[0].means}`,
+      })
+    },
+  })
+
+  // The voice: the workshop's own reference points, stored as material.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/voice', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method === 'GET' || req.method === 'HEAD') { respond(res, 200, { voice: readVoice() }); return }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
+        respond(res, 401, { error: 'owner token required' }); return
+      }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const base = readVoice()
+        const raw = (parsed['voice'] ?? {}) as Record<string, unknown>
+        const voice: Voice = {
+          name: typeof raw['name'] === 'string' ? raw['name'] : base.name,
+          character: typeof raw['character'] === 'string' ? raw['character'] : base.character,
+          references: Array.isArray(raw['references'])
+            ? raw['references'].filter((item): item is string => typeof item === 'string')
+            : base.references,
+          enabled: raw['enabled'] !== false,
+          neverPrint: Array.isArray(raw['neverPrint'])
+            ? raw['neverPrint'].filter((item): item is string => typeof item === 'string')
+            : base.neverPrint,
+        }
+        writeVoice(voice)
+        respond(res, 200, { ok: true, voice })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }

@@ -9,7 +9,9 @@
  * @module @deepseek-ai/dsh-one-turn/normalise
  */
 
+import { decisionBlock, readings } from './ambiguity.ts'
 import { lessonBlock } from './lessons.ts'
+import { readVoice, voiceBlock } from './voice.ts'
 import {
   MAX_MUST_HAVE, SHAPE_CONTRACT, SUPPORTED_SHAPES,
   type IntakeAnswers, type Normalised, type OneTurnSpec, type Shape,
@@ -186,6 +188,12 @@ export function normalise(answers: IntakeAnswers): Normalised {
         ? ['testimonials, customer names, prices, dates, credentials, addresses that were not supplied']
         : (answers.neverInvent ?? []).map(clean).filter(item => item !== ''),
       lessons: lessonBlock(shape),
+      decision: (() => {
+        const all = readings(goal, shape)
+        const taken = all[0]
+        return taken === undefined ? '' : decisionBlock(taken, all.slice(1))
+      })(),
+      voice: voiceBlock(readVoice(), false),
       techLimits: clean(answers.techLimits) === ''
         ? `one file, opened directly by the person; no build step, no network at run time (${spec_shape_hint(shape)})`
         : clean(answers.techLimits),

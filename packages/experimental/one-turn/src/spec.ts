@@ -84,6 +84,10 @@ export interface OneTurnSpec {
   readonly techLimits: string
   /** What has gone wrong on this shape before, from the shelf. Empty when new. */
   readonly lessons: string
+  /** The recorded interpretation decision, so this build can be re-steered. */
+  readonly decision: string
+  /** The workshop voice, used as material rather than text. */
+  readonly voice: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */
