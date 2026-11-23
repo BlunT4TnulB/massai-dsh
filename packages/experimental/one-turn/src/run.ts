@@ -121,18 +121,32 @@ function keywordsOf(requirement: string): string[] {
     .filter(word => word.length > 2 && !REQUIREMENT_STOPWORDS.has(word))
 }
 
+/**
+ * Words that describe how something should feel rather than what it should do.
+ *
+ * "clickable", "scrolling", "prominent" are requirements written in adjective —
+ * an implementer satisfies them without printing the word. Counting them turned
+ * good builds into failures, so only the naming words are required to appear.
+ */
+function isSoftWord(word: string): boolean {
+  return /\.(ing|able|ible|ly|ive|ous|ful)$/.test(word) || word.endsWith('ing') || word.endsWith('able')
+}
+
 /** Does a requirement leave a trace in the artifact text? */
 function traces(requirement: string, haystack: string): boolean {
-  const words = keywordsOf(requirement)
-  if (words.length === 0) return false
+  const all = keywordsOf(requirement)
+  if (all.length === 0) return false
+  const hard = all.filter(word => !isSoftWord(word))
+  // Nothing nameable was asked for: the requirement can only be judged by eye.
+  if (hard.length === 0) return true
   let matched = 0
-  for (const word of words) {
+  for (const word of hard) {
     const forms = SYNONYMS[word] ?? [word]
     // Prefix match catches inflection: "certified" matches "certif".
     const stem = word.length > 5 ? word.slice(0, 5) : word
     if (forms.some(form => haystack.includes(form)) || haystack.includes(stem)) matched += 1
   }
-  return matched / words.length >= 0.5
+  return matched / hard.length >= 0.5
 }
 
 /** Static checks that need no browser and no judgement. */
@@ -241,11 +255,38 @@ function extractJson(text: string): unknown {
   const end = candidate.lastIndexOf('}')
   if (start === -1 || end <= start) throw new Error('no JSON object in reply')
   const slice = candidate.slice(start, end + 1)
-  try {
-    return JSON.parse(slice)
-  } catch {
-    return JSON.parse(repairControlChars(slice))
+  for (const attempt of [slice, repairControlChars(slice), closeUnbalanced(repairControlChars(slice))]) {
+    try {
+      return JSON.parse(attempt)
+    } catch {
+      /* try the next repair */
+    }
   }
+  throw new Error('reply is not parseable JSON, even after repair')
+}
+
+/**
+ * Close strings, arrays and objects a truncated reply left open.
+ * @param text - the JSON candidate.
+ * @returns the same text with its delimiters balanced.
+ */
+function closeUnbalanced(text: string): string {
+  let inString = false
+  let escaped = false
+  const stack: string[] = []
+  for (const char of text) {
+    if (escaped) { escaped = false; continue }
+    if (char === '\\' && inString) { escaped = true; continue }
+    if (char === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (char === '{') stack.push('}')
+    else if (char === '[') stack.push(']')
+    else if (char === '}' || char === ']') stack.pop()
+  }
+  let out = text
+  if (inString) out += '"'
+  while (stack.length > 0) out += stack.pop()
+  return out
 }
 
 /** Ask the model for files, and bound what comes back to something safe to write. */
@@ -312,8 +353,8 @@ export async function runTrial(options: {
           },
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 8000,
-        temperature: 0.3,
+        max_tokens: 12000,
+        temperature: 0.15,
       }),
     })
 

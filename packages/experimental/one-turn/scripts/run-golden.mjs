@@ -107,7 +107,8 @@ const scorecard = {
   results,
 }
 
-const out = join(root, 'golden', `results-${new Date().toISOString().slice(0, 10)}.json`)
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+const out = join(root, 'golden', `results-${stamp}.json`)
 await writeFile(out, JSON.stringify(scorecard, null, 2), 'utf8')
 
 console.log('')
