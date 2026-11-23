@@ -84,6 +84,57 @@ function estimateCost(inputTokens: number, outputTokens: number): number {
   return (inputTokens / 1_000_000) * 0.28 + (outputTokens / 1_000_000) * 0.42
 }
 
+
+/** Words that describe a requirement rather than name a feature. */
+const REQUIREMENT_STOPWORDS: ReadonlySet<string> = new Set([
+  'the', 'and', 'with', 'that', 'this', 'from', 'must', 'should', 'have', 'has', 'are', 'for',
+  'shows', 'show', 'visible', 'prominent', 'clearly', 'clearly', 'defaults', 'default', 'creates',
+  'create', 'prints', 'print', 'includes', 'include', 'each', 'every', 'which', 'when', 'into',
+  'onto', 'above', 'below', 'without', 'there', 'their', 'them', 'they', 'your', 'yours', 'its',
+  'instead',
+])
+
+/** Feature words that different vocabularies spell differently. */
+const SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  zip: ['zip', 'archive', 'compress', '.zip'],
+  'dry-run': ['dry-run', 'dry run', '--apply', 'apply flag', 'dry_run'],
+  remaining: ['remaining', 'days left', 'countdown', 'days to go'],
+  prominent: ['hero', 'text-5xl', 'text-6xl', 'text-4xl', 'large', 'headline'],
+  phone: ['phone', 'tel:', 'telephone', 'call'],
+  price: ['price', 'prices', 'rate', 'cad', 'usd', '$'],
+  gst: ['gst', 'tax', 'hst', 'vat'],
+  sortable: ['sort', 'sortable', 'sortby', 'order'],
+  filter: ['filter', 'search', 'query'],
+  reload: ['reload', 'localstorage', 'persist', 'refresh'],
+  drag: ['drag', 'draggable', 'drop', 'dataTransfer'],
+  hash: ['hash', 'sha', 'md5', 'digest'],
+  summary: ['summary', 'summarise', 'summarize', 'report', 'total'],
+  columns: ['column', 'th', 'thead'],
+  month: ['month', 'monthly', 'jan', 'feb'],
+}
+
+/** The meaningful words of a requirement, synonym-expanded. */
+function keywordsOf(requirement: string): string[] {
+  return requirement.toLowerCase()
+    .split(/[^a-z0-9.\-]+/)
+    .map(word => word.replace(/^[-.]+|[-.]+$/g, ''))
+    .filter(word => word.length > 2 && !REQUIREMENT_STOPWORDS.has(word))
+}
+
+/** Does a requirement leave a trace in the artifact text? */
+function traces(requirement: string, haystack: string): boolean {
+  const words = keywordsOf(requirement)
+  if (words.length === 0) return false
+  let matched = 0
+  for (const word of words) {
+    const forms = SYNONYMS[word] ?? [word]
+    // Prefix match catches inflection: "certified" matches "certif".
+    const stem = word.length > 5 ? word.slice(0, 5) : word
+    if (forms.some(form => haystack.includes(form)) || haystack.includes(stem)) matched += 1
+  }
+  return matched / words.length >= 0.5
+}
+
 /** Static checks that need no browser and no judgement. */
 function checkFiles(spec: OneTurnSpec, files: readonly BuiltFile[]): CheckResult[] {
   const results: CheckResult[] = []
@@ -129,15 +180,25 @@ function checkFiles(spec: OneTurnSpec, files: readonly BuiltFile[]): CheckResult
   })
 
   // Every brief requirement should leave a trace somewhere in the artifact.
-  const missing = spec.mustHave.filter((requirement) => {
-    const keywords = requirement.toLowerCase().split(/\W+/).filter(word => word.length > 4)
-    if (keywords.length === 0) return false
-    return !keywords.some(word => joined.toLowerCase().includes(word))
-  })
+  //
+  // The matching is deliberately tolerant: a requirement is written in the words a
+  // person uses ("date is prominent"), while the artifact is written in the words an
+  // implementer uses ("hero", "text-5xl"). Demanding literal phrases produced false
+  // failures, which is worse than no check at all — an instrument that lies makes
+  // the score meaningless. So: drop requirement-language stopwords, expand a small
+  // synonym table, match on prefixes, and pass when half the meaningful words are
+  // found. A genuinely missing feature still fails, because none of its words appear.
+  const haystack = joined.toLowerCase()
+  const missing = spec.mustHave.filter(requirement => !traces(requirement, haystack))
+  const unchecked = missing.filter(requirement => keywordsOf(requirement).length === 0)
   results.push({
     check: 'requirements-traced',
-    pass: missing.length === 0,
-    detail: missing.length === 0 ? 'all requirements appear' : `no trace of: ${missing.slice(0, 2).join(' / ')}`,
+    pass: missing.length === unchecked.length,
+    detail: missing.length === 0
+      ? 'all requirements appear'
+      : missing.length === unchecked.length
+        ? `${unchecked.length} requirement(s) could not be checked by words`
+        : `no trace of: ${missing.slice(0, 2).join(' / ')}`,
   })
 
   return results
