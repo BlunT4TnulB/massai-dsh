@@ -147,8 +147,10 @@ export function adminPageHtml(spend?: {
         + (c.last === 0 ? '—' : new Date(c.last).toISOString().slice(0, 16).replace('T', ' ')) + '</td></tr>'),
       '</tbody></table>'].join('\n      ')
   const creditSection = [
-    '<section><h2>Fuel · the DeepSeek balance</h2>${fuelSection(fuel)}</section>
-<section><h2>Credit · top-ups</h2>',
+    '<section><h2>Fuel · the DeepSeek balance</h2>',
+    fuelSection(fuel),
+    '</section>',
+    '<section><h2>Credit · top-ups</h2>',
     '<form method="POST" action="/api/credits/grant" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem">',
     '<input name="userId" placeholder="guest-… / user id" required style="flex:1;min-width:12rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
     '<input name="usd" placeholder="5.00" required style="width:7rem;padding:.5rem .6rem;border-radius:.4rem;border:1px solid #3a3a44;background:#101014;color:#F2F2F4">',
