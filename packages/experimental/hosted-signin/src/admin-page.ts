@@ -89,6 +89,29 @@ function fuelSection(fuel?: {
   return `<p class="ok"><b>${money}</b> available — read ${age} min ago. The free preview is running.</p>`
 }
 
+/** One line per credential that will expire and quietly break automation. */
+function credentialSection(raw: string | undefined): string {
+  if (raw === undefined || raw.trim() === '') {
+    return '<p class="empty">No credentials tracked. Set <code>DSH_CREDENTIAL_EXPIRIES</code> to a JSON array of'
+      + ' <code>{"name","expires"}</code> and this panel will count down for you.</p>'
+  }
+  try {
+    const rows = JSON.parse(raw) as Array<{ name?: string; expires?: string }>
+    const lines = rows.map((row) => {
+      const at = Date.parse(row.expires ?? '')
+      if (!Number.isFinite(at)) return `<li>${row.name ?? 'unknown'} — unreadable date</li>`
+      const days = Math.floor((at - Date.now()) / 86_400_000)
+      const when = new Date(at).toISOString().slice(0, 10)
+      if (days < 0) return `<li><b class="bad">EXPIRED</b> ${row.name ?? ''} since ${when}</li>`
+      if (days <= 7) return `<li><b class="bad">${days} days</b> — ${row.name ?? ''} expires ${when}</li>`
+      return `<li>${row.name ?? ''} — ${days} days (${when})</li>`
+    })
+    return `<ul class="creds">${lines.join('')}</ul>`
+  } catch {
+    return '<p class="warn">DSH_CREDENTIAL_EXPIRIES is not valid JSON, so nothing is being counted down.</p>'
+  }
+}
+
 export function adminPageHtml(spend?: {
   tracked: boolean
   spent: number
@@ -149,6 +172,9 @@ export function adminPageHtml(spend?: {
   const creditSection = [
     '<section><h2>Fuel · the DeepSeek balance</h2>',
     fuelSection(fuel),
+    '</section>',
+    '<section><h2>Credentials · what expires</h2>',
+    credentialSection(process.env.DSH_CREDENTIAL_EXPIRIES),
     '</section>',
     '<section><h2>Credit · top-ups</h2>',
     '<form method="POST" action="/api/credits/grant" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:0 0 .9rem">',
