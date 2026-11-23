@@ -1,0 +1,147 @@
+[
+  {
+    "id": "site-lawn-care",
+    "shape": "single-page-site",
+    "goal": "A page for my lawn care business in Edmonton, phone number and a list of services",
+    "audience": "homeowners in Edmonton",
+    "details": ["Lawn & Order YEG", "(780) 555-0142", "services: mowing 40, edging 25, leaf cleanup 70"],
+    "mustHave": ["phone number visible without scrolling", "at least three services listed"],
+    "neverInvent": ["customer reviews", "years in business"]
+  },
+  {
+    "id": "site-wedding",
+    "shape": "single-page-site",
+    "goal": "A wedding invitation page for Sarah and Tom, June 14, RSVP by email",
+    "audience": "friends and family",
+    "details": ["Sarah and Tom", "June 14", "RSVP to sarah.tom@example.org"],
+    "mustHave": ["date is prominent", "RSVP email is a working link"]
+  },
+  {
+    "id": "site-podcast",
+    "shape": "single-page-site",
+    "goal": "A one-page site for a podcast, with the 5 latest episodes and links",
+    "audience": "listeners",
+    "details": ["show: Signal & Noise", "episode links go to /episodes/1 through /episodes/5"],
+    "mustHave": ["five episodes listed", "episode links clickable"]
+  },
+  {
+    "id": "site-dogwalking",
+    "shape": "single-page-site",
+    "goal": "A pricing page for a dog-walking service, 3 tiers",
+    "audience": "dog owners",
+    "details": ["tiers: single walk 25, weekly 100, monthly 340"],
+    "mustHave": ["three tiers", "prices visible", "recommended tier marked"]
+  },
+  {
+    "id": "app-tip-calculator",
+    "shape": "single-file-app",
+    "goal": "A tip calculator that splits by people",
+    "details": ["round to cents", "people 1 to 20"],
+    "mustHave": ["splits the bill by number of people", "shows per-person total"]
+  },
+  {
+    "id": "app-countdown",
+    "shape": "single-file-app",
+    "goal": "A countdown to Christmas with a nice big number",
+    "details": ["target: December 25 of the current year"],
+    "mustHave": ["shows days remaining", "updates without reload"]
+  },
+  {
+    "id": "app-todo-persist",
+    "shape": "single-file-app",
+    "goal": "A todo list that remembers after refresh",
+    "details": ["store in localStorage"],
+    "mustHave": ["add and remove items", "items survive a reload"]
+  },
+  {
+    "id": "app-kanban",
+    "shape": "single-file-app",
+    "goal": "A kanban board with drag and drop, 3 columns",
+    "details": ["columns: todo, doing, done", "no external libraries"],
+    "mustHave": ["three columns", "cards can be dragged between columns"]
+  },
+  {
+    "id": "script-photo-rename",
+    "shape": "script",
+    "goal": "Rename every photo in a folder to the date it was taken",
+    "details": ["Python 3 standard library", "dry-run unless --apply"],
+    "mustHave": ["reads the photo date", "defaults to a dry run"]
+  },
+  {
+    "id": "script-csv-clean",
+    "shape": "script",
+    "goal": "Clean a CSV: trim spaces, drop empty rows, fix dates",
+    "details": ["Python 3 standard library", "prints a summary"],
+    "mustHave": ["trims whitespace", "drops empty rows", "prints a summary"]
+  },
+  {
+    "id": "script-duplicate-finder",
+    "shape": "script",
+    "goal": "Check a folder for duplicate files by content",
+    "details": ["hash file contents", "delete nothing by default"],
+    "mustHave": ["groups duplicates", "deletes nothing by default"]
+  },
+  {
+    "id": "script-folder-backup",
+    "shape": "script",
+    "goal": "Back up a folder to a dated zip",
+    "details": ["Python 3 standard library", "name includes the date"],
+    "mustHave": ["creates a zip", "prints the path"]
+  },
+  {
+    "id": "data-revenue-dashboard",
+    "shape": "data-view",
+    "goal": "A dashboard of this CSV: revenue by month and top 5 products",
+    "details": ["data.json contains month, product, amount", "CAD, no decimals"],
+    "mustHave": ["revenue by month", "top five products"]
+  },
+  {
+    "id": "data-sortable-table",
+    "shape": "data-view",
+    "goal": "A table I can sort and filter from this JSON",
+    "details": ["data.json contains 20 rows of people with name, city, amount"],
+    "mustHave": ["sortable columns", "filter box"]
+  },
+  {
+    "id": "data-heatmap",
+    "shape": "data-view",
+    "goal": "A heatmap calendar of these daily counts",
+    "details": ["data.json maps dates to counts"],
+    "mustHave": ["twelve months visible", "shows the count for a day"]
+  },
+  {
+    "id": "doc-resume",
+    "shape": "document",
+    "goal": "A resume from this text for a warehouse supervisor job",
+    "details": ["Warehouse Supervisor, Acme Edmonton, 2019 to 2023", "forklift certification, 2021"],
+    "mustHave": ["one page", "shows the employer and dates"]
+  },
+  {
+    "id": "doc-invoice",
+    "shape": "document",
+    "goal": "An invoice template with my logo and tax line",
+    "details": ["business: Cedar Works", "GST 5%"],
+    "mustHave": ["line items with totals", "GST line"]
+  },
+  {
+    "id": "doc-readme",
+    "shape": "document",
+    "goal": "A README for this project based on the files",
+    "details": ["the project is a single-page site with index.html"],
+    "mustHave": ["says how to run it"]
+  },
+  {
+    "id": "doc-fiber-tubing",
+    "shape": "document",
+    "goal": "A parts list and cutting plan for my fiber tubing frame",
+    "details": ["12mm OD carbon fiber tube, 8mm ID", "3m lengths, qty 6", "aluminium ferrules, 12mm, qty 12", "frame is 1.2m x 0.8m x 0.6m"],
+    "mustHave": ["cut list with a length per piece", "total tube required", "assembly order"],
+    "neverInvent": ["supplier names", "prices", "load ratings"]
+  },
+  {
+    "id": "adv-uber",
+    "shape": "single-page-site",
+    "goal": "Build me an app like Uber",
+    "expectRefusal": true
+  }
+]
