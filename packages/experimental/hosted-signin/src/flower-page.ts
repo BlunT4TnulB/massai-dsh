@@ -28,121 +28,90 @@ const canvas = document.getElementById('flower');
 const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const params = new URLSearchParams(location.search);
+const EMBEDDED = params.get('embed') === '1';
+const SHAPE = (params.get('shape') || 'galaxy').toLowerCase();
 
-// --- shapes ---------------------------------------------------------------
-// Four bodies, one presence. The two candidates under review are the buckyball
-// and the 3-fold icosahedron; the flower is what it came from.
-//   ?shape=bucky | threefold | icosa | dodeca | flower
-const SHAPE = (new URLSearchParams(location.search).get('shape') || 'bucky').toLowerCase();
+// --- the galaxy -----------------------------------------------------------
+// A fixed, symmetrical sphere of interlocking circles. The circles come from the
+// icosahedron's own symmetry: six axes through opposite vertices, fifteen through
+// opposite edges, ten through opposite faces. Thirty-one circles, and every pair
+// of them crosses twice — hundreds of intersections, all rooted in the same
+// geometry as the nineteen circles of the mark.
 const PHI = (1 + Math.sqrt(5)) / 2;
-
 const norm = function (v) {
   const r = Math.hypot(v[0], v[1], v[2]) || 1;
   return [v[0] / r, v[1] / r, v[2] / r];
 };
-const lerp3 = function (a, b, t) {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const cross = function (a, b) {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 };
-const dist3 = function (a, b) {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-};
-const dedupe = function (list) {
-  const out = [];
-  for (const v of list) {
-    if (!out.some(function (q) { return dist3(q, v) < 1e-6; })) out.push(v);
-  }
-  return out;
-};
-const edgesOf = function (vertices) {
-  let shortest = Infinity;
-  for (let i = 0; i < vertices.length; i += 1) {
-    for (let j = i + 1; j < vertices.length; j += 1) {
-      const d = dist3(vertices[i], vertices[j]);
-      if (d < shortest) shortest = d;
-    }
-  }
-  const out = [];
-  for (let i = 0; i < vertices.length; i += 1) {
-    for (let j = i + 1; j < vertices.length; j += 1) {
-      if (dist3(vertices[i], vertices[j]) < shortest * 1.12) out.push([vertices[i], vertices[j]]);
-    }
-  }
-  return out;
-};
-const trianglesOf = function (vertices) {
-  let shortest = Infinity;
-  for (let i = 0; i < vertices.length; i += 1) {
-    for (let j = i + 1; j < vertices.length; j += 1) {
-      const d = dist3(vertices[i], vertices[j]);
-      if (d < shortest) shortest = d;
-    }
-  }
-  const near = function (a, b) { return dist3(a, b) < shortest * 1.12; };
-  const out = [];
-  for (let i = 0; i < vertices.length; i += 1) {
-    for (let j = i + 1; j < vertices.length; j += 1) {
-      for (let k = j + 1; k < vertices.length; k += 1) {
-        if (near(vertices[i], vertices[j]) && near(vertices[j], vertices[k]) && near(vertices[i], vertices[k])) {
-          out.push([vertices[i], vertices[j], vertices[k]]);
-        }
-      }
-    }
-  }
-  return out;
-};
+const dot = function (a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; };
 
 const ICOSA = [
   [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
   [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
   [PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, 1], [-PHI, 0, -1],
 ].map(norm);
-const DODECA = [
-  [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
-  [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
-  [0, 1 / PHI, PHI], [0, 1 / PHI, -PHI], [0, -1 / PHI, PHI], [0, -1 / PHI, -PHI],
-  [1 / PHI, PHI, 0], [1 / PHI, -PHI, 0], [-1 / PHI, PHI, 0], [-1 / PHI, -PHI, 0],
-  [PHI, 0, 1 / PHI], [PHI, 0, -1 / PHI], [-PHI, 0, 1 / PHI], [-PHI, 0, -1 / PHI],
-].map(norm);
 
-const ICO_EDGES = edgesOf(ICOSA);
-const ICO_FACES = trianglesOf(ICOSA);
+const axes = [];
+const addAxis = function (v) {
+  const n = norm(v);
+  if (!axes.some(function (a) { return Math.abs(dot(a, n)) > 0.9999; })) axes.push(n);
+};
+// six through the vertices
+for (const v of ICOSA) addAxis(v);
+// fifteen through the edges
+for (let i = 0; i < ICOSA.length; i += 1) {
+  for (let j = i + 1; j < ICOSA.length; j += 1) {
+    const d = Math.hypot(ICOSA[i][0] - ICOSA[j][0], ICOSA[i][1] - ICOSA[j][1], ICOSA[i][2] - ICOSA[j][2]);
+    if (d < 1.2) addAxis([ICOSA[i][0] + ICOSA[j][0], ICOSA[i][1] + ICOSA[j][1], ICOSA[i][2] + ICOSA[j][2]]);
+  }
+}
+// ten through the faces
+for (let i = 0; i < ICOSA.length; i += 1) {
+  for (let j = i + 1; j < ICOSA.length; j += 1) {
+    for (let k = j + 1; k < ICOSA.length; k += 1) {
+      const near = function (a, b) {
+        return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1.2;
+      };
+      if (near(ICOSA[i], ICOSA[j]) && near(ICOSA[j], ICOSA[k]) && near(ICOSA[i], ICOSA[k])) {
+        addAxis([
+          ICOSA[i][0] + ICOSA[j][0] + ICOSA[k][0],
+          ICOSA[i][1] + ICOSA[j][1] + ICOSA[k][1],
+          ICOSA[i][2] + ICOSA[j][2] + ICOSA[k][2],
+        ]);
+      }
+    }
+  }
+}
 
-// The buckyball: truncate every corner of the icosahedron. Two points one third
-// along each edge give sixty vertices, ninety edges, twelve pentagons and twenty
-// hexagons — the most reference points of anything here.
-const BUCKY = dedupe(ICO_EDGES.flatMap(function (edge) {
-  return [norm(lerp3(edge[0], edge[1], 1 / 3)), norm(lerp3(edge[0], edge[1], 2 / 3))];
-}));
-const BUCKY_PENTA = ICOSA.map(norm);
-const BUCKY_HEXA = ICO_EDGES.map(function (edge) {
-  return norm(lerp3(edge[0], edge[1], 0.5));
-});
-const BUCKY_PANELS = BUCKY_PENTA.concat(BUCKY_HEXA);
+// Every intersection, deduplicated on a small grid: this is the galaxy's matter.
+const nodes = [];
+const seen = new Set();
+const keyOf = function (v) {
+  return Math.round(v[0] * 200) + ',' + Math.round(v[1] * 200) + ',' + Math.round(v[2] * 200);
+};
+for (let i = 0; i < axes.length; i += 1) {
+  for (let j = i + 1; j < axes.length; j += 1) {
+    const line = cross(axes[i], axes[j]);
+    if (Math.hypot(line[0], line[1], line[2]) < 1e-6) continue;
+    for (const sign of [1, -1]) {
+      const p = norm([line[0] * sign, line[1] * sign, line[2] * sign]);
+      const key = keyOf(p);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      nodes.push(p);
+    }
+  }
+}
 
-// The 3-fold icosahedron: every face split into three around its centre. Thirty
-// two vertices, ninety edges, sixty triangular panels — threefold symmetry.
-const THREEFOLD = dedupe(ICOSA.concat(ICO_FACES.map(function (face) {
-  return norm([
-    (face[0][0] + face[1][0] + face[2][0]) / 3,
-    (face[0][1] + face[1][1] + face[2][1]) / 3,
-    (face[0][2] + face[1][2] + face[2][2]) / 3,
-  ]);
-})));
-const THREEFOLD_PANELS = ICO_FACES.map(function (face) {
-  return norm([
-    (face[0][0] + face[1][0] + face[2][0]) / 3,
-    (face[0][1] + face[1][1] + face[2][1]) / 3,
-    (face[0][2] + face[1][2] + face[2][2]) / 3,
-  ]);
-});
-
-// The flower, wrapped onto the sphere: nineteen circles carried from the flat
-// mark onto the surface. This is the transform — the logo becomes the skin.
-function flowerWrap(radius, circles) {
+// The nineteen circles of the mark, carried onto the sphere: the root of it.
+function flowerPaths() {
   const out = [];
-  const centres = [];
   const A = [1, 0];
   const B = [0.5, Math.sqrt(3) / 2];
+  const centres = [];
   for (let i = -2; i <= 2; i += 1) {
     for (let j = -2; j <= 2; j += 1) {
       const x = i * A[0] + j * B[0];
@@ -150,80 +119,45 @@ function flowerWrap(radius, circles) {
       if (Math.hypot(x, y) <= 2 + 1e-6) centres.push([x, y]);
     }
   }
-  const scale = radius / 2.0;
+  const scale = 1 / 2.0;
   for (const c of centres) {
     for (const hemis of [1, -1]) {
       const line = [];
-      for (let t = 0; t <= circles * 2; t += 1) {
-        const angle = (t / (circles * 2)) * Math.PI * 2;
+      for (let t = 0; t <= 28; t += 1) {
+        const angle = (t / 28) * Math.PI * 2;
         const px = (c[0] + Math.cos(angle)) * scale;
         const py = (c[1] + Math.sin(angle)) * scale;
         const rr = Math.hypot(px, py);
-        if (rr > radius) { line.push(null); continue; }
-        line.push([px, py, hemis * Math.sqrt(Math.max(0, radius * radius - rr * rr))]);
+        if (rr > 0.995) { line.push(null); continue; }
+        line.push([px, py, hemis * Math.sqrt(Math.max(0, 1 - rr * rr))]);
       }
       out.push(line);
     }
   }
   return out;
 }
-
-const BODY = SHAPE === 'icosa'
-  ? { name: 'icosahedron', vertices: ICOSA, radius: 1, panels: [] }
-  : SHAPE === 'dodeca'
-    ? { name: 'dodecahedron', vertices: DODECA, radius: 1, panels: [] }
-    : SHAPE === 'threefold'
-      ? { name: '3-fold icosahedron', vertices: THREEFOLD, radius: 1, panels: THREEFOLD_PANELS }
-      : SHAPE === 'flower'
-        ? {
-            name: 'flower ball',
-            vertices: flowerWrap(1, 8).flat().filter(Boolean).map(norm),
-            radius: 1,
-            panels: [],
-          }
-        : { name: 'buckyball', vertices: BUCKY, radius: 1, panels: BUCKY_PANELS };
-const VERTICES = BODY.vertices;
-const EDGES = edgesOf(VERTICES);
-const FLOWER_SKIN = flowerWrap(BODY.radius * 0.995, 6);
-
-// Centring: one fit against the body's own radius, and the exact middle of the
-// viewport. Every body occupies the same share of the smaller dimension.
-const EMBEDDED = new URLSearchParams(location.search).get('embed') === '1';
-const FIT = EMBEDDED ? 0.46 : 0.37;
-
-const DOOR_NAMES = ['Talk', 'Projects', 'Library', 'You', 'Limits', 'Tip jar', 'Help'];
-const doors = DOOR_NAMES.map(function (label, index) {
-  const v = VERTICES[index % VERTICES.length];
-  return { x: v[0], y: v[1], z: v[2], label: label };
-});
-const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
-const skillPoints = VERTICES.slice(7, 15);
+const FLOWER = flowerPaths();
 
 const GOLD = '247,205,140';
 const GREEN = '126,226,168';
 const BLUE = '158,203,255';
-const SKILL_COLOR = {
-  geometry: GREEN, dashboard: BLUE, 'web-app': GOLD, scripting: '217,130,43',
-  testing: '200,160,255', docs: '180,190,200', scanner: '150,220,220',
-  service: '240,180,140', general: GOLD,
-};
-// Idle movement, thirty percent quicker than it was. Still slow enough to breathe.
+const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
 const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
+const FIT = EMBEDDED ? 0.50 : 0.40;
 
 const spriteCache = new Map();
-function sphereSprite(tint) {
+function glowSprite(tint) {
   if (spriteCache.has(tint)) return spriteCache.get(tint);
-  const size = 128;
+  const size = 64;
   const c = document.createElement('canvas');
   c.width = size;
   c.height = size;
   const g = c.getContext('2d');
-  const grad = g.createRadialGradient(size * 0.42, size * 0.38, 0, size / 2, size / 2, size / 2);
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
   grad.addColorStop(0, 'rgba(255,250,240,0.95)');
-  grad.addColorStop(0.18, 'rgba(' + tint + ',0.72)');
-  grad.addColorStop(0.55, 'rgba(' + tint + ',0.20)');
+  grad.addColorStop(0.25, 'rgba(' + tint + ',0.55)');
   grad.addColorStop(1, 'rgba(' + tint + ',0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, size, size);
@@ -231,8 +165,8 @@ function sphereSprite(tint) {
   return c;
 }
 
-let yaw = 0.35;
-let pitch = -0.42;
+let yaw = 0.4;
+let pitch = -0.35;
 let roll = 0;
 let velYaw = 0;
 let velPitch = 0;
@@ -240,7 +174,6 @@ let velRoll = 0;
 let zoom = 1;
 let dragging = false;
 let dragMode = 'turn';
-let hovered = -1;
 let last = performance.now();
 let bloom = 0;
 let breath = 0;
@@ -261,14 +194,14 @@ const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
 const dust = [];
-for (let i = 0; i < 90; i += 1) {
+for (let i = 0; i < 70; i += 1) {
   const a = Math.random() * Math.PI * 2;
   const b = Math.acos(2 * Math.random() - 1);
-  const r = 1.4 + Math.random() * 2.2;
-  dust.push({ x: Math.sin(b) * Math.cos(a) * r, y: Math.sin(b) * Math.sin(a) * r, z: Math.cos(b) * r, s: 0.4 + Math.random() * 0.8 });
+  const r = 1.3 + Math.random() * 2.0;
+  dust.push({ x: Math.sin(b) * Math.cos(a) * r, y: Math.sin(b) * Math.sin(a) * r, z: Math.cos(b) * r, s: 0.4 + Math.random() * 0.7 });
 }
 
-const DPR = Math.min(innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1);
+const DPR = Math.min((EMBEDDED || innerWidth < 700) ? 1.4 : 2, window.devicePixelRatio || 1);
 function resize() {
   canvas.width = Math.floor(innerWidth * DPR);
   canvas.height = Math.floor(innerHeight * DPR);
@@ -295,30 +228,23 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  const scale = zoom * Math.min(innerWidth, innerHeight) * (FIT / BODY.radius);
+  const scale = zoom * Math.min(innerWidth, innerHeight) * FIT;
   const k = distance / (distance + z3);
-  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight / 2 + y3 * scale * k, k: k, depth: z3 };
+  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight / 2 + y3 * scale * k, k: k, depth: z3, z: z3 };
 }
 
-function drawSprite(tint, x, y, radius, alpha) {
-  const sprite = sphereSprite(tint);
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-  ctx.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2);
-  ctx.globalAlpha = 1;
-}
-
-function heatAt(x, y, z, now) {
-  let heat = 0;
+function heat(now, x, y, z) {
+  let value = 0;
   if (focus !== null) {
     const d = Math.hypot(x - focus.x, y - focus.y, z - focus.z);
-    heat += Math.max(0, 1 - d / 1.1) * bloom;
+    value += Math.max(0, 1 - d / 1.2) * bloom;
   }
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 0.9;
+    const radius = ((now - ripple.t0) / 1000) * 1.1;
     const band = Math.abs(Math.hypot(x, y, z) - radius);
-    if (band < 0.12) heat += (1 - band / 0.12) * ripple.strength * Math.max(0, 1 - radius / 2.4);
+    if (band < 0.14) value += (1 - band / 0.14) * ripple.strength * Math.max(0, 1 - radius / 2.6);
   }
-  return heat;
+  return value;
 }
 
 function drawHalo(now) {
@@ -329,9 +255,9 @@ function drawHalo(now) {
   life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
   g.addColorStop(0, 'rgba(' + Math.round(58 * self.memory) + ',' + Math.round(34 * self.memory) + ','
-    + Math.round(16 + 24 * (1 - self.memory)) + ',' + (0.52 * life + 0.10 * breath + 0.20 * bloom).toFixed(3) + ')');
-  g.addColorStop(0.35, 'rgba(20,15,12,' + (0.88 + 0.05 * breath).toFixed(3) + ')');
-  g.addColorStop(0.78, 'rgba(11,11,13,0.98)');
+    + Math.round(16 + 24 * (1 - self.memory)) + ',' + (0.55 * life + 0.10 * breath + 0.18 * bloom).toFixed(3) + ')');
+  g.addColorStop(0.38, 'rgba(20,15,12,' + (0.88 + 0.05 * breath).toFixed(3) + ')');
+  g.addColorStop(0.8, 'rgba(11,11,13,0.98)');
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -339,183 +265,154 @@ function drawHalo(now) {
     const p = project(mote.x, mote.y, mote.z);
     ctx.beginPath();
     ctx.arc(p.x, p.y, DPR * mote.s * p.k, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.15 * (p.k - 0.5)).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.14 * (p.k - 0.5)).toFixed(3) + ')';
     ctx.fill();
   }
 }
 
-function drawFlowerSkin() {
-  // The transform: the flat flower carried onto the surface, both hemispheres.
-  ctx.lineWidth = DPR * 0.55;
-  for (const line of FLOWER_SKIN) {
+/** Sample one great circle perpendicular to an axis. */
+function circlePath(axis, steps) {
+  const helper = Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const u = norm(cross(axis, helper));
+  const v = cross(axis, u);
+  const out = [];
+  for (let t = 0; t < steps; t += 1) {
+    const angle = (t / steps) * Math.PI * 2;
+    out.push([
+      u[0] * Math.cos(angle) + v[0] * Math.sin(angle),
+      u[1] * Math.cos(angle) + v[1] * Math.sin(angle),
+      u[2] * Math.cos(angle) + v[2] * Math.sin(angle),
+    ]);
+  }
+  return out;
+}
+const GREAT = axes.map(function (axis) { return circlePath(axis, EMBEDDED || innerWidth < 700 ? 56 : 84); });
+
+function strokeCircle(points, now, front) {
+  ctx.beginPath();
+  let started = false;
+  for (const point of points) {
+    const p = project(point[0], point[1], point[2]);
+    if ((p.z > 0) !== front) { started = false; continue; }
+    if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+    else ctx.lineTo(p.x, p.y);
+  }
+  const base = front ? 0.30 : 0.10;
+  ctx.strokeStyle = 'rgba(' + GOLD + ',' + (base * life + 0.04 * breath).toFixed(3) + ')';
+  ctx.lineWidth = DPR * (front ? 0.9 : 0.6);
+  ctx.stroke();
+  void now;
+}
+
+function drawGalaxy(now) {
+  // back hemisphere first, then the nodes, then the front: depth without sorting
+  // thousands of segments.
+  for (const points of GREAT) strokeCircle(points, now, false);
+  for (const line of FLOWER) {
     ctx.beginPath();
     let started = false;
     for (const point of line) {
       if (point === null) { started = false; continue; }
       const p = project(point[0], point[1], point[2]);
+      if (p.z > 0) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
     }
-    ctx.strokeStyle = 'rgba(247,205,140,' + (0.07 + 0.04 * breath).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(255,236,205,' + (0.05 * life + 0.02 * breath).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.7;
     ctx.stroke();
   }
-}
 
-function drawPanels(now) {
-  for (const panel of BODY.panels) {
-    const p = project(panel[0], panel[1], panel[2]);
-    const near = Math.max(0, Math.min(1, (p.k - 0.62) / 0.5));
-    const radius = DPR * 1.8 * p.k;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.10 + 0.24 * near + 0.03 * breath).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.9;
-    ctx.stroke();
-  }
-  void now;
-}
-
-function drawEdges(now) {
-  const drawn = EDGES.map(function (edge) {
-    const a = project(edge[0][0], edge[0][1], edge[0][2]);
-    const b = project(edge[1][0], edge[1][1], edge[1][2]);
-    return { a: a, b: b, near: (a.k + b.k) / 2 };
-  }).sort(function (p, q) { return p.near - q.near; });
-  for (const edge of drawn) {
-    const heat = (heatAt(edge.a.x, edge.a.y, 0, now) + heatAt(edge.b.x, edge.b.y, 0, now)) / 2;
-    const glow = Math.max(0, Math.min(1, (edge.near - 0.62) / 0.5));
-    const weight = (0.10 + self.wisdom * 0.06) + glow * 0.30 + heat * 0.40;
-    ctx.beginPath();
-    ctx.moveTo(edge.a.x, edge.a.y);
-    ctx.lineTo(edge.b.x, edge.b.y);
-    // outer pass first: a wide, faint stroke is the cheapest glow there is
-    ctx.strokeStyle = 'rgba(217,130,43,' + (weight * 0.45).toFixed(3) + ')';
-    ctx.lineWidth = DPR * (3.2 + 2.4 * glow);
-    ctx.stroke();
-    // inner pass: the filament itself
-    ctx.beginPath();
-    ctx.moveTo(edge.a.x, edge.a.y);
-    ctx.lineTo(edge.b.x, edge.b.y);
-    ctx.strokeStyle = 'rgba(247,205,140,' + weight.toFixed(3) + ')';
-    ctx.lineWidth = DPR * (0.9 + 1.2 * glow);
-    ctx.stroke();
-  }
-}
-
-function drawVertices(now) {
-  const ordered = VERTICES.map(function (v) {
-    const p = project(v[0], v[1], v[2]);
-    return { v: v, p: p, depth: p.depth };
-  }).sort(function (a, b) { return a.depth - b.depth; });
+  // the matter: every intersection, dimmed by depth, warmed by work
+  const ordered = nodes.map(function (n) {
+    const p = project(n[0], n[1], n[2]);
+    return { n: n, p: p };
+  }).sort(function (a, b) { return a.p.depth - b.p.depth; });
   for (const entry of ordered) {
-    const heat = heatAt(entry.v[0], entry.v[1], entry.v[2], now);
-    const isDoor = doors.some(function (d) {
-      return Math.abs(d.x - entry.v[0]) < 1e-9 && Math.abs(d.y - entry.v[1]) < 1e-9 && Math.abs(d.z - entry.v[2]) < 1e-9;
-    });
-    const tint = heat > 0.06 ? GREEN : GOLD;
-    const base = Math.min(innerWidth, innerHeight) * 0.038 * (FIT / BODY.radius) * (isDoor ? 1.6 : 1);
-    const radius = base * entry.p.k * (1 + heat * 0.20);
-    const depthFade = 0.45 + 0.55 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
-    // a soft halo behind every vertex: the omnipresence comes from overlap
-    drawSprite(tint, entry.p.x, entry.p.y, radius * 2.6, (depthFade * 0.22 + heat * 0.2) * life);
-    drawSprite(tint, entry.p.x, entry.p.y, radius, (depthFade + heat * 0.4) * life);
+    const p = entry.p;
+    if (p.z < -0.55) continue;
+    const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
+    const hot = heat(now, entry.n[0], entry.n[1], entry.n[2]);
+    const sprite = glowSprite(hot > 0.1 ? GREEN : GOLD);
+    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4);
+    ctx.globalAlpha = Math.min(1, (0.10 + 0.5 * near) * life + hot * 0.4);
+    ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+    ctx.globalAlpha = 1;
   }
-}
 
-function drawCentres(now) {
-  ctx.lineWidth = DPR * 0.45;
-  for (const v of VERTICES) {
-    const a = project(0, 0, 0);
-    const b = project(v[0], v[1], v[2]);
+  for (const points of GREAT) strokeCircle(points, now, true);
+  for (const line of FLOWER) {
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.025 + 0.06 * Math.max(0, b.k - 0.62) + 0.02 * breath).toFixed(3) + ')';
+    let started = false;
+    for (const point of line) {
+      if (point === null) { started = false; continue; }
+      const p = project(point[0], point[1], point[2]);
+      if (p.z <= 0) { started = false; continue; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = 'rgba(255,240,215,' + (0.16 * life + 0.03 * breath).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.8;
     ctx.stroke();
   }
-  void now;
 }
 
 function drawTrail(now) {
   if (trail.length === 0) return;
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
-  const base = Math.min(innerWidth, innerHeight) * (FIT / BODY.radius) * 1.55;
+  const base = Math.min(innerWidth, innerHeight) * FIT * 1.45;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);
     const freshness = Math.max(0.06, 1 - age / 600000);
     const turn = index / 40;
     const angle = -Math.PI / 2 + (turn % 1) * Math.PI * 2;
-    const radius = base * (0.70 + 0.05 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
-    drawSprite(SKILL_COLOR[event.skill] || GOLD,
-      cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
-      DPR * (2.0 + 2.6 * freshness) * (0.9 + 0.2 * self.works), (0.07 + 0.4 * freshness) * life);
+    const radius = base * (0.72 + 0.05 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
+    const colour = event.skill === 'geometry' ? GREEN : event.skill === 'dashboard' ? BLUE : GOLD;
+    drawGlow(colour, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, DPR * (1.8 + 2.2 * freshness), (0.06 + 0.35 * freshness) * life);
   });
+}
+
+function drawGlow(tint, x, y, radius, alpha) {
+  const sprite = glowSprite(tint);
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2);
+  ctx.globalAlpha = 1;
 }
 
 function drawAgents() {
   agents.forEach(function (agent, index) {
     const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.45;
-    const orbit = BODY.radius * 1.22;
-    const p = project(Math.cos(angle) * orbit, Math.sin(angle) * orbit, Math.sin(yaw + index) * 0.4);
-    drawSprite(GOLD, p.x, p.y, DPR * (6 + Math.min(6, agent.steps * 0.6)), 0.32);
-    const mine = trail.filter(function (step) {
-      return step.agent === undefined || step.agent === agent.id;
-    }).slice(-8);
-    mine.forEach(function (step, i) {
-      const hop = (i + 1) * 0.13;
-      const q = project(Math.cos(angle) * (orbit + hop), Math.sin(angle) * (orbit + hop), 0);
-      drawSprite(SKILL_COLOR[step.skill] || GOLD, q.x, q.y, DPR * 1.9, 0.45);
-    });
-  });
-}
-
-function drawDoors() {
-  doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, door.z);
-    const active = index === hovered;
-    const radius = DPR * (active ? 9 : 6) * (0.85 + 0.5 * (p.k - 0.6));
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = active ? 'rgba(255,238,205,0.92)' : 'rgba(239,220,164,0.36)';
-    ctx.shadowColor = 'rgba(217,130,43,0.85)';
-    ctx.shadowBlur = DPR * (active ? 18 : 9);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    if (active || zoom > 1.15) {
-      ctx.font = (DPR * 11).toFixed(0) + 'px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = active ? 'rgba(255,240,215,0.95)' : 'rgba(220,210,190,0.6)';
-      ctx.fillText(door.label, p.x, p.y - radius - DPR * 7);
-    }
+    const p = project(Math.cos(angle) * 1.25, Math.sin(angle) * 1.25, Math.sin(yaw + index) * 0.4);
+    drawGlow(GOLD, p.x, p.y, DPR * (5 + Math.min(5, agent.steps * 0.5)), 0.30);
   });
 }
 
 function drawRipples(now) {
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 0.9;
-    const left = Math.max(0, 1 - radius / 2.4);
+    const radius = ((now - ripple.t0) / 1000) * 1.1;
+    const left = Math.max(0, 1 - radius / 2.6);
     if (left <= 0) continue;
     ctx.beginPath();
-    for (let t = 0; t <= 128; t += 1) {
-      const angle = (t / 128) * Math.PI * 2;
+    for (let t = 0; t <= 96; t += 1) {
+      const angle = (t / 96) * Math.PI * 2;
       const p = project(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
       if (t === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     }
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(126,226,168,' + (left * 0.16).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 1.1;
+    ctx.strokeStyle = 'rgba(' + GREEN + ',' + (left * 0.18).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 1.2;
     ctx.stroke();
   }
-  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 0.9 < 2.4; });
+  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.1 < 2.6; });
 }
 
 function drawMood() {
   const hour = new Date().getHours();
   const dayness = Math.max(0, Math.cos(((hour - 13) / 24) * Math.PI * 2));
   ctx.fillStyle = 'rgba(' + Math.round(60 + 30 * dayness) + ',' + Math.round(34 + 40 * dayness) + ','
-    + Math.round(90 - 40 * dayness) + ',' + (0.05 + 0.03 * dayness).toFixed(3) + ')';
+    + Math.round(90 - 40 * dayness) + ',' + (0.04 + 0.03 * dayness).toFixed(3) + ')';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -528,7 +425,6 @@ function frame(now) {
   }
   const live = focus !== null && now < focusUntil;
   bloom += ((live ? 1 : 0) - bloom) * 0.035;
-
   const spinning = Math.abs(velYaw) + Math.abs(velPitch) + Math.abs(velRoll) > 0.00008;
   if (!dragging && spinning) {
     yaw += velYaw * dt;
@@ -552,63 +448,44 @@ function frame(now) {
       roll += (0 - roll) * 0.01;
     }
   }
-
   drawHalo(now);
-  drawFlowerSkin();
-  drawPanels(now);
-  drawCentres(now);
-  drawEdges(now);
   drawTrail(now);
-  drawVertices(now);
+  drawGalaxy(now);
   drawAgents();
-  drawDoors();
   drawRipples(now);
   drawMood();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-// --- simulation: a slider that ramps the intelligence levels ---------------
+// --- simulation -----------------------------------------------------------
 function applyLevel(level) {
   simLevel = level;
   const nameEl = document.getElementById('levelName');
   if (nameEl) nameEl.textContent = LEVELS[level] || '';
-  if (level === 0) {
-    trail = [];
-    agents = [];
-    focus = null;
-    simulated = true;
-    return;
-  }
+  if (level === 0) { focus = null; simulated = true; return; }
   const now = Date.now();
-  const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs', 'scanner', 'service'];
   const count = level * 6;
   trail = [];
   for (let i = 0; i < count; i += 1) {
-    trail.push({
-      skill: pool[(i * (level + 1)) % pool.length],
-      at: now - (count - i) * (9000 / level),
-      agent: 'sim-' + (i % Math.min(6, level)),
-    });
+    trail.push({ skill: SKILL_ORDER[(i * (level + 1)) % SKILL_ORDER.length], at: now - (count - i) * (9000 / level) });
   }
   agents = [];
-  for (let a = 0; a < Math.min(6, level); a += 1) {
-    agents.push({ id: 'sim-' + a, steps: 2 + a * 2, lastSkill: pool[a % pool.length] });
-  }
-  const point = skillPoints[level % skillPoints.length];
-  focus = { x: point[0], y: point[1], z: point[2], label: 'simulated level ' + level + ' — ' + (LEVELS[level] || '') };
+  for (let a = 0; a < Math.min(6, level); a += 1) agents.push({ id: 'sim-' + a, steps: 2 + a * 2 });
+  const target = nodes[(level * 97) % nodes.length];
+  focus = { x: target[0], y: target[1], z: target[2] };
   focusUntil = performance.now() + 600000;
   ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
-  if (counter) counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length + ' edges';
+  if (counter) counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles';
 }
 const slider = document.getElementById('level');
 if (slider) {
   slider.addEventListener('input', function () { applyLevel(Number(slider.value)); });
   applyLevel(Number(slider.value));
 }
+if (counter) counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles';
 
-// --- live data -------------------------------------------------------------
 async function poll() {
   try {
     const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
@@ -619,24 +496,16 @@ async function poll() {
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
-    if (counter) counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length
-      + ' edges' + (trailTotal > 0 ? ' · ' + trailTotal + ' actions' : '');
     const badge = document.getElementById('simulated');
-    if (badge) badge.style.opacity = simulated ? '0.75' : '0';
+    if (badge) badge.style.opacity = simulated ? '0.7' : '0';
     const hot = data.focus;
-    if (!hot) {
-      const settled = document.getElementById('settled');
-      if (settled) settled.textContent = trail.length > 0 ? 'session settled' : '';
-      return;
-    }
-    const index = SKILL_ORDER.indexOf(hot.skill);
-    const point = index >= 0 ? skillPoints[index % skillPoints.length] : null;
-    if (!point) return;
-    focus = { x: point[0], y: point[1], z: point[2], label: hot.label };
+    if (!hot) return;
+    const target = nodes[Math.abs(SKILL_ORDER.indexOf(hot.skill) + 3) % nodes.length];
+    focus = { x: target[0], y: target[1], z: target[2] };
     focusUntil = performance.now() + 25000;
     ripples.push({ t0: performance.now(), strength: 1 });
     if (caption) { caption.textContent = hot.label; caption.style.opacity = '1'; }
-  } catch { /* a live view that fails is still a flower */ }
+  } catch { /* a live view that fails is still a galaxy */ }
 }
 poll();
 setInterval(poll, 2500);
@@ -675,7 +544,7 @@ async function pollVitals() {
 pollVitals();
 setInterval(pollVitals, 15000);
 
-// --- interaction -----------------------------------------------------------
+// --- interaction ----------------------------------------------------------
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
@@ -690,17 +559,7 @@ canvas.addEventListener('pointermove', function (event) {
     lookX += ((event.clientX / innerWidth - 0.5) * 0.16 - lookX) * 0.06;
     lookY += ((event.clientY / innerHeight - 0.5) * 0.11 - lookY) * 0.06;
   }
-  if (!dragging) {
-    let best = -1;
-    let bestDistance = 30 * DPR;
-    doors.forEach(function (door, index) {
-      const p = project(door.x, door.y, door.z);
-      const distance = Math.hypot(p.x - event.clientX * DPR, p.y - event.clientY * DPR);
-      if (distance < bestDistance) { bestDistance = distance; best = index; }
-    });
-    hovered = best;
-    return;
-  }
+  if (!dragging) return;
   const parts = (canvas.dataset.drag || '0,0').split(',');
   const dx = event.clientX - Number(parts[0]);
   const dy = event.clientY - Number(parts[1]);
@@ -723,7 +582,7 @@ canvas.addEventListener('pointerup', function () {
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
-  zoom = Math.max(0.6, Math.min(2.2, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.55, Math.min(2.4, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;
@@ -732,9 +591,10 @@ addEventListener('keydown', function (event) {
   if (event.key === 'ArrowDown') pitch = Math.min(1.5, pitch + 0.07);
   if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
-  if (event.key === 'r' || event.key === 'R') { yaw = 0.35; pitch = -0.42; roll = 0; }
+  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; }
 });
 setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 8000);
+void SHAPE;
 `
 
 /**
@@ -802,13 +662,13 @@ export function flowerPageHtml(embed = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn it · <b>shift-drag</b> (or right-drag) to roll · <b>scroll</b> closer · throw it and it keeps spinning</p>
+<p class="hint" id="hint"><b>drag</b> to travel around it · <b>shift-drag</b> to roll · <b>scroll</b> closer · let go and it goes on without you</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">
     <span id="levelName">dormant</span>
   </div>
-  <span class="shapes"><a href="/flower?shape=bucky">buckyball</a> · <a href="/flower?shape=threefold">3-fold icosahedron</a> · <a href="/flower?shape=flower">flower</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
+  <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
 </body></html>`
 }

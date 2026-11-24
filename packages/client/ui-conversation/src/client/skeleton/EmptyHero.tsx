@@ -210,13 +210,28 @@ function SanctumStage({ size }: { size: number }) {
 }
 
 /**
- * How large the stage may be: most of the smaller viewport axis, capped so the
- * headline and composer still breathe.
+ * How large the stage may be.
+ *
+ * On a phone the width is the binding axis, so the stage takes most of it — the
+ * point of the stage is that it dominates the blank state, and a 96 pixel logo
+ * does not. On a desktop the smaller axis is height once the composer is on
+ * screen, so it is capped there.
  * @returns the edge length in pixels.
  */
 function stageSize(): number {
-  const smaller = Math.min(window.innerWidth, window.innerHeight)
-  return Math.max(320, Math.min(640, Math.round(smaller * 0.66)))
+  const width = window.innerWidth
+  const height = window.innerHeight
+  const phone = width < 900
+  const edge = phone ? Math.min(width * 0.88, height * 0.5) : Math.min(width, height) * 0.66
+  return Math.max(260, Math.min(640, Math.round(edge)))
+}
+
+/**
+ * Whether to mount the live stage at all.
+ * @returns true when the viewport can carry the frame.
+ */
+function stageFits(): boolean {
+  return window.innerWidth >= 320
 }
 
 /**
@@ -226,11 +241,11 @@ function stageSize(): number {
  */
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
   const [stagePx, setStagePx] = useState(() => (typeof window === 'undefined' ? 480 : stageSize()))
-  const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : window.innerWidth >= 900))
+  const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : stageFits()))
   useEffect(() => {
     const measure = (): void => {
       setStagePx(stageSize())
-      setWide(window.innerWidth >= 900)
+      setWide(stageFits())
     }
     measure()
     window.addEventListener('resize', measure)
