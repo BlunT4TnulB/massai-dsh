@@ -719,7 +719,10 @@ export function apply(ctx: Context): void {
       try {
         const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
         const skill = String(parsed['skill'] ?? 'general')
-        recordActivity(skill, String(parsed['label'] ?? skill))
+        // A session id is optional: real tool calls always carry one, and a tester
+        // may supply one to exercise the agent view.
+        const session = String(parsed['session'] ?? '')
+        recordActivity(skill, String(parsed['label'] ?? skill), session === '' ? undefined : session)
         respond(res, 200, { ok: true, focus: focusOf() ?? null })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
