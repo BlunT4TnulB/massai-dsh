@@ -72,7 +72,7 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
 <div id="detail"></div>
 
 <p class="foot"><a href="/">The door</a> · <a href="/limits">Limits</a> · <a href="/me">Your id</a>
-· <a href="/support">Support</a> · <a href="/settings">How much help</a> · <a href="/privacy">Privacy</a></p>
+· <a href="/support">Support</a> · <a href="/map">The map</a> · <a href="/settings">How much help</a> · <a href="/privacy">Privacy</a></p>
 
 <script>
 (() => {

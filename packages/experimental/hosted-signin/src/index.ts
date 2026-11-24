@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
-import { accessPageHtml } from '@deepseek-ai/dsh-host-webserver'
+import { accessPageHtml, mapPageHtml } from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
@@ -25,7 +25,7 @@ import {
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
-import { comfortCookie, comfortFromCookie, comfortPageHtml, preset, type ComfortTier } from './comfort.ts'
+import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -663,6 +663,23 @@ export function apply(ctx: Context): void {
     .then(reading => publishBalance(reading))
     .catch(() => undefined)
 
+
+
+  // The map: the seven destinations, drawn as the flower of life. Server rendered
+  // because navigation must not depend on a script arriving.
+  ctx.webServer.register({
+    kind: 'exact', path: '/map', auth: 'anonymous',
+    handler: (req, res) => {
+      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
+      const html = Buffer.from(mapPageHtml(isMaster(comfort)))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // How much help is on screen. One cookie, no account, changeable from any page.
   ctx.webServer.register({

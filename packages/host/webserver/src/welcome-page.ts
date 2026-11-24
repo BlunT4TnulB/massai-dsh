@@ -267,7 +267,7 @@ export function welcomePage(line?: number, cookieHeader = ''): string {
       ${comfort.tips ? '<p class="ask" style="margin-bottom:.45rem">First time? <a href="/guide">Two-minute guide</a> · <a href="/limits">Every limit, before you start</a></p>' : ''}
       ${comfort.disclaimers ? `<p class="fine">Everything here is written by an AI and can be wrong — read it before you ship it.
       Massai is an independent project, not affiliated with any model provider.</p>` : ''}
-      ${comfort.legal ? `<p class="fine" style="margin-top:.35rem"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/support">Tip jar</a> · <a href="/settings">Help level</a></p>` : ''}
+      ${comfort.legal ? `<p class="fine" style="margin-top:.35rem"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/support">Tip jar</a> · <a href="/map">The map</a> · <a href="/settings">Help level</a></p>` : ''}
     </div>` : ''}`)
 }
 

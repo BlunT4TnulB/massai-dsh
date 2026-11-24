@@ -949,3 +949,4 @@ export class WebServer extends Service {
 
 export default WebServer
 export { accessPageHtml, welcomePage }
+export { mapPageHtml } from './map-page.ts'
