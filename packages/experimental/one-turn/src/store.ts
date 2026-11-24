@@ -226,8 +226,8 @@ export interface LibraryProfile {
  */
 export async function libraryProfile(): Promise<LibraryProfile | undefined> {
   if (!storeConfigured()) return undefined
-  const rows = await runSql<{ name: string; bytes: number; manifest: unknown }>(
-    "SELECT name, bytes, manifest FROM one_turn_projects WHERE visibility = 'shelf' AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 200")
+  const rows = await runSql<{ name: string; bytes: number; manifest: unknown; shape: string }>(
+    "SELECT name, bytes, manifest, shape FROM one_turn_projects WHERE visibility = 'shelf' AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 200")
   if (rows.length === 0) return undefined
   const counts = new Map<string, number>()
   const detail: Array<{ name: string; shape: string; paths: string[] }> = []

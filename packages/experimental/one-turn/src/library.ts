@@ -9,7 +9,7 @@
  * @module @deepseek-ai/dsh-one-turn/library
  */
 
-import { inferSkills, setCatalog, type Skill } from './skills.ts'
+import { inferSkills, setCatalog } from './skills.ts'
 import { libraryProfile, storeConfigured, type LibraryProfile } from './store.ts'
 
 /** What is remembered in memory. */
