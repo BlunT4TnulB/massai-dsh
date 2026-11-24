@@ -29,74 +29,71 @@ const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// --- geometry -------------------------------------------------------------
-const R = 1;
-const A = [R, 0];
-const B = [R / 2, R * Math.sqrt(3) / 2];
-const centres = [];
+// --- geometry: the flower, wrapped onto a ball ----------------------------
+// The flat flower of life is the *seam pattern*; the object is a sphere. Each of
+// the nineteen centres is lifted onto a shell (z = ±sqrt(RS² - r²)), so the
+// silhouette is still the flower while the body is a ball and not a pancake.
+const RS = 2.02;
+const A = [1, 0];
+const B = [0.5, Math.sqrt(3) / 2];
+const flat = [];
 for (let i = -2; i <= 2; i += 1) {
   for (let j = -2; j <= 2; j += 1) {
     const x = i * A[0] + j * B[0];
     const y = i * A[1] + j * B[1];
-    if (Math.hypot(x, y) <= 2 * R + 1e-6) centres.push([x, y]);
+    if (Math.hypot(x, y) <= 2 + 1e-6) flat.push([x, y]);
+  }
+}
+const spheres = [];
+for (const point of flat) {
+  const r = Math.hypot(point[0], point[1]);
+  const z = Math.sqrt(Math.max(0, RS * RS - r * r));
+  spheres.push({ x: point[0], y: point[1], z: z });
+  if (z > 0.18) spheres.push({ x: point[0], y: point[1], z: -z });
+}
+
+// Seams: pairs close enough to be joined. This is what reads as a ball.
+const seams = [];
+for (let i = 0; i < spheres.length; i += 1) {
+  for (let j = i + 1; j < spheres.length; j += 1) {
+    const a = spheres[i];
+    const b = spheres[j];
+    const d = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    if (d > 0.55 && d < 1.05) seams.push([a, b, d]);
   }
 }
 
-function intersections() {
-  const out = [];
-  for (let i = 0; i < centres.length; i += 1) {
-    for (let j = i + 1; j < centres.length; j += 1) {
-      const x1 = centres[i][0];
-      const y1 = centres[i][1];
-      const x2 = centres[j][0];
-      const y2 = centres[j][1];
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const d = Math.hypot(dx, dy);
-      if (d === 0 || d > 2 * R) continue;
-      const a = d / 2;
-      const h = Math.sqrt(Math.max(0, R * R - a * a));
-      const mx = x1 + dx * (a / d);
-      const my = y1 + dy * (a / d);
-      const ux = -dy / d;
-      const uy = dx / d;
-      for (const sign of [1, -1]) {
-        const px = mx + ux * h * sign;
-        const py = my + uy * h * sign;
-        let dup = false;
-        for (const q of out) if (Math.hypot(q[0] - px, q[1] - py) < 1e-3) { dup = true; break; }
-        if (!dup) out.push([px, py]);
-      }
-    }
+// The cage: a cuboctahedron — Fuller's vector equilibrium — around the ball.
+// Twelve vertices, equal length to the centre, twenty-four edges.
+const CAGE_R = 2.5;
+const CAGE = [];
+for (const s1 of [1, -1]) {
+  for (const s2 of [1, -1]) {
+    CAGE.push([s1 * CAGE_R / Math.SQRT2, s2 * CAGE_R / Math.SQRT2, 0]);
+    CAGE.push([s1 * CAGE_R / Math.SQRT2, 0, s2 * CAGE_R / Math.SQRT2]);
+    CAGE.push([0, s1 * CAGE_R / Math.SQRT2, s2 * CAGE_R / Math.SQRT2]);
   }
-  return out;
 }
-const lattice = intersections();
-
-// The web: lattice points close enough to be joined by a filament. This is the
-// structure the flower *implies* and never draws.
-const filaments = [];
-for (let i = 0; i < lattice.length; i += 1) {
-  for (let j = i + 1; j < lattice.length; j += 1) {
-    const d = Math.hypot(lattice[i][0] - lattice[j][0], lattice[i][1] - lattice[j][1]);
-    if (d > 0.36 && d < 0.72) filaments.push([lattice[i], lattice[j], d]);
+const cageEdges = [];
+for (let i = 0; i < CAGE.length; i += 1) {
+  for (let j = i + 1; j < CAGE.length; j += 1) {
+    const d = Math.hypot(CAGE[i][0] - CAGE[j][0], CAGE[i][1] - CAGE[j][1], CAGE[i][2] - CAGE[j][2]);
+    if (d < CAGE_R * 1.05) cageEdges.push([CAGE[i], CAGE[j]]);
   }
 }
 
-// --- doors and skill points -----------------------------------------------
 const doors = [
-  { x: 0, y: 0, label: 'Talk' },
-  { x: 1, y: 0, label: 'Projects' },
-  { x: 0.5, y: Math.sqrt(3) / 2, label: 'Library' },
-  { x: -0.5, y: Math.sqrt(3) / 2, label: 'You' },
-  { x: -1, y: 0, label: 'Limits' },
-  { x: -0.5, y: -Math.sqrt(3) / 2, label: 'Tip jar' },
-  { x: 0.5, y: -Math.sqrt(3) / 2, label: 'Help' },
+  { x: 0, y: 0, z: RS, label: 'Talk' },
+  { x: 1, y: 0, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Projects' },
+  { x: 0.5, y: Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Library' },
+  { x: -0.5, y: Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'You' },
+  { x: -1, y: 0, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Limits' },
+  { x: -0.5, y: -Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Tip jar' },
+  { x: 0.5, y: -Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Help' },
 ];
 const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
-const skillPoints = centres.filter(function (c) { return Math.hypot(c[0], c[1]) > 1.5; }).slice(0, 12);
+const skillPoints = spheres.filter(function (s) { return Math.hypot(s.x, s.y) > 1.5 && s.z > 0; }).slice(0, 8);
 
-// --- palette, restraint ---------------------------------------------------
 const GOLD = '247,205,140';
 const GREEN = '126,226,168';
 const BLUE = '158,203,255';
@@ -106,8 +103,8 @@ const SKILL_COLOR = {
   service: '240,180,140', general: GOLD,
 };
 const IDLE_SPEED = 0.00006;
+const FRICTION = 0.955;
 
-// --- sprite cache ---------------------------------------------------------
 const spriteCache = new Map();
 function sphereSprite(tint) {
   if (spriteCache.has(tint)) return spriteCache.get(tint);
@@ -130,8 +127,13 @@ function sphereSprite(tint) {
 // --- state ----------------------------------------------------------------
 let yaw = 0.35;
 let pitch = -0.42;
+let roll = 0;
+let velYaw = 0;
+let velPitch = 0;
+let velRoll = 0;
 let zoom = 1;
 let dragging = false;
+let dragMode = 'turn';
 let hovered = -1;
 let last = performance.now();
 let bloom = 0;
@@ -146,30 +148,25 @@ let focus = null;
 let focusUntil = 0;
 let simulated = false;
 let ripples = [];
-// The being's own condition. Everything it knows about itself arrives here.
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
-// Dust: a slow cloud the object hangs inside. Pure atmosphere.
 const dust = [];
 for (let i = 0; i < 90; i += 1) {
   const a = Math.random() * Math.PI * 2;
-  const r = 0.8 + Math.random() * 2.2;
-  dust.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, z: (Math.random() - 0.5) * 2.4, s: 0.4 + Math.random() * 0.8 });
+  const b = Math.acos(2 * Math.random() - 1);
+  const r = 1.2 + Math.random() * 2.1;
+  dust.push({
+    x: Math.sin(b) * Math.cos(a) * r,
+    y: Math.sin(b) * Math.sin(a) * r,
+    z: Math.cos(b) * r,
+    s: 0.4 + Math.random() * 0.8,
+  });
 }
 
 const DPR = Math.min(innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1);
-// Layers: four depths on a wide screen, two on a phone. Volume costs fill rate.
-const LAYERS = innerWidth < 700
-  ? [{ z: -0.28, alpha: 0.30, size: 1.07 }, { z: 0.28, alpha: 0.70, size: 0.98 }]
-  : [
-      { z: -0.52, alpha: 0.18, size: 1.16 },
-      { z: -0.17, alpha: 0.34, size: 1.07 },
-      { z: 0.17, alpha: 0.52, size: 1.00 },
-      { z: 0.52, alpha: 0.74, size: 0.94 },
-    ];
 
 function resize() {
   canvas.width = Math.floor(innerWidth * DPR);
@@ -180,19 +177,33 @@ function resize() {
 resize();
 addEventListener('resize', resize);
 
+// Full three-axis rotation: no axis is locked, which is what makes it a ball.
 function project(x, y, z) {
-  const cy = Math.cos(yaw + lookX);
-  const sy = Math.sin(yaw + lookX);
-  const cp = Math.cos(pitch + lookY);
-  const sp = Math.sin(pitch + lookY);
-  const x1 = x * cy - z * sy;
-  const z1 = x * sy + z * cy;
-  const y1 = y * cp - z1 * sp;
-  const z2 = y * sp + z1 * cp;
-  const distance = 6.2;
-  const scale = zoom * Math.min(innerWidth, innerHeight) * 0.30;
-  const k = distance / (distance + z2);
-  return { x: innerWidth / 2 + x1 * scale * k, y: innerHeight / 2 + y1 * scale * k, k: k, depth: z2 };
+  const ya = yaw + lookX;
+  const pa = pitch + lookY;
+  const ra = roll;
+  const cy = Math.cos(ya);
+  const sy = Math.sin(ya);
+  const cp = Math.cos(pa);
+  const sp = Math.sin(pa);
+  const cr = Math.cos(ra);
+  const sr = Math.sin(ra);
+  // roll around Z first, then yaw around Y, then pitch around X
+  const x1 = x * cr - y * sr;
+  const y1 = x * sr + y * cr;
+  const x2 = x1 * cy + z * sy;
+  const z2 = -x1 * sy + z * cy;
+  const y3 = y1 * cp - z2 * sp;
+  const z3 = y1 * sp + z2 * cp;
+  const distance = 6.4;
+  const scale = zoom * Math.min(innerWidth, innerHeight) * 0.28;
+  const k = distance / (distance + z3);
+  return {
+    x: innerWidth / 2 + x2 * scale * k,
+    y: innerHeight / 2 + y3 * scale * k,
+    k: k,
+    depth: z3,
+  };
 }
 
 function drawSprite(tint, x, y, radius, alpha) {
@@ -202,17 +213,16 @@ function drawSprite(tint, x, y, radius, alpha) {
   ctx.globalAlpha = 1;
 }
 
-/** Bloom from proximity to the work, plus whatever ripple is passing through. */
-function heatAt(x, y, now) {
+function heatAt(x, y, z, now) {
   let heat = 0;
   if (focus !== null) {
-    const d = Math.hypot(x - focus.x, y - focus.y);
-    heat += Math.max(0, 1 - d / 2.4) * bloom;
+    const d = Math.hypot(x - focus.x, y - focus.y, z - focus.z);
+    heat += Math.max(0, 1 - d / 2.2) * bloom;
   }
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 1.5;
-    const band = Math.abs(Math.hypot(x, y) - radius);
-    if (band < 0.22) heat += (1 - band / 0.22) * ripple.strength * Math.max(0, 1 - radius / 4);
+    const radius = ((now - ripple.t0) / 1000) * 1.6;
+    const band = Math.abs(Math.hypot(x, y, z) - radius);
+    if (band < 0.24) heat += (1 - band / 0.24) * ripple.strength * Math.max(0, 1 - radius / 4);
   }
   return heat;
 }
@@ -222,7 +232,6 @@ function drawHalo(now) {
   const cy = innerHeight / 2;
   const reach = Math.max(innerWidth, innerHeight) * 0.82;
   breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
-  // A tired being breathes shallower and glows less; a well one breathes fully.
   life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
   g.addColorStop(0, 'rgba(' + Math.round(58 * self.memory) + ',' + Math.round(34 * self.memory) + ','
@@ -233,71 +242,69 @@ function drawHalo(now) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // one thin world ring, so the object hangs inside something rather than floating
-  ctx.beginPath();
-  for (let t = 0; t <= 96; t += 1) {
-    const angle = (t / 96) * Math.PI * 2;
-    const p = project(Math.cos(angle) * 2.4, Math.sin(angle) * 2.4, 0);
-    if (t === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  }
-  ctx.closePath();
-  ctx.strokeStyle = 'rgba(217,130,43,0.09)';
-  ctx.lineWidth = DPR * 0.8;
-  ctx.stroke();
-
-  // dust, projected and dimmed by depth
   for (const mote of dust) {
     const p = project(mote.x, mote.y, mote.z);
     ctx.beginPath();
     ctx.arc(p.x, p.y, DPR * mote.s * p.k, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.16 * (p.k - 0.5)).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.15 * (p.k - 0.5)).toFixed(3) + ')';
     ctx.fill();
   }
 }
 
-function drawWeb(now) {
-  // Filaments between lattice points: the structure the flower implies.
+function drawCage(now) {
+  // The vector equilibrium: twelve vertices equidistant from the centre, a
+  // geometry of balance rather than of surface. Faint enough to be felt.
+  ctx.lineWidth = DPR * 0.6;
+  for (const edge of cageEdges) {
+    const a = project(edge[0][0], edge[0][1], edge[0][2]);
+    const b = project(edge[1][0], edge[1][1], edge[1][2]);
+    const near = (a.k + b.k) / 2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.02 + 0.05 * (near - 0.55) + 0.03 * breath).toFixed(3) + ')';
+    ctx.stroke();
+  }
+  for (const vertex of CAGE) {
+    const p = project(vertex[0], vertex[1], vertex[2]);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, DPR * 1.5 * p.k, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(158,203,255,' + (0.10 + 0.18 * (p.k - 0.5)).toFixed(3) + ')';
+    ctx.fill();
+  }
+  void now;
+}
+
+function drawSpheres(now) {
+  const ordered = spheres
+    .map(function (s) { return { s: s, depth: project(s.x, s.y, s.z).depth }; })
+    .sort(function (a, b) { return a.depth - b.depth; });
+  for (const entry of ordered) {
+    const sp = entry.s;
+    const p = project(sp.x, sp.y, sp.z);
+    const heat = heatAt(sp.x, sp.y, sp.z, now);
+    const isDoor = doors.some(function (d) {
+      return Math.abs(d.x - sp.x) < 1e-6 && Math.abs(d.y - sp.y) < 1e-6 && Math.abs(d.z - sp.z) < 1e-6;
+    });
+    const tint = heat > 0.06 ? GREEN : GOLD;
+    const base = Math.min(innerWidth, innerHeight) * 0.28 * 0.62;
+    const radius = base * p.k * (isDoor ? 1.35 : 1) * (1 + heat * 0.12);
+    const depthFade = 0.30 + 0.70 * Math.max(0, Math.min(1, (p.k - 0.62) / 0.55));
+    drawSprite(tint, p.x, p.y, radius, (depthFade * 0.95 + heat * 0.45) * life);
+  }
+  // seams last, so they read as the net over the ball
   ctx.lineWidth = DPR * 0.5;
-  for (const fil of filaments) {
-    const a = project(fil[0][0], fil[0][1], 0);
-    const b = project(fil[1][0], fil[1][1], 0);
-    const heat = (heatAt(fil[0][0], fil[0][1], now) + heatAt(fil[1][0], fil[1][1], now)) / 2;
-    const closeness = 1 - (fil[2] - 0.36) / 0.36;
+  for (const seam of seams) {
+    const a = project(seam[0].x, seam[0].y, seam[0].z);
+    const b = project(seam[1].x, seam[1].y, seam[1].z);
+    const near = (a.k + b.k) / 2;
+    const heat = (heatAt(seam[0].x, seam[0].y, seam[0].z, now) + heatAt(seam[1].x, seam[1].y, seam[1].z, now)) / 2;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.strokeStyle = 'rgba(247,205,140,'
-      + ((0.02 + self.wisdom * 0.05) + 0.05 * closeness + heat * 0.25).toFixed(3) + ')';
+      + ((0.02 + self.wisdom * 0.04) * (0.6 + (near - 0.55)) + heat * 0.3).toFixed(3) + ')';
     ctx.stroke();
-  }
-  for (const point of lattice) {
-    const p = project(point[0], point[1], 0);
-    const heat = heatAt(point[0], point[1], now);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, DPR * (0.7 + 1.7 * (p.k - 0.55)) * (1 + heat * 1.2), 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,236,205,' + (0.10 + 0.22 * (p.k - 0.5) + heat * 0.55).toFixed(3) + ')';
-    ctx.fill();
-  }
-}
-
-function drawSpheres(now) {
-  for (const layer of LAYERS) {
-    const ordered = centres
-      .map(function (c) { return { c: c, depth: project(c[0], c[1], layer.z).depth }; })
-      .sort(function (p, q) { return p.depth - q.depth; });
-    for (const entry of ordered) {
-      const c = entry.c;
-      const p = project(c[0], c[1], layer.z);
-      const isDoor = doors.some(function (d) { return Math.abs(d.x - c[0]) < 1e-6 && Math.abs(d.y - c[1]) < 1e-6; });
-      const heat = heatAt(c[0], c[1], now);
-      const tint = heat > 0.06 ? GREEN : GOLD;
-      const base = Math.min(innerWidth, innerHeight) * 0.30 * 0.90 * layer.size;
-      const radius = base * p.k * (isDoor ? 1.08 : 1) * (1 + heat * 0.10);
-      const brightness = (layer.alpha * (0.55 + 0.45 * (p.k - 0.55))
-        + heat * 0.45 + breath * 0.05 * layer.alpha) * life;
-      drawSprite(tint, p.x, p.y, radius, brightness);
-    }
   }
 }
 
@@ -305,41 +312,40 @@ function drawTrail(now) {
   if (trail.length === 0) return;
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
-  const base = Math.min(innerWidth, innerHeight) * 0.44;
+  const base = Math.min(innerWidth, innerHeight) * 0.42;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);
     const freshness = Math.max(0.06, 1 - age / 600000);
     const turn = index / 40;
     const angle = -Math.PI / 2 + (turn % 1) * Math.PI * 2;
-    const radius = base * (0.72 + 0.055 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
+    const radius = base * (0.70 + 0.05 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
     drawSprite(SKILL_COLOR[event.skill] || GOLD,
       cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
-      DPR * (2.2 + 3.2 * freshness) * (0.9 + 0.2 * self.works), (0.08 + 0.5 * freshness) * life);
+      DPR * (2.0 + 3.0 * freshness) * (0.9 + 0.2 * self.works), (0.08 + 0.45 * freshness) * life);
   });
 }
 
 function drawAgents() {
   agents.forEach(function (agent, index) {
     const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.45;
-    const p = project(Math.cos(angle) * 1.62, Math.sin(angle) * 1.62, Math.sin(yaw + index) * 0.36);
+    const p = project(Math.cos(angle) * 1.75, Math.sin(angle) * 1.75, Math.sin(yaw + index) * 0.5);
     drawSprite(GOLD, p.x, p.y, DPR * (7 + Math.min(7, agent.steps * 0.7)), 0.34);
     const mine = trail.filter(function (step) {
       return step.agent === undefined || step.agent === agent.id;
     }).slice(-8);
     mine.forEach(function (step, i) {
-      const hop = (i + 1) * 0.17;
-      const q = project(Math.cos(angle) * (1.62 + hop), Math.sin(angle) * (1.62 + hop), 0);
+      const hop = (i + 1) * 0.18;
+      const q = project(Math.cos(angle) * (1.75 + hop), Math.sin(angle) * (1.75 + hop), 0);
       drawSprite(SKILL_COLOR[step.skill] || GOLD, q.x, q.y, DPR * 2.0, 0.5);
     });
   });
 }
 
-function drawDoors(now) {
+function drawDoors() {
   doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, LAYERS[LAYERS.length - 1].z + 0.02);
+    const p = project(door.x, door.y, door.z + 0.02);
     const active = index === hovered;
-    const heat = heatAt(door.x, door.y, now);
-    const radius = DPR * (active ? 11 : 8) * (0.85 + 0.5 * (p.k - 0.6)) * (1 + heat * 0.35);
+    const radius = DPR * (active ? 10 : 7) * (0.85 + 0.5 * (p.k - 0.6));
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fillStyle = active ? 'rgba(255,238,205,0.92)' : 'rgba(239,220,164,0.42)';
@@ -358,9 +364,9 @@ function drawDoors(now) {
 
 function drawRipples(now) {
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 1.5;
-    const life = Math.max(0, 1 - radius / 4);
-    if (life <= 0) continue;
+    const radius = ((now - ripple.t0) / 1000) * 1.6;
+    const lifeLeft = Math.max(0, 1 - radius / 4.4);
+    if (lifeLeft <= 0) continue;
     ctx.beginPath();
     for (let t = 0; t <= 128; t += 1) {
       const angle = (t / 128) * Math.PI * 2;
@@ -369,36 +375,19 @@ function drawRipples(now) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(126,226,168,' + (life * 0.16).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(126,226,168,' + (lifeLeft * 0.15).toFixed(3) + ')';
     ctx.lineWidth = DPR * 1.1;
     ctx.stroke();
   }
-  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.5 < 4; });
+  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.6 < 4.4; });
 }
 
-function drawFocus(now) {
-  if (focus === null) return;
-  const p = project(focus.x, focus.y, LAYERS[LAYERS.length - 1].z + 0.03);
-  const pulse = 11 + 6 * Math.sin(now * 0.0035);
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, (15 + pulse) * DPR * (0.72 + 0.4 * (p.k - 0.6)), 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(126,226,168,0.72)';
-  ctx.lineWidth = DPR * 1.3;
-  ctx.shadowColor = 'rgba(126,226,168,0.85)';
-  ctx.shadowBlur = DPR * 16;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-}
-
-function drawMood(now) {
-  // The hour tints the whole thing: amber at noon, indigo deep at night. A four
-  // percent wash — enough to feel time pass, not enough to notice why.
+function drawMood() {
   const hour = new Date().getHours();
   const dayness = Math.max(0, Math.cos(((hour - 13) / 24) * Math.PI * 2));
   ctx.fillStyle = 'rgba(' + Math.round(60 + 30 * dayness) + ',' + Math.round(34 + 40 * dayness) + ','
     + Math.round(90 - 40 * dayness) + ',' + (0.05 + 0.03 * dayness).toFixed(3) + ')';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  void now;
 }
 
 function frame(now) {
@@ -411,28 +400,45 @@ function frame(now) {
   const live = focus !== null && now < focusUntil;
   bloom += ((live ? 1 : 0) - bloom) * 0.035;
 
-  if (live && !dragging) {
-    const targetYaw = -Math.atan2(focus.y, focus.x);
-    yaw += (targetYaw - yaw) * 0.03;
-    pitch += (-0.30 - pitch) * 0.03;
-  } else if (!dragging && !reduce) {
-    yaw += dt * IDLE_SPEED;
+  // Flick spin: the throw keeps going and slows, then attention returns to the
+  // idle turn (or to the work, if there is work).
+  const spinning = Math.abs(velYaw) + Math.abs(velPitch) + Math.abs(velRoll) > 0.00008;
+  if (!dragging && spinning) {
+    yaw += velYaw * dt;
+    pitch += velPitch * dt;
+    roll += velRoll * dt;
+    pitch = Math.max(-1.5, Math.min(1.5, pitch));
+    velYaw *= FRICTION;
+    velPitch *= FRICTION;
+    velRoll *= FRICTION;
+  } else if (!dragging) {
+    velYaw = 0;
+    velPitch = 0;
+    velRoll = 0;
+    if (live) {
+      const targetYaw = -Math.atan2(focus.y, focus.x);
+      yaw += (targetYaw - yaw) * 0.03;
+      pitch += (-0.30 - pitch) * 0.03;
+      roll += (0 - roll) * 0.03;
+    } else if (!reduce) {
+      yaw += dt * IDLE_SPEED;
+      roll += (0 - roll) * 0.01;
+    }
   }
 
   drawHalo(now);
-  drawWeb(now);
+  drawCage(now);
   drawTrail(now);
   drawSpheres(now);
   drawAgents();
-  drawDoors(now);
+  drawDoors();
   drawRipples(now);
-  drawFocus(now);
-  drawMood(now);
+  drawMood();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-// --- polling --------------------------------------------------------------
+// --- self-awareness -------------------------------------------------------
 function simulate(now) {
   const seed = Math.floor(now / 30000);
   const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs'];
@@ -455,7 +461,7 @@ async function poll() {
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
     if (simulated) simulate(Date.now());
-    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions · 76 spheres · 61 points' : '';
+    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions · 38 spheres · 24 vectors' : '';
     const badge = document.getElementById('simulated');
     if (badge) badge.style.opacity = simulated ? '0.75' : '0';
     const hot = data.focus;
@@ -467,7 +473,7 @@ async function poll() {
     const index = SKILL_ORDER.indexOf(hot.skill);
     const point = index >= 0 ? skillPoints[index % skillPoints.length] : null;
     if (!point) return;
-    focus = { x: point[0], y: point[1], label: hot.label };
+    focus = { x: point.x, y: point.y, z: point.z, label: hot.label };
     focusUntil = performance.now() + 25000;
     ripples.push({ t0: performance.now(), strength: 1 });
     if (caption) {
@@ -486,11 +492,9 @@ async function pollVitals() {
     const response = await fetch('/api/vitals', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
     const v = await response.json();
-    // Fuel: five dollars is a full breath; a dollar is a whisper.
     const fuel = typeof v.fuelUsd === 'number' ? v.fuelUsd : 0;
-    const energy = v.fuelAvailable === false ? 0.25 : Math.max(0.18, Math.min(1, fuel / 5));
     self = {
-      energy: energy,
+      energy: v.fuelAvailable === false ? 0.25 : Math.max(0.18, Math.min(1, fuel / 5)),
       memory: v.memoryOk === false ? 0.35 : 1,
       wisdom: Math.min(1, (v.lessons || 0) / 20),
       works: Math.min(1, (v.projects || 0) / 60),
@@ -498,22 +502,17 @@ async function pollVitals() {
       awake: typeof v.awakeSeconds === 'number' ? v.awakeSeconds : 0,
     };
     const confess = document.getElementById('confession');
-    if (confess) {
-      // It says the true thing about itself, then lets it fade. A thought, not a
-      // banner: visible for a few breaths, gone, and it comes back later.
-      if (typeof v.confession === 'string' && v.confession !== '') {
-        confess.textContent = v.confession;
-        confess.style.opacity = '0.85';
-        clearTimeout(confessTimer);
-        confessTimer = setTimeout(function () { confess.style.opacity = '0'; }, 14000);
-      }
+    if (confess && typeof v.confession === 'string' && v.confession !== '') {
+      confess.textContent = v.confession;
+      confess.style.opacity = '0.85';
+      clearTimeout(confessTimer);
+      confessTimer = setTimeout(function () { confess.style.opacity = '0'; }, 14000);
     }
     const status = document.getElementById('being');
     if (status) {
-      // It says how it is, once, in the quietest place on the page.
       const hours = Math.floor(self.awake / 3600);
-      const life = hours > 0 ? 'awake ' + hours + 'h' : 'awake ' + Math.max(1, Math.floor(self.awake / 60)) + 'm';
-      status.textContent = (self.notice === '' ? '' : self.notice + ' · ') + life
+      const howLong = hours > 0 ? 'awake ' + hours + 'h' : 'awake ' + Math.max(1, Math.floor(self.awake / 60)) + 'm';
+      status.textContent = (self.notice === '' ? '' : self.notice + ' · ') + howLong
         + ' · ' + (v.projects || 0) + ' works kept · ' + (v.lessons || 0) + ' lessons held';
       status.style.color = self.notice === '' ? '#57575f' : '#8a6a3a';
     }
@@ -524,42 +523,57 @@ async function pollVitals() {
 pollVitals();
 setInterval(pollVitals, 15000);
 
-// --- interaction: attention without demands -------------------------------
+// --- interaction: all three axes, with a throw ---------------------------
+let lastPointer = { x: 0, y: 0, t: 0 };
+canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
+  dragMode = event.button === 2 || event.shiftKey ? 'roll' : 'turn';
+  velYaw = 0;
+  velPitch = 0;
+  velRoll = 0;
   canvas.setPointerCapture(event.pointerId);
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
+  lastPointer = { x: event.clientX, y: event.clientY, t: performance.now() };
+  canvas.style.cursor = 'grabbing';
 });
 canvas.addEventListener('pointermove', function (event) {
-  // It notices where you are. A few degrees of gaze, no commitment, no target.
   if (!reduce) {
-    const targetX = (event.clientX / innerWidth - 0.5) * 0.18;
-    const targetY = (event.clientY / innerHeight - 0.5) * 0.12;
-    lookX += (targetX - lookX) * 0.06;
-    lookY += (targetY - lookY) * 0.06;
+    lookX += ((event.clientX / innerWidth - 0.5) * 0.16 - lookX) * 0.06;
+    lookY += ((event.clientY / innerHeight - 0.5) * 0.11 - lookY) * 0.06;
   }
-  if (dragging) {
-    const parts = (canvas.dataset.drag || '0,0').split(',');
-    yaw += (event.clientX - Number(parts[0])) * 0.005;
-    pitch = Math.max(-1.15, Math.min(1.15, pitch + (event.clientY - Number(parts[1])) * 0.004));
-    canvas.dataset.drag = event.clientX + ',' + event.clientY;
-    if (hint) hint.style.opacity = '0';
+  if (!dragging) {
+    let best = -1;
+    let bestDistance = 30 * DPR;
+    doors.forEach(function (door, index) {
+      const p = project(door.x, door.y, door.z);
+      const distance = Math.hypot(p.x - event.clientX * DPR, p.y - event.clientY * DPR);
+      if (distance < bestDistance) { bestDistance = distance; best = index; }
+    });
+    hovered = best;
     return;
   }
-  let best = -1;
-  let bestDistance = 28 * DPR;
-  doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, LAYERS[LAYERS.length - 1].z + 0.02);
-    const distance = Math.hypot(p.x - event.clientX * DPR, p.y - event.clientY * DPR);
-    if (distance < bestDistance) { bestDistance = distance; best = index; }
-  });
-  hovered = best;
-  canvas.style.cursor = dragging ? 'grabbing' : 'grab';
+  const parts = (canvas.dataset.drag || '0,0').split(',');
+  const dx = event.clientX - Number(parts[0]);
+  const dy = event.clientY - Number(parts[1]);
+  if (dragMode === 'roll') {
+    roll += dx * 0.006;
+    velRoll = dx * 0.0009;
+  } else {
+    yaw += dx * 0.005;
+    pitch = Math.max(-1.5, Math.min(1.5, pitch + dy * 0.004));
+    velYaw = dx * 0.0008;
+    velPitch = dy * 0.0006;
+  }
+  canvas.dataset.drag = event.clientX + ',' + event.clientY;
+  if (hint) hint.style.opacity = '0';
+  void lastPointer;
 });
 canvas.addEventListener('pointerup', function () {
-  // Nothing is clicked here on purpose. A presence that navigates is a menu;
-  // leaving is what /map is for.
+  // The throw keeps its momentum and settles back into the idle turn. Nothing is
+  // clicked here on purpose: a presence that navigates is a menu.
   dragging = false;
+  canvas.style.cursor = 'grab';
 });
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
@@ -569,11 +583,13 @@ canvas.addEventListener('wheel', function (event) {
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;
   if (event.key === 'ArrowRight') yaw += 0.1;
-  if (event.key === 'ArrowUp') pitch = Math.max(-1.15, pitch - 0.07);
-  if (event.key === 'ArrowDown') pitch = Math.min(1.15, pitch + 0.07);
-  if (event.key === '0') { yaw = 0.35; pitch = -0.42; zoom = 1; }
+  if (event.key === 'ArrowUp') pitch = Math.max(-1.5, pitch - 0.07);
+  if (event.key === 'ArrowDown') pitch = Math.min(1.5, pitch + 0.07);
+  if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
+  if (event.key === 'e' || event.key === 'E') roll += 0.1;
+  if (event.key === 'r' || event.key === 'R') { yaw = 0.35; pitch = -0.42; roll = 0; }
 });
-setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 7000);
+setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 8000);
 `
 
 /**
@@ -628,7 +644,7 @@ export function flowerPageHtml(): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn it · <b>scroll</b> to come closer · nothing to press</p>
+<p class="hint" id="hint"><b>drag</b> to turn it · <b>shift-drag</b> (or right-drag) to roll · <b>scroll</b> closer · throw it and it keeps spinning</p>
 <a class="plain" href="/map">where everything is →</a>
 <script>${FLOWER_SCRIPT}</script>
 </body></html>`
