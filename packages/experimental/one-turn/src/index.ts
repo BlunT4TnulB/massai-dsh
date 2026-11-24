@@ -477,7 +477,8 @@ export function apply(ctx: Context): void {
         const files = filesFrom(parsed['files'])
         if (files.length === 0) { respond(res, 400, { error: 'no files supplied' }); return }
         const project = await createProject({
-          owner: caller.id,
+          // The operator may file an import under their own name; a guest may not.
+          owner: caller.owner && str(parsed, 'owner') !== '' ? str(parsed, 'owner') : caller.id,
           name: str(parsed, 'name') === '' ? 'Untitled' : str(parsed, 'name'),
           shape: str(parsed, 'shape') === '' ? 'single-page-site' : str(parsed, 'shape'),
           entry: str(parsed, 'entry') === '' ? (files[0]?.path ?? 'index.html') : str(parsed, 'entry'),
