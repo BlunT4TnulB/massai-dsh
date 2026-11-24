@@ -323,6 +323,101 @@ function strokeCircle(index, points, now, front) {
   void now;
 }
 
+/**
+ * Basis for the tangent plane at a direction: two orthonormal vectors and the
+ * direction itself. A child galaxy is planted here, scaled, so that zooming into
+ * a star reveals a smaller galaxy — the same structure, repeated. That is the
+ * fractal part: the whole is made of pieces that are themselves the whole.
+ * @param axis - the anchor direction (a unit vector).
+ * @returns [u, v, axis] an orthonormal frame.
+ */
+function frameAt(axis) {
+  const helper = Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const u = norm(cross(axis, helper));
+  const v = cross(axis, u);
+  return [u, v, axis];
+}
+
+/**
+ * Draw the galaxy (circles + nodes), optionally planted on a cap of angular
+ * radius (radius) around an anchor direction, so a zoomed view keeps resolving
+ * into the same figure. When anchor is null it draws the root sphere.
+ */
+function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
+  const frame = anchor === null ? null : frameAt(anchor);
+  const local = function (point) {
+    if (frame === null) return point;
+    const x = point[0] * Math.cos(rotPhase) - point[1] * Math.sin(rotPhase);
+    const y = point[0] * Math.sin(rotPhase) + point[1] * Math.cos(rotPhase);
+    const z = point[2];
+    const u = frame[0];
+    const v = frame[1];
+    const a = frame[2];
+    return norm([
+      a[0] + (u[0] * x + v[0] * y) * radius,
+      a[1] + (u[1] * x + v[1] * y) * radius,
+      a[2] + (u[2] * x + v[2] * y) * radius,
+    ]);
+  };
+  const localZ = function (point) {
+    if (frame === null) return point[2];
+    return dot(point, frame[2]);
+  };
+
+  // back circles
+  for (let i = 0; i < GREAT.length; i += 1) {
+    const points = GREAT[i];
+    ctx.beginPath();
+    let started = false;
+    for (const raw of points) {
+      const point = local(raw);
+      const p = project(point[0], point[1], point[2]);
+      if (localZ(point) > 0) { started = false; continue; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    const weight = i === -1 ? 2 : 1;
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.6;
+    ctx.stroke();
+  }
+
+  // nodes, dimmed by depth, warmed by work
+  const ordered = nodes.map(function (node, index) {
+    const point = local(node.p);
+    const p = project(point[0], point[1], point[2]);
+    return { node: node, index: index, p: p, point: point };
+  }).sort(function (a, b) { return a.p.depth - b.p.depth; });
+  for (const entry of ordered) {
+    const p = entry.p;
+    if (p.z < -0.5) continue;
+    const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
+    const hot = heat(now, entry.point[0], entry.point[1], entry.point[2]);
+    const sprite = glowSprite(hot > 0.1 ? GREEN : GOLD);
+    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4);
+    ctx.globalAlpha = Math.min(1, ((0.10 + 0.5 * near) * life + hot * 0.4) * alpha);
+    ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // front circles
+  for (let i = 0; i < GREAT.length; i += 1) {
+    const points = GREAT[i];
+    ctx.beginPath();
+    let started = false;
+    for (const raw of points) {
+      const point = local(raw);
+      const p = project(point[0], point[1], point[2]);
+      if (localZ(point) <= 0) { started = false; continue; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.30 * alpha).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.9;
+    ctx.stroke();
+  }
+}
+
 function drawGalaxy(now) {
   // back hemisphere first, then the nodes, then the front: depth without sorting
   // thousands of segments.
@@ -632,7 +727,7 @@ canvas.addEventListener('pointermove', function (event) {
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
     const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-    zoom = Math.max(0.55, Math.min(3.2, zoomAtPinch * (now / pinchStart)));
+    zoom = Math.max(0.5, Math.min(7, zoomAtPinch * (now / pinchStart)));
     return;
   }
   if (!reduce) {
@@ -688,7 +783,7 @@ canvas.addEventListener('pointercancel', function (event) {
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
-  zoom = Math.max(0.55, Math.min(2.4, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.5, Math.min(7, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;

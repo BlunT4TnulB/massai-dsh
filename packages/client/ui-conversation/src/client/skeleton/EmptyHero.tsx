@@ -194,22 +194,6 @@ function FlowerMark({ size }: { size: number }) {
  * @param props.size - rendered edge length in pixels.
  * @returns the stage element tree.
  */
-function SanctumStage({ size }: { size: number }) {
-  return (
-    <div className={css.sanctum} style={{ width: size, height: size }} aria-hidden="true">
-      <iframe
-        className={css.sanctumFrame}
-        src="/flower?embed=1"
-        title="The Massai galaxy"
-        loading="eager"
-        tabIndex={-1}
-        scrolling="no"
-      />
-      <span className={css.sanctumVeil} />
-    </div>
-  )
-}
-
 /**
  * The galaxy as the whole room: a fixed, full-viewport frame behind everything.
  *
@@ -238,23 +222,6 @@ function GalaxyBackground({ show }: { show: boolean }) {
 }
 
 /**
- * How large the stage may be.
- *
- * On a phone the width is the binding axis, so the stage takes most of it — the
- * point of the stage is that it dominates the blank state, and a 96 pixel logo
- * does not. On a desktop the smaller axis is height once the composer is on
- * screen, so it is capped there.
- * @returns the edge length in pixels.
- */
-function stageSize(): number {
-  const width = window.innerWidth
-  const height = window.innerHeight
-  const phone = width < 900
-  const edge = phone ? Math.min(width * 0.88, height * 0.5) : Math.min(width, height) * 0.66
-  return Math.max(260, Math.min(640, Math.round(edge)))
-}
-
-/**
  * Whether to mount the live stage at all.
  * @returns true when the viewport can carry the frame.
  */
@@ -268,13 +235,9 @@ function stageFits(): boolean {
  * @returns the centered hero element tree.
  */
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
-  const [stagePx, setStagePx] = useState(() => (typeof window === 'undefined' ? 480 : stageSize()))
   const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : stageFits()))
   useEffect(() => {
-    const measure = (): void => {
-      setStagePx(stageSize())
-      setWide(stageFits())
-    }
+    const measure = (): void => { setWide(stageFits()) }
     measure()
     window.addEventListener('resize', measure)
     return () => { window.removeEventListener('resize', measure) }
