@@ -254,6 +254,9 @@
   border: 0;
   background: #08080a;
   color-scheme: dark;
+  /* Pure presence: the frame never takes the pointer, so the page scrolls and
+     the composer behaves normally over it. Turning it is what /flower is for. */
+  pointer-events: none;
 }
 
 .sanctumVeil {
