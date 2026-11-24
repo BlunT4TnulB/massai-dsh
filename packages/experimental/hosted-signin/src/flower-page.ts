@@ -474,16 +474,27 @@ function drawGalaxy(now) {
     const p = project(node.p[0], node.p[1], node.p[2]);
     return { node: node, index: index, p: p };
   }).sort(function (a, b) { return a.p.depth - b.p.depth; });
+  // Every star carries a wide, faint halo. Drawn additively, the haloes of a few
+  // hundred stars accumulate into one cloud: no single star is bright, the sum of
+  // them is. That overlap is the glow of the mind, and why it reads as alive.
+  ctx.globalCompositeOperation = 'lighter';
   for (const entry of ordered) {
     const p = entry.p;
     if (p.z < -0.55) continue;
     const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
     const hot = heat(now, entry.node.p[0], entry.node.p[1], entry.node.p[2]);
     const picked = entry.index === hoverNode || entry.index === diveNode;
-    const sprite = glowSprite(hot > 0.1 ? GREEN : picked ? '255,244,225' : GOLD);
-    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4) * (picked ? 3.2 : 1);
-    ctx.globalAlpha = Math.min(1, (0.10 + 0.5 * near) * life + hot * 0.4 + (picked ? 0.6 : 0));
-    ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+    const isDoor = entry.index === PORTAL;
+    // thoughts sit a shade darker than the door and far lighter in weight
+    const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
+    const core = DPR * (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
+    const cloud = core * (isDoor ? 5.5 : 3.6);
+    const strength = Math.min(1, (0.07 + 0.34 * near) * life + hot * 0.35 + (picked ? 0.4 : 0));
+    const sprite = glowSprite(tint);
+    ctx.globalAlpha = strength * (isDoor ? 0.30 : 0.16);
+    ctx.drawImage(sprite, p.x - cloud, p.y - cloud, cloud * 2, cloud * 2);
+    ctx.globalAlpha = strength * (isDoor ? 1 : 0.85);
+    ctx.drawImage(sprite, p.x - core, p.y - core, core * 2, core * 2);
     ctx.globalAlpha = 1;
     // The door is the only star with a ring: findable at rest, still not a sign.
     if (entry.index === PORTAL) {
@@ -491,10 +502,11 @@ function drawGalaxy(now) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + DPR * 3) * DPR * p.k, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,242,214,' + (0.20 + 0.16 * breath).toFixed(3) + ')';
-      ctx.lineWidth = DPR * 1.1;
+      ctx.lineWidth = DPR * 1.2;
       ctx.stroke();
     }
   }
+  ctx.globalCompositeOperation = 'source-over';
 
   GREAT.forEach(function (points, index) { strokeCircle(index, points, now, true); });
   for (const line of FLOWER) {
