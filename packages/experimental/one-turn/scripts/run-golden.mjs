@@ -67,17 +67,24 @@ async function runOne(task) {
   }
 }
 
+// One run of nineteen tasks cannot tell a real improvement from luck: the model is
+// stochastic. `RUNS=3` repeats the whole set so the scorecard reports a mean and a
+// spread instead of a single number pretending to be a fact.
+const runs = Math.max(1, Number(process.env.RUNS ?? '1') || 1)
 const results = []
-for (const [index, task] of selected.entries()) {
-  process.stdout.write(`[${index + 1}/${selected.length}] ${task.id} … `)
-  try {
-    const result = await runOne(task)
-    results.push(result)
-    const verdict = result.refused === true ? 'refused correctly' : result.accepted ? 'ACCEPTED' : 'failed'
-    console.log(`${verdict}  $${(result.costUsd ?? 0).toFixed(4)}`)
-  } catch (error) {
-    results.push({ task: task.id, accepted: false, costUsd: 0, error: String(error) })
-    console.log(`error ${String(error).slice(0, 60)}`)
+for (let pass = 1; pass <= runs; pass += 1) {
+  if (runs > 1) console.log(`— pass ${pass}/${runs} —`)
+  for (const [index, task] of selected.entries()) {
+    process.stdout.write(`[${index + 1}/${selected.length}] ${task.id} … `)
+    try {
+      const result = await runOne(task)
+      results.push({ ...result, pass })
+      const verdict = result.refused === true ? 'refused correctly' : result.accepted ? 'ACCEPTED' : 'failed'
+      console.log(`${verdict}  $${(result.costUsd ?? 0).toFixed(4)}`)
+    } catch (error) {
+      results.push({ task: task.id, pass, accepted: false, costUsd: 0, error: String(error) })
+      console.log(`error ${String(error).slice(0, 60)}`)
+    }
   }
 }
 
@@ -93,9 +100,23 @@ for (const result of graded) {
   }
 }
 
+// Per-pass rates: the spread is the honest part of the number.
+const passRates = []
+for (let pass = 1; pass <= runs; pass += 1) {
+  const passResults = results.filter(result => result.pass === pass && result.refused === undefined)
+  const passAccepted = passResults.filter(result => result.accepted).length
+  passRates.push(passResults.length === 0 ? 0 : Number((passAccepted / passResults.length).toFixed(3)))
+}
+const mean = passRates.length === 0 ? 0 : passRates.reduce((sum, rate) => sum + rate, 0) / passRates.length
+const spread = passRates.length === 0 ? 0 : Math.max(...passRates) - Math.min(...passRates)
+
 const scorecard = {
   at: new Date().toISOString(),
   base,
+  runs,
+  passRates,
+  meanRate: Number(mean.toFixed(3)),
+  spread,
   tasks: results.length,
   accepted,
   graded: graded.length,
@@ -115,6 +136,10 @@ console.log('')
 console.log('— scorecard —')
 console.log(`  tasks            ${scorecard.tasks}`)
 console.log(`  accepted         ${scorecard.accepted} / ${scorecard.graded} graded  (${(scorecard.oneTurnRate * 100).toFixed(0)}% one-turn)`)
+if (runs > 1) {
+  console.log(`  per pass         ${scorecard.passRates.map(rate => `${(rate * 100).toFixed(0)}%`).join(' · ')}`)
+  console.log(`  mean ± spread    ${(scorecard.meanRate * 100).toFixed(0)}% ± ${(scorecard.spread * 100).toFixed(0)} points`)
+}
 console.log(`  refusals         ${scorecard.refusalsCorrect} / ${refusals.length} correct`)
 console.log(`  spent            $${scorecard.spentUsd.toFixed(4)}`)
 console.log(`  cost per build   $${scorecard.costPerAccepted.toFixed(4)}`)
