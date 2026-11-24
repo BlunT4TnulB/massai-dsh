@@ -680,6 +680,7 @@ export function apply(ctx: Context): void {
     },
   })
 
+
   // A browsable view of the supported shapes, for the intake screen.
   ctx.webServer.register({
     kind: 'exact', path: '/api/one-turn/shapes', auth: 'anonymous',

@@ -26,6 +26,7 @@ import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
+import { classifyToolCall, clearActivity, focusOf, readActivity, recordActivity } from './activity.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
@@ -351,6 +352,16 @@ export function apply(ctx: Context): void {
     handler: (session: { id: string }, event: unknown) => void,
   ) => void
   onSessionEvent('session/event', (session, event) => {
+    // Live activity: a tool call is the honest unit of "the agent is doing X".
+    // Classification looks only at the tool name and argument text, never content.
+    const typed = event as { type?: string; data?: { name?: string; arguments?: unknown } }
+    if (typed.type === 'tool/call') {
+      const name = String(typed.data?.name ?? '')
+      const rawArguments = typeof typed.data?.arguments === 'string'
+        ? typed.data.arguments
+        : JSON.stringify(typed.data?.arguments ?? {})
+      classifyToolCall(name, rawArguments)
+    }
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
     const usage = data?.usage
@@ -679,6 +690,33 @@ export function apply(ctx: Context): void {
         'cache-control': 'no-store',
       })
       res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
+
+  // The live view: what the workshop is doing, for the flower to turn toward.
+  // Coarse by design — a capability and a few words, nothing about the content.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/activity', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        const now = Date.now()
+        respond(res, 200, { focus: focusOf(now) ?? null, events: readActivity(now), windowMinutes: 10 })
+        return
+      }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
+        respond(res, 401, { error: 'owner token required' }); return
+      }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const skill = String(parsed['skill'] ?? 'general')
+        recordActivity(skill, String(parsed['label'] ?? skill))
+        respond(res, 200, { ok: true, focus: focusOf() ?? null })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

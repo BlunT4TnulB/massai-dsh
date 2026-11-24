@@ -81,6 +81,38 @@ const doors = [
   { x: 0.5, y: -Math.sqrt(3) / 2, label: 'Help', href: '/settings' },
 ];
 
+// --- live activity: the flower turns toward whatever is being built --------
+// The twelve outer centres are the skill points; the seven inner ones are doors.
+// The server reports the hottest capability by id; we map it to a point.
+const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
+const skillPoints = centres
+  .filter((c) => Math.hypot(c[0], c[1]) > 1.5)
+  .slice(0, 12);
+let focus = null;   // { x, y, label }
+let focusUntil = 0;
+
+async function poll() {
+  try {
+    const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
+    if (!response.ok) return;
+    const data = await response.json();
+    const hot = data.focus;
+    if (!hot) return;
+    const index = SKILL_ORDER.indexOf(hot.skill);
+    const point = index >= 0 ? skillPoints[index % skillPoints.length] : null;
+    if (!point) return;
+    focus = { x: point[0], y: point[1], label: hot.label };
+    focusUntil = performance.now() + 20000;
+    const caption = document.getElementById('caption');
+    caption.textContent = hot.label;
+    caption.style.opacity = '1';
+  } catch {
+    /* a live view that fails is still a flower */
+  }
+}
+poll();
+setInterval(poll, 2500);
+
 // --- camera ---------------------------------------------------------------
 let yaw = 0.35;
 let pitch = -0.42;
@@ -159,6 +191,20 @@ function lines() {
     ctx.fill();
   }
 
+  // the live point: a pulsing ring around whatever is being built right now
+  if (focus !== null && performance.now() < focusUntil) {
+    const p = project(focus.x, focus.y, 0);
+    const pulse = 10 + 6 * Math.sin(performance.now() * 0.004);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (14 + pulse) * DPR * (0.7 + 0.4 * (p.k - 0.6)), 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(126,226,168,0.85)';
+    ctx.lineWidth = DPR * 1.6;
+    ctx.shadowColor = 'rgba(126,226,168,0.9)';
+    ctx.shadowBlur = DPR * 16;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
   // the seven doors: brighter, labelled, clickable
   doors.forEach((door, index) => {
     const p = project(door.x, door.y, 0);
@@ -183,7 +229,16 @@ function lines() {
 function frame(now) {
   const dt = Math.min(64, now - last);
   last = now;
-  if (!dragging && !reduce) yaw += dt * 0.00022;
+  const live = focus !== null && now < focusUntil;
+  if (live && !dragging) {
+    // Turn the focused point toward the viewer: the face of the medallion.
+    const targetYaw = -Math.atan2(focus.y, focus.x);
+    const targetPitch = -0.32;
+    yaw += (targetYaw - yaw) * 0.045;
+    pitch += (targetPitch - pitch) * 0.045;
+  } else if (!dragging && !reduce) {
+    yaw += dt * 0.00022;
+  }
   lines();
   requestAnimationFrame(frame);
 }
@@ -265,6 +320,8 @@ export function flowerPageHtml(hideHelp = false): string {
   .hint{position:fixed;left:0;right:0;bottom:1.4rem;text-align:center;font-size:.78rem;color:#8a8a93;
     transition:opacity 1.2s ease}
   .hint b{color:#EFDCA4;font-weight:600}
+  .caption{position:fixed;left:0;right:0;top:3.2rem;text-align:center;font-size:.82rem;
+    color:#7ee2a8;opacity:0;transition:opacity .6s ease;letter-spacing:.02em}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -275,6 +332,7 @@ export function flowerPageHtml(hideHelp = false): string {
   <div class="brand"><img src="/massai-crest.svg" alt="" width="22" height="22"><span>MASSAI</span></div>
   <a class="back" href="/">← the door</a>
 </div>
+<p class="caption" id="caption"></p>
 <p class="hint" id="hint"><b>drag</b> to turn · <b>scroll</b> to zoom · <b>click</b> a point to move${hideHelp ? '' : ' · arrows work too'}</p>
 <a class="plain" href="/map">plain map for screen readers</a>
 <script>${FLOWER_SCRIPT}</script>
