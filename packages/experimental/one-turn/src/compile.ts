@@ -164,6 +164,8 @@ export function compile(spec: OneTurnSpec): CompiledMask {
   if (spec.lessons !== '') add('lessons', spec.lessons)
   if (spec.voice !== '') add('voice', spec.voice)
 
+  if (spec.library !== '') add('library', spec.library)
+
   add('protocol', OUTPUT_PROTOCOL)
 
   add('self-check', SELF_CHECK.join('\n'))

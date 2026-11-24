@@ -18,6 +18,7 @@ import { interview, probes, shapeChoices } from './intake.ts'
 import { isAmbiguous, readings } from './ambiguity.ts'
 import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { hydrateLessons, lessonsFor, readLessons, recordLesson } from './lessons.ts'
+import { currentLibrary, hydrateLibrary } from './library.ts'
 import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
 import { listObjects, r2Configured, storageCheck } from './r2.ts'
 import {
@@ -121,7 +122,11 @@ export function apply(ctx: Context): void {
       await ensureStoreSchema()
       const lessons = await hydrateLessons()
       await hydrateVoice()
-      process.stderr.write(`one-turn: store ${storeConfigured() ? 'durable' : 'file-only'}, ${lessons} lesson(s) loaded\n`)
+      const library = await hydrateLibrary()
+      process.stderr.write(`one-turn: store ${storeConfigured() ? 'durable' : 'file-only'}, ${lessons} lesson(s), ${library} library project(s)\n`)
+      // The shelf changes when someone publishes, so refresh the profile hourly.
+      const timer = setInterval(() => { void hydrateLibrary().catch(() => undefined) }, 60 * 60 * 1000)
+      if (typeof timer.unref === 'function') timer.unref()
     } catch (error) {
       process.stderr.write(`one-turn: store boot failed: ${error instanceof Error ? error.message : String(error)}\n`)
     }
@@ -425,6 +430,7 @@ export function apply(ctx: Context): void {
           ...stats,
           lessonsInMemory: readLessons().length,
           voiceStored: readVoice().name,
+          library: currentLibrary() ?? null,
         })
       } catch (error) {
         respond(res, 500, { error: error instanceof Error ? error.message : String(error) })

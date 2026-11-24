@@ -196,6 +196,59 @@ export async function saveTrial(trial: StoredTrial): Promise<void> {
   }
 }
 
+/**
+ * What the workshop's own library looks like: how many projects, how big, and
+ * which stacks recur. Builds use it as a convention hint — the house style is
+ * whatever the house already builds.
+ */
+export interface LibraryProfile {
+  /** How many published projects there are. */
+  readonly projects: number
+  /** Total bytes across them. */
+  readonly bytes: number
+  /** Most common file extensions, biggest first. */
+  readonly extensions: Array<{ readonly ext: string; readonly files: number }>
+  /** Repository names, for the console. */
+  readonly names: readonly string[]
+  /** Epoch ms when this profile was computed. */
+  readonly at: number
+}
+
+/**
+ * Compute the library profile from published projects.
+ * @returns the profile, or undefined when nothing is published yet.
+ */
+export async function libraryProfile(): Promise<LibraryProfile | undefined> {
+  if (!storeConfigured()) return undefined
+  const rows = await runSql<{ name: string; bytes: number; manifest: unknown }>(
+    "SELECT name, bytes, manifest FROM one_turn_projects WHERE visibility = 'shelf' AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 200")
+  if (rows.length === 0) return undefined
+  const counts = new Map<string, number>()
+  let bytes = 0
+  for (const row of rows) {
+    bytes += Number(row.bytes ?? 0)
+    const manifest = (typeof row.manifest === 'string' ? JSON.parse(row.manifest) : row.manifest) as unknown
+    if (!Array.isArray(manifest)) continue
+    for (const item of manifest) {
+      const path = (item as { path?: unknown }).path
+      if (typeof path !== 'string') continue
+      const ext = path.includes('.') ? (path.split('.').at(-1) ?? '').toLowerCase() : ''
+      if (ext === '' || ext.length > 6) continue
+      counts.set(ext, (counts.get(ext) ?? 0) + 1)
+    }
+  }
+  return {
+    projects: rows.length,
+    bytes,
+    extensions: [...counts.entries()]
+      .map(([ext, files]) => ({ ext, files }))
+      .sort((a, b) => b.files - a.files)
+      .slice(0, 6),
+    names: rows.slice(0, 12).map(row => row.name),
+    at: Date.now(),
+  }
+}
+
 /** Aggregate stats for the console: trials, acceptance, spend, lessons. */
 export async function trialStats(): Promise<{
   configured: boolean

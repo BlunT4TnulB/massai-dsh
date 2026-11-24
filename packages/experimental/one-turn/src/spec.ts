@@ -90,6 +90,8 @@ export interface OneTurnSpec {
   readonly voice: string
   /** What the Extrapolator filled in, and which parts must stay visibly blank. */
   readonly extrapolated: string
+  /** The workshop's own library, as a convention hint. Empty when the shelf is bare. */
+  readonly library: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */
