@@ -193,6 +193,7 @@ let simulated = false;
 let ripples = [];
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
+let thoughtTimer = 0;
 let simLevel = 0;
 let hoverNode = -1;
 let diveNode = -1;
@@ -210,8 +211,27 @@ const ROLES = [
 const DAY = Math.floor(Date.now() / 86400000);
 const daySeed = (DAY * 2654435761) % 4294967296;
 const roleOf = function (index) { return ROLES[(index * 7 + 3) % ROLES.length]; };
-// The door: one star among hundreds, and it changes with the day.
-const PORTAL = (daySeed + 17) % nodes.length;
+// The door: the one star that faces the viewer when nothing has moved yet, so it
+// sits at the centre of the screen. Everything else is a thought you can look at;
+// this is the only one you can enter. It drifts with the day, not with the view.
+const REST_YAW = 0.4;
+const REST_PITCH = -0.35;
+const PORTAL = (function () {
+  // rotate the rest camera's forward axis back into the sphere: that direction is
+  // what the viewer is looking at when the page settles.
+  const cy = Math.cos(REST_YAW);
+  const sy = Math.sin(REST_YAW);
+  const cp = Math.cos(REST_PITCH);
+  const sp = Math.sin(REST_PITCH);
+  const forward = [sy * cp, -sp, cy * cp];
+  let best = 0;
+  let bestScore = -Infinity;
+  for (let i = 0; i < nodes.length; i += 1) {
+    const score = dot(nodes[i].p, forward);
+    if (score > bestScore) { bestScore = score; best = i; }
+  }
+  return best;
+})();
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -465,6 +485,15 @@ function drawGalaxy(now) {
     ctx.globalAlpha = Math.min(1, (0.10 + 0.5 * near) * life + hot * 0.4 + (picked ? 0.6 : 0));
     ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
     ctx.globalAlpha = 1;
+    // The door is the only star with a ring: findable at rest, still not a sign.
+    if (entry.index === PORTAL) {
+      const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (pulse + DPR * 3) * DPR * p.k, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,242,214,' + (0.20 + 0.16 * breath).toFixed(3) + ')';
+      ctx.lineWidth = DPR * 1.1;
+      ctx.stroke();
+    }
   }
 
   GREAT.forEach(function (points, index) { strokeCircle(index, points, now, true); });
@@ -788,6 +817,16 @@ canvas.addEventListener('pointerup', function (event) {
   canvas.style.cursor = 'grab';
   // A tap enters the star under it; a tap on empty space comes back out.
   const picked = nodeAt(event.clientX, event.clientY);
+  if (picked >= 0 && picked !== PORTAL) {
+    // A thought, not a door: name it, then let it be.
+    const label = document.getElementById('nodeName');
+    if (label) {
+      label.textContent = describe(picked);
+      clearTimeout(thoughtTimer);
+      thoughtTimer = setTimeout(function () { if (label) label.textContent = ''; }, 2600);
+    }
+    return;
+  }
   if (picked === PORTAL) {
     // The only star that leads anywhere: it asks the room around it to open.
     try { window.parent.postMessage({ type: 'massai:enter' }, '*'); } catch (error) { void error; }

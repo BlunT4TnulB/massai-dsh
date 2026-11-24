@@ -12,6 +12,23 @@
    unportaled Conversation popovers still rise above AppFrame chrome that floats over the column. */
 .root[data-phase='hero'] {
   isolation: isolate;
+  /* The galaxy is fixed behind the whole viewport; the conversation column has to
+     stop painting over it, or the "entire screen" is really a panel. */
+  background: transparent;
+}
+
+/* and the header/mode strip goes with it: the mind is the frame, not the chrome */
+.root[data-phase='hero'] .header {
+  background: transparent;
+  border-bottom-color: transparent;
+  opacity: .0;
+  pointer-events: none;
+}
+
+.root[data-phase='hero']:hover .header {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .25s ease;
 }
 
 /* 76px with its rule: the height of the Sidebar's tab strip and header row
