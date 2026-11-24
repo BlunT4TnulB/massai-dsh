@@ -77,6 +77,16 @@ function fingerprintOf(manifest: readonly { path: string }[]): FingerprintSlice[
     .slice(0, 4)
 }
 
+/** One step of the session that built a project. */
+export interface BuildStep {
+  /** A capability id, shared with the live activity. */
+  readonly skill: string
+  /** A few words about the step. */
+  readonly label: string
+  /** Epoch ms. */
+  readonly at: number
+}
+
 /** A project's metadata, without file bytes. */
 export interface ProjectSummary {
   readonly id: string
@@ -90,6 +100,8 @@ export interface ProjectSummary {
   readonly bytes: number
   /** What kinds of files built it — the same vocabulary the live activity uses. */
   readonly fingerprint: readonly FingerprintSlice[]
+  /** The session that produced it, when it was recorded: a replayable trace. */
+  readonly buildTrail: readonly BuildStep[]
   readonly createdAt: number
   readonly updatedAt: number
 }
@@ -119,6 +131,14 @@ function toSummary(row: Record<string, unknown>): ProjectSummary {
       })
     : []
   const files = paths.length
+  const rawTrail = (typeof row['build_trail'] === 'string' ? JSON.parse(row['build_trail']) : row['build_trail']) as unknown
+  const buildTrail = Array.isArray(rawTrail)
+    ? rawTrail.flatMap((item) => {
+        const step = item as Partial<BuildStep>
+        if (typeof step.skill !== 'string' || typeof step.at !== 'number') return []
+        return [{ skill: step.skill, label: typeof step.label === 'string' ? step.label : '', at: step.at }]
+      }).slice(0, 80)
+    : []
   return {
     id: String(row['id']),
     owner: String(row['owner']),
@@ -130,6 +150,7 @@ function toSummary(row: Record<string, unknown>): ProjectSummary {
     files,
     bytes: Number(row['bytes'] ?? 0),
     fingerprint: fingerprintOf(paths),
+    buildTrail,
     createdAt: Date.parse(String(row['created_at'] ?? '')) || Date.now(),
     updatedAt: Date.parse(String(row['updated_at'] ?? '')) || Date.now(),
   }
@@ -149,6 +170,7 @@ export async function createProject(input: {
   readonly origin?: string
   readonly status?: ProjectStatus
   readonly visibility?: ProjectVisibility
+  readonly buildTrail?: readonly BuildStep[]
 }): Promise<ProjectSummary | undefined> {
   if (!projectsConfigured()) return undefined
   const id = `p-${randomUUID()}`
@@ -165,13 +187,16 @@ export async function createProject(input: {
   const status = input.status ?? 'active'
   const visibility = input.visibility ?? 'private'
   await runSql(`
-    INSERT INTO one_turn_projects (id, owner, name, shape, status, entry, manifest, bytes, origin, visibility)
-    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
-  `, [id, input.owner, input.name, input.shape, status, input.entry, JSON.stringify(manifest), bytes, input.origin ?? null, visibility])
+    INSERT INTO one_turn_projects
+      (id, owner, name, shape, status, entry, manifest, bytes, origin, visibility, build_trail)
+    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11::jsonb)
+  `, [id, input.owner, input.name, input.shape, status, input.entry, JSON.stringify(manifest), bytes,
+    input.origin ?? null, visibility, JSON.stringify((input.buildTrail ?? []).slice(0, 80))])
   return {
     id, owner: input.owner, name: input.name, shape: input.shape, status, visibility, entry: input.entry,
     files: manifest.length, bytes,
     fingerprint: fingerprintOf(manifest.map(item => ({ path: item.path }))),
+    buildTrail: (input.buildTrail ?? []).slice(0, 80),
     createdAt: Date.now(), updatedAt: Date.now(),
   }
 }

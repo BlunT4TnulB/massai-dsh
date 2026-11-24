@@ -83,6 +83,7 @@ export async function ensureStoreSchema(): Promise<void> {
        created_at timestamptz NOT NULL DEFAULT now(),
        updated_at timestamptz NOT NULL DEFAULT now())`,
     `ALTER TABLE one_turn_projects ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'private'`,
+    `ALTER TABLE one_turn_projects ADD COLUMN IF NOT EXISTS build_trail jsonb NOT NULL DEFAULT '[]'`,
     `CREATE INDEX IF NOT EXISTS one_turn_projects_owner ON one_turn_projects (owner, updated_at DESC)`,
     `CREATE INDEX IF NOT EXISTS one_turn_projects_status ON one_turn_projects (status, updated_at DESC)`,
   ]

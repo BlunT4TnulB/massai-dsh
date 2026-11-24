@@ -73,6 +73,33 @@ function filesFrom(value: unknown): ProjectFile[] {
   })
 }
 
+
+/**
+ * Snapshot the live activity trail through the loopback.
+ *
+ * The activity buffer belongs to the hosting layer, which this package cannot
+ * import; it does expose it over HTTP. One request to our own port is a fair price
+ * for a project that remembers how it was built, and a failure here is silent — the
+ * project is still worth saving without its trace.
+ * @returns the recent trail, newest last, or an empty list.
+ */
+async function snapshotTrail(): Promise<Array<{ skill: string; label: string; at: number }>> {
+  try {
+    const port = process.env.PORT ?? '10000'
+    const response = await fetch(`http://127.0.0.1:${port}/api/one-turn/activity`, { signal: AbortSignal.timeout(2000) })
+    if (!response.ok) return []
+    const data = await response.json() as { trail?: unknown }
+    if (!Array.isArray(data.trail)) return []
+    return data.trail.flatMap((item) => {
+      const step = item as { skill?: unknown; label?: unknown; at?: unknown }
+      if (typeof step.skill !== 'string' || typeof step.at !== 'number') return []
+      return [{ skill: step.skill, label: typeof step.label === 'string' ? step.label : '', at: step.at }]
+    }).slice(-60)
+  } catch {
+    return []
+  }
+}
+
 /** Answer one JSON request. */
 function respond(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body)
@@ -236,6 +263,7 @@ export function apply(ctx: Context): void {
         let saved: { id: string; name: string } | undefined
         if (record.accepted && projectsConfigured()) {
           try {
+            const buildTrail = await snapshotTrail()
             const project = await createProject({
               owner: str(parsed, 'owner') === '' ? 'owner' : str(parsed, 'owner'),
               name: str(parsed, 'name') === '' ? (normalised.spec.goal.slice(0, 60) || 'Untitled build') : str(parsed, 'name'),
@@ -243,6 +271,7 @@ export function apply(ctx: Context): void {
               entry: normalised.spec.outputContract.entry,
               files: record.files.map(file => ({ path: file.path, content: file.content })),
               origin: `trial:${record.id}`,
+              buildTrail,
             })
             if (project !== undefined) saved = { id: project.id, name: project.name }
           } catch { /* a save failure must not fail the build */ }
