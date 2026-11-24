@@ -57,6 +57,26 @@ runtime ~22 · constraints ~120 · style ~130 · acceptance ~95 · decision ~160
 voice ~160 · protocol 78 · self-check ~70          total ≈ 750–1,100 tokens
 ```
 
+## With the library in the mask (one pass, 2026-11-24)
+
+After publishing 13 repository imports to the community shelf and feeding their stack profile into the
+mask's `library` section (94 tokens):
+
+| Metric | Value |
+|---|---|
+| one-turn rate | **79%** (one pass; inside the 63–84% band) |
+| cost per build | $0.0023 |
+| failures | 2 (1 placeholder, 1 requirement trace) |
+
+The library's opening profile, straight from the published projects:
+
+```
+md 103 · ts 91 · tsx 55 · py 38 · json 35 · dxf 33     13 projects, 1.87 MB
+```
+
+Every build now carries: *"the workshop's own library holds 13 published projects… follow their
+conventions: the same file layout, the same naming, the same dependency restraint."*
+
 ## Next, in order
 
 1. Drive `requirements-traced` to zero by feeding every failure back as a lesson.
