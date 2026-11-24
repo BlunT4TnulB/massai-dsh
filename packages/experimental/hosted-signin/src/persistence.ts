@@ -49,7 +49,10 @@ let lastOk: number | undefined
  * @param params - positional parameters.
  * @returns the returned rows (empty for statements that return none).
  */
-async function runSql(query: string, params: readonly unknown[] = []): Promise<Array<Record<string, unknown>>> {
+export async function runSql(
+  query: string,
+  params: readonly unknown[] = [],
+): Promise<Array<Record<string, unknown>>> {
   const url = databaseUrl()
   if (url === '') throw new Error('DATABASE_URL is not set')
   // `postgresql://` is not a special scheme, so `new URL(conn).origin` is the

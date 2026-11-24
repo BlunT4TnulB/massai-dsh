@@ -28,6 +28,7 @@ import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from '
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
 import { agentsOf, classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
 import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession } from './hive.ts'
+import { readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
@@ -791,6 +792,23 @@ export function apply(ctx: Context): void {
         'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
       })
       res.end()
+    },
+  })
+
+
+  // Self-awareness: the workshop's own condition, readable by anyone because a
+  // being that hides how it is doing is not being honest, it is performing.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/vitals', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const vitals = await readVitals()
+        const notice = vitalsNotice(vitals)
+        respond(res, 200, { ...vitals, ...(notice === undefined ? {} : { notice }) })
+      } catch (error) {
+        respond(res, 503, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

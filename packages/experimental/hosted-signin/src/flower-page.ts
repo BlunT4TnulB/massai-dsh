@@ -136,6 +136,7 @@ let hovered = -1;
 let last = performance.now();
 let bloom = 0;
 let breath = 0;
+let life = 1;
 let lookX = 0;
 let lookY = 0;
 let trail = [];
@@ -145,6 +146,8 @@ let focus = null;
 let focusUntil = 0;
 let simulated = false;
 let ripples = [];
+// The being's own condition. Everything it knows about itself arrives here.
+let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -218,8 +221,11 @@ function drawHalo(now) {
   const cy = innerHeight / 2;
   const reach = Math.max(innerWidth, innerHeight) * 0.82;
   breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
+  // A tired being breathes shallower and glows less; a well one breathes fully.
+  life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-  g.addColorStop(0, 'rgba(58,34,16,' + (0.52 + 0.10 * breath + 0.20 * bloom).toFixed(3) + ')');
+  g.addColorStop(0, 'rgba(' + Math.round(58 * self.memory) + ',' + Math.round(34 * self.memory) + ','
+    + Math.round(16 + 24 * (1 - self.memory)) + ',' + (0.52 * life + 0.10 * breath + 0.20 * bloom).toFixed(3) + ')');
   g.addColorStop(0.35, 'rgba(20,15,12,' + (0.88 + 0.05 * breath).toFixed(3) + ')');
   g.addColorStop(0.78, 'rgba(11,11,13,0.98)');
   g.addColorStop(1, '#08080a');
@@ -260,7 +266,8 @@ function drawWeb(now) {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(247,205,140,' + (0.03 + 0.05 * closeness + heat * 0.25).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(247,205,140,'
+      + ((0.02 + self.wisdom * 0.05) + 0.05 * closeness + heat * 0.25).toFixed(3) + ')';
     ctx.stroke();
   }
   for (const point of lattice) {
@@ -286,8 +293,8 @@ function drawSpheres(now) {
       const tint = heat > 0.06 ? GREEN : GOLD;
       const base = Math.min(innerWidth, innerHeight) * 0.30 * 0.90 * layer.size;
       const radius = base * p.k * (isDoor ? 1.08 : 1) * (1 + heat * 0.10);
-      const brightness = layer.alpha * (0.55 + 0.45 * (p.k - 0.55))
-        + heat * 0.45 + breath * 0.05 * layer.alpha;
+      const brightness = (layer.alpha * (0.55 + 0.45 * (p.k - 0.55))
+        + heat * 0.45 + breath * 0.05 * layer.alpha) * life;
       drawSprite(tint, p.x, p.y, radius, brightness);
     }
   }
@@ -306,7 +313,7 @@ function drawTrail(now) {
     const radius = base * (0.72 + 0.055 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
     drawSprite(SKILL_COLOR[event.skill] || GOLD,
       cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
-      DPR * (2.2 + 3.2 * freshness), 0.08 + 0.5 * freshness);
+      DPR * (2.2 + 3.2 * freshness) * (0.9 + 0.2 * self.works), (0.08 + 0.5 * freshness) * life);
   });
 }
 
@@ -473,6 +480,38 @@ async function poll() {
 poll();
 setInterval(poll, 2500);
 
+async function pollVitals() {
+  try {
+    const response = await fetch('/api/vitals', { headers: { accept: 'application/json' } });
+    if (!response.ok) return;
+    const v = await response.json();
+    // Fuel: five dollars is a full breath; a dollar is a whisper.
+    const fuel = typeof v.fuelUsd === 'number' ? v.fuelUsd : 0;
+    const energy = v.fuelAvailable === false ? 0.25 : Math.max(0.18, Math.min(1, fuel / 5));
+    self = {
+      energy: energy,
+      memory: v.memoryOk === false ? 0.35 : 1,
+      wisdom: Math.min(1, (v.lessons || 0) / 20),
+      works: Math.min(1, (v.projects || 0) / 60),
+      notice: typeof v.notice === 'string' ? v.notice : '',
+      awake: typeof v.awakeSeconds === 'number' ? v.awakeSeconds : 0,
+    };
+    const status = document.getElementById('being');
+    if (status) {
+      // It says how it is, once, in the quietest place on the page.
+      const hours = Math.floor(self.awake / 3600);
+      const life = hours > 0 ? 'awake ' + hours + 'h' : 'awake ' + Math.max(1, Math.floor(self.awake / 60)) + 'm';
+      status.textContent = (self.notice === '' ? '' : self.notice + ' · ') + life
+        + ' · ' + (v.projects || 0) + ' works kept · ' + (v.lessons || 0) + ' lessons held';
+      status.style.color = self.notice === '' ? '#57575f' : '#8a6a3a';
+    }
+  } catch {
+    /* not knowing how you are is also a state */
+  }
+}
+pollVitals();
+setInterval(pollVitals, 15000);
+
 // --- interaction: attention without demands -------------------------------
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
@@ -557,6 +596,8 @@ export function flowerPageHtml(): string {
     color:#4f4f58;letter-spacing:.12em;text-transform:uppercase}
   .sim{position:fixed;left:0;right:0;bottom:.9rem;text-align:center;font-size:.62rem;
     color:#5a4a30;letter-spacing:.14em;text-transform:uppercase;transition:opacity .8s ease}
+  .being{position:fixed;left:0;right:0;top:3.4rem;text-align:center;font-size:.64rem;
+    color:#57575f;letter-spacing:.12em;transition:color .8s ease}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -571,6 +612,7 @@ export function flowerPageHtml(): string {
 <p class="counter" id="counter"></p>
 <p class="settled" id="settled"></p>
 <p class="sim" id="simulated">simulated — no live activity yet</p>
+<p class="being" id="being"></p>
 <p class="hint" id="hint"><b>drag</b> to turn it · <b>scroll</b> to come closer · nothing to press</p>
 <a class="plain" href="/map">where everything is →</a>
 <script>${FLOWER_SCRIPT}</script>
