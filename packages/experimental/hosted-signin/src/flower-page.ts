@@ -470,6 +470,20 @@ function drawGalaxy(now) {
     ctx.lineWidth = DPR * 0.8;
     ctx.stroke();
   }
+
+  // The recursion: zooming toward the dive star reveals a smaller galaxy inside
+  // it, and deeper zoom reveals one inside that — the same figure, repeated. That
+  // is the fractal part: each piece is itself the whole.
+  if (diveNode >= 0 && zoom > 1.55) {
+    const anchor = nodes[diveNode].p;
+    const strength = Math.min(1, (zoom - 1.55) / 1.4);
+    drawGalaxyAt(now, anchor, 0.34, yaw * 2 + diveNode, 0.2 + 0.8 * strength);
+  }
+  if (diveNode >= 0 && zoom > 2.9) {
+    const anchor = nodes[diveNode].p;
+    const strength = Math.min(1, (zoom - 2.9) / 1.8);
+    drawGalaxyAt(now, anchor, 0.12, yaw * 3 + diveNode * 2, strength * 0.9);
+  }
 }
 
 function drawTrail(now) {
