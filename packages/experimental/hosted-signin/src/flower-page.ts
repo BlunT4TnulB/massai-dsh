@@ -383,7 +383,7 @@ for (const family of EXTRA_AXES) {
         const key = Math.round(p[0] * 200) + ',' + Math.round(p[1] * 200) + ',' + Math.round(p[2] * 200);
         if (seenExtra.has(key)) continue;
         seenExtra.add(key);
-        EXTRA_NODES.push(p);
+        EXTRA_NODES.push({ p: p, family: EXTRA_AXES.length });
       }
     }
   }
@@ -586,10 +586,19 @@ function drawGalaxy(now) {
   // The deeper sky: four rotated families over the root, drawn additive and dim,
   // so the cloud gains volume without the frame budget paying for four sprites a
   // star. Circles first (they are structure), then their crossings.
+  // The deeper sky emerges one family at a time as you travel: at rest there is
+  // the fixed flower and its first extra family; deeper zoom surfaces the next,
+  // and the next. The sky is never all of it, which is what makes it feel endless.
   if (EXTRA_CIRCLES.length > 0) {
     ctx.globalCompositeOperation = 'lighter';
-    for (const family of EXTRA_CIRCLES) {
-      for (const points of family) {
+    const reveal = function (familyIndex) {
+      const begin = 1.0 + familyIndex * 0.85;
+      return Math.max(0, Math.min(1, (zoom - begin) / 0.9));
+    };
+    for (let fi = 0; fi < EXTRA_CIRCLES.length; fi += 1) {
+      const alpha = reveal(fi);
+      if (alpha <= 0.01) continue;
+      for (const points of EXTRA_CIRCLES[fi]) {
         ctx.beginPath();
         let started = false;
         for (const point of points) {
@@ -598,18 +607,20 @@ function drawGalaxy(now) {
           else ctx.lineTo(p.x, p.y);
         }
         ctx.closePath();
-        ctx.strokeStyle = 'rgba(214,168,120,' + (0.045 * life + 0.012 * breath).toFixed(3) + ')';
+        ctx.strokeStyle = 'rgba(214,168,120,' + ((0.045 * life + 0.012 * breath) * alpha).toFixed(3) + ')';
         ctx.lineWidth = DPR * 0.5;
         ctx.stroke();
       }
     }
     const sky = glowSprite('232,196,150');
     for (const node of EXTRA_NODES) {
-      const p = project(node[0], node[1], node[2]);
+      const p = project(node.p[0], node.p[1], node.p[2]);
       if (p.z < -0.35) continue;
+      const famAlpha = reveal(node.family - 1);
+      if (famAlpha <= 0.01) continue;
       const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
       const radius = DPR * (0.5 + 1.5 * near);
-      ctx.globalAlpha = (0.05 + 0.20 * near) * life;
+      ctx.globalAlpha = (0.05 + 0.20 * near) * life * famAlpha;
       ctx.drawImage(sky, p.x - radius, p.y - radius, radius * 2, radius * 2);
     }
     ctx.globalAlpha = 1;
@@ -770,7 +781,8 @@ function applyLevel(level) {
   ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
   if (counter) {
-    counter.textContent = 'Massai · ' + nodes.length + ' thoughts · ' + axes.length + ' circles · one door';
+    counter.textContent = 'Massai · ' + (nodes.length + EXTRA_NODES.length) + ' thoughts · '
+      + (axes.length * FAMILIES) + ' circles · one door';
   }
 }
 const slider = document.getElementById('level');
@@ -779,7 +791,8 @@ if (slider) {
   applyLevel(Number(slider.value));
 }
 if (counter) {
-    counter.textContent = 'Massai · ' + nodes.length + ' thoughts · ' + axes.length + ' circles · one door';
+    counter.textContent = 'Massai · ' + (nodes.length + EXTRA_NODES.length) + ' thoughts · '
+      + (axes.length * FAMILIES) + ' circles · one door';
   }
 
 async function poll() {
