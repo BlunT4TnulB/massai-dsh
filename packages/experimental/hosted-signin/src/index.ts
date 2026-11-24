@@ -752,11 +752,11 @@ export function apply(ctx: Context): void {
 
 
 
-  // The immersive flower: the mark as a place you can turn, zoom and click through.
+  // The immersive flower: a presence you can turn, not a menu. It ignores the
+  // comfort setting on purpose — there is nothing here to explain or to hide.
   ctx.webServer.register({
     kind: 'exact', path: '/flower', auth: 'anonymous',
     handler: (req, res) => {
-      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
       const html = Buffer.from(flowerPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
