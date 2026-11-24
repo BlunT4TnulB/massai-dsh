@@ -147,6 +147,8 @@ const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
 const FIT = EMBEDDED ? 0.46 : 0.40;
+// Zoom bands: each passed threshold reveals the next galaxy inside the last.
+const ZOOM_BANDS = [1.5, 2.4, 3.8, 5.6, 8.0, 11.0];
 const ANCHOR = EMBEDDED ? 0.40 : 0.5;
 
 const spriteCache = new Map();
@@ -200,6 +202,16 @@ let pointers = new Map();
 let pinchStart = 0;
 let zoomAtPinch = 1;
 const KIND = { vertex: 'vertex', edge: 'edge', face: 'face' };
+// What a star is, for the nine-tenths of them that are not the door.
+const ROLES = [
+  'a good thought', 'a bad thought', 'a random thought', 'a memory',
+  'a tool', 'a project', 'a ramble', 'an unfinished idea', 'a doubt',
+];
+const DAY = Math.floor(Date.now() / 86400000);
+const daySeed = (DAY * 2654435761) % 4294967296;
+const roleOf = function (index) { return ROLES[(index * 7 + 3) % ROLES.length]; };
+// The door: one star among hundreds, and it changes with the day.
+const PORTAL = (daySeed + 17) % nodes.length;
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -471,18 +483,17 @@ function drawGalaxy(now) {
     ctx.stroke();
   }
 
-  // The recursion: zooming toward the dive star reveals a smaller galaxy inside
-  // it, and deeper zoom reveals one inside that — the same figure, repeated. That
-  // is the fractal part: each piece is itself the whole.
-  if (diveNode >= 0 && zoom > 1.55) {
-    const anchor = nodes[diveNode].p;
-    const strength = Math.min(1, (zoom - 1.55) / 1.4);
-    drawGalaxyAt(now, anchor, 0.34, yaw * 2 + diveNode, 0.2 + 0.8 * strength);
-  }
-  if (diveNode >= 0 && zoom > 2.9) {
-    const anchor = nodes[diveNode].p;
-    const strength = Math.min(1, (zoom - 2.9) / 1.8);
-    drawGalaxyAt(now, anchor, 0.12, yaw * 3 + diveNode * 2, strength * 0.9);
+  // Endless finding: every band of zoom grows another galaxy inside the last.
+  // The root never moves — it is always the fixed flower — but each child is
+  // anchored on a different star, so no two journeys repeat.
+  for (let band = 0; band < ZOOM_BANDS.length; band += 1) {
+    if (zoom <= ZOOM_BANDS[band]) break;
+    const strength = Math.min(1, (zoom - ZOOM_BANDS[band]) / (ZOOM_BANDS[band] * 0.6));
+    const anchorNode = diveNode >= 0 && band === 0
+      ? nodes[diveNode].p
+      : nodes[(daySeed + band * 53 + Math.floor(band * 7919)) % nodes.length].p;
+    drawGalaxyAt(now, anchorNode, 0.34 / Math.pow(1.75, band), yaw * (2 + band) + band, 0.85 - band * 0.1);
+    void strength;
   }
 }
 
@@ -626,8 +637,7 @@ function applyLevel(level) {
   ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
   if (counter) {
-    counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles'
-      + ' · ' + nodes.length + ' ways in';
+    counter.textContent = 'Massai · ' + nodes.length + ' thoughts · ' + axes.length + ' circles · one door';
   }
 }
 const slider = document.getElementById('level');
@@ -636,8 +646,7 @@ if (slider) {
   applyLevel(Number(slider.value));
 }
 if (counter) {
-    counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles'
-      + ' · ' + nodes.length + ' ways in';
+    counter.textContent = 'Massai · ' + nodes.length + ' thoughts · ' + axes.length + ' circles · one door';
   }
 
 async function poll() {
@@ -714,9 +723,8 @@ function nodeAt(clientX, clientY) {
 
 function describe(index) {
   if (index < 0) return '';
-  const node = nodes[index];
-  const pair = [axes[node.a].kind, axes[node.b].kind].sort();
-  return pair[0] + ' × ' + pair[1] + ' · node ' + index;
+  if (index === PORTAL) return 'the door — touch it to enter';
+  return roleOf(index);
 }
 
 canvas.addEventListener('pointerdown', function (event) {
@@ -741,7 +749,7 @@ canvas.addEventListener('pointermove', function (event) {
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
     const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-    zoom = Math.max(0.5, Math.min(7, zoomAtPinch * (now / pinchStart)));
+    zoom = Math.max(0.5, Math.min(16, zoomAtPinch * (now / pinchStart)));
     return;
   }
   if (!reduce) {
@@ -780,7 +788,12 @@ canvas.addEventListener('pointerup', function (event) {
   canvas.style.cursor = 'grab';
   // A tap enters the star under it; a tap on empty space comes back out.
   const picked = nodeAt(event.clientX, event.clientY);
-  if (picked >= 0) {
+  if (picked === PORTAL) {
+    // The only star that leads anywhere: it asks the room around it to open.
+    try { window.parent.postMessage({ type: 'massai:enter' }, '*'); } catch (error) { void error; }
+    const label = document.getElementById('nodeName');
+    if (label) label.textContent = 'entering…';
+  } else if (picked >= 0) {
     diveNode = picked;
     const label = document.getElementById('nodeName');
     if (label) label.textContent = describe(picked);
@@ -797,7 +810,7 @@ canvas.addEventListener('pointercancel', function (event) {
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
-  zoom = Math.max(0.5, Math.min(7, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.5, Math.min(16, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;

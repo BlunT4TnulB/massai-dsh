@@ -162,8 +162,23 @@ export function ConversationContent(props: ConversationContentProps) {
         : hero ? { placeholder: t('placeholder.hero') } : {}),
   })
 
+  // The galaxy hides one door among its stars. When it is found, the frame posts
+  // one message and the composer appears — before that, the mind IS the screen.
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    const receive = (event: MessageEvent): void => {
+      const data = event.data as { type?: unknown } | null
+      if (data !== null && typeof data === 'object' && data.type === 'massai:enter') setEntered(true)
+    }
+    window.addEventListener('message', receive)
+    return () => { window.removeEventListener('message', receive) }
+  }, [])
+
   const composerBar = (
-    <div className={clsx(css.composerStack, hero && css.composerHero)}>
+    <div
+      className={clsx(css.composerStack, hero && css.composerHero)}
+      data-enter-gate={hero && !entered ? 'closed' : 'open'}
+    >
       {hero && <HeroShell t={t} renderSlot={renderSlot} />}
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}

@@ -592,23 +592,17 @@
    in the middle of it. It docks at the foot of the screen as a slim floating bar:
    the transcript is empty, there is nothing to centre around, and the mind stays
    unobstructed. */
-@media (min-width: 320px) {
-  .root[data-phase='hero'] .composerHero {
-    align-self: center;
-    justify-content: flex-end;
-    margin-top: auto;
-    padding-bottom: 18px;
-    gap: 6px;
-    width: min(calc(var(--dsh-composer-card-max-width) * 0.86 + 2 * var(--dsh-composer-side-clearance)), calc(100% - 24px));
-  }
+/* Until the door is found, the room has no composer. The galaxy is the whole
+   screen; the workspace row and the input card arrive only when the mind lets
+   you in. This is the "no bar" rule made structural rather than stylistic. */
+.composerStack[data-enter-gate='closed'] {
+  gap: 0;
+}
 
-  /* the card itself thins to a bar: less fill, softer edge, blur over the sky */
-  .root[data-phase='hero'] [data-composer-card] {
-    border-radius: 1.4rem;
-    background: rgba(20, 20, 24, .58);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
-  }
+.composerStack[data-enter-gate='closed'] [data-composer-card],
+.composerStack[data-enter-gate='closed'] [data-composer-dock],
+.composerStack[data-enter-gate='closed'] > div:not([data-immersion]) {
+  display: none;
 }
 
 /* Hero phase: the composer stack (hero chrome + workspace row + card) is
