@@ -588,6 +588,29 @@
   left: 0;
 }
 
+/* Hero phase, immersive: the galaxy is the frame, so the composer must not sit
+   in the middle of it. It docks at the foot of the screen as a slim floating bar:
+   the transcript is empty, there is nothing to centre around, and the mind stays
+   unobstructed. */
+@media (min-width: 320px) {
+  .root[data-phase='hero'] .composerHero {
+    align-self: center;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-bottom: 18px;
+    gap: 6px;
+    width: min(calc(var(--dsh-composer-card-max-width) * 0.86 + 2 * var(--dsh-composer-side-clearance)), calc(100% - 24px));
+  }
+
+  /* the card itself thins to a bar: less fill, softer edge, blur over the sky */
+  .root[data-phase='hero'] [data-composer-card] {
+    border-radius: 1.4rem;
+    background: rgba(20, 20, 24, .58);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+  }
+}
+
 /* Hero phase: the composer stack (hero chrome + workspace row + card) is
    flex-centered in the column; composer phase docks it at the bottom. Flex,
    NOT absolute+transform: a transform would make this box the containing
