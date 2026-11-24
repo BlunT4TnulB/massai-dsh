@@ -330,6 +330,65 @@ function circlePath(axis, steps) {
 }
 const GREAT = axes.map(function (axis) { return circlePath(axis.n, EMBEDDED || innerWidth < 700 ? 56 : 84); });
 
+// --- the deeper axes -------------------------------------------------------
+// The same thirty-one circles, rotated onto four more orientations. Five
+// families in all: one fixed (the mark's own symmetry) and four the mind turns
+// for itself. A phone carries three families; a wide screen carries five.
+const FAMILIES = innerWidth < 700 ? 3 : 5;
+
+/**
+ * Rotate a direction by three angles (X, then Y, then Z).
+ * @param v - unit direction.
+ * @param a - X angle in radians.
+ * @param b - Y angle in radians.
+ * @param c - Z angle in radians.
+ * @returns the rotated unit direction.
+ */
+function spin3(v, a, b, c) {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  const cb = Math.cos(b), sb = Math.sin(b);
+  const cc = Math.cos(c), sc = Math.sin(c);
+  const y1 = v[1] * ca - v[2] * sa;
+  const z1 = v[1] * sa + v[2] * ca;
+  const x2 = v[0] * cb + z1 * sb;
+  const z2 = -v[0] * sb + z1 * cb;
+  const x3 = x2 * cc - y1 * sc;
+  const y3 = x2 * sc + y1 * cc;
+  return [x3, y3, z2];
+}
+
+const EXTRA_AXES = [];
+for (let family = 1; family < FAMILIES; family += 1) {
+  // deterministic, day-seeded, and far apart: no two families lie on one another
+  const a = ((daySeed % 1000) / 1000) * Math.PI + family * 0.618;
+  const b = (((daySeed >> 3) % 1000) / 1000) * Math.PI * 2 + family * 0.414;
+  const c = ((family * 137.5) * Math.PI) / 180;
+  const rotated = axes.map(function (axis) { return spin3(axis.n, a, b, c); });
+  EXTRA_AXES.push(rotated);
+}
+
+// A dulled copy of the sprite cache for the extras: one tint, dimmer.
+const EXTRA_CIRCLES = [];
+const EXTRA_NODES = [];
+for (const family of EXTRA_AXES) {
+  EXTRA_CIRCLES.push(family.map(function (axis) { return circlePath(axis, 44); }));
+  // the crossings inside a family, deduplicated: the extra sky's stars
+  const seenExtra = new Set();
+  for (let i = 0; i < family.length; i += 1) {
+    for (let j = i + 1; j < family.length; j += 1) {
+      const line = cross(family[i], family[j]);
+      if (Math.hypot(line[0], line[1], line[2]) < 1e-6) continue;
+      for (const sign of [1, -1]) {
+        const p = norm([line[0] * sign, line[1] * sign, line[2] * sign]);
+        const key = Math.round(p[0] * 200) + ',' + Math.round(p[1] * 200) + ',' + Math.round(p[2] * 200);
+        if (seenExtra.has(key)) continue;
+        seenExtra.add(key);
+        EXTRA_NODES.push(p);
+      }
+    }
+  }
+}
+
 function circleWeight(index) {
   const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
   if (chosen === null) return 1;
@@ -522,6 +581,39 @@ function drawGalaxy(now) {
     ctx.strokeStyle = 'rgba(255,240,215,' + (0.16 * life + 0.03 * breath).toFixed(3) + ')';
     ctx.lineWidth = DPR * 0.8;
     ctx.stroke();
+  }
+
+  // The deeper sky: four rotated families over the root, drawn additive and dim,
+  // so the cloud gains volume without the frame budget paying for four sprites a
+  // star. Circles first (they are structure), then their crossings.
+  if (EXTRA_CIRCLES.length > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const family of EXTRA_CIRCLES) {
+      for (const points of family) {
+        ctx.beginPath();
+        let started = false;
+        for (const point of points) {
+          const p = project(point[0], point[1], point[2]);
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(214,168,120,' + (0.045 * life + 0.012 * breath).toFixed(3) + ')';
+        ctx.lineWidth = DPR * 0.5;
+        ctx.stroke();
+      }
+    }
+    const sky = glowSprite('232,196,150');
+    for (const node of EXTRA_NODES) {
+      const p = project(node[0], node[1], node[2]);
+      if (p.z < -0.35) continue;
+      const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
+      const radius = DPR * (0.5 + 1.5 * near);
+      ctx.globalAlpha = (0.05 + 0.20 * near) * life;
+      ctx.drawImage(sky, p.x - radius, p.y - radius, radius * 2, radius * 2);
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   // Endless finding: every band of zoom grows another galaxy inside the last.
