@@ -757,7 +757,7 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/flower', auth: 'anonymous',
     handler: (req, res) => {
       const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
-      const html = Buffer.from(flowerPageHtml(isMaster(comfort)))
+      const html = Buffer.from(flowerPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),

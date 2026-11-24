@@ -449,10 +449,9 @@ setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 7000);
 
 /**
  * Render the immersive flower page.
- * @param hideHelp - true for a person who asked for no explanatory text.
  * @returns the page HTML.
  */
-export function flowerPageHtml(hideHelp = false): string {
+export function flowerPageHtml(): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>The flower — Massai</title>
