@@ -23,6 +23,9 @@ import { runSql, storeConfigured } from './store.ts'
 /** What a project may be. */
 export type ProjectStatus = 'active' | 'paused' | 'adoptable' | 'forked' | 'deleted'
 
+/** Whether a project is the owner's alone, or offered to the public shelf. */
+export type ProjectVisibility = 'private' | 'shelf'
+
 /** One file in a project. */
 export interface ProjectFile {
   readonly path: string
@@ -36,6 +39,7 @@ export interface ProjectSummary {
   readonly name: string
   readonly shape: string
   readonly status: ProjectStatus
+  readonly visibility: ProjectVisibility
   readonly entry: string
   readonly files: number
   readonly bytes: number
@@ -68,6 +72,7 @@ function toSummary(row: Record<string, unknown>): ProjectSummary {
     name: String(row['name']),
     shape: String(row['shape']),
     status: String(row['status']) as ProjectStatus,
+    visibility: (String(row['visibility'] ?? 'private') === 'shelf' ? 'shelf' : 'private'),
     entry: String(row['entry'] ?? ''),
     files,
     bytes: Number(row['bytes'] ?? 0),
@@ -89,6 +94,7 @@ export async function createProject(input: {
   readonly files: readonly ProjectFile[]
   readonly origin?: string
   readonly status?: ProjectStatus
+  readonly visibility?: ProjectVisibility
 }): Promise<ProjectSummary | undefined> {
   if (!projectsConfigured()) return undefined
   const id = `p-${randomUUID()}`
@@ -103,12 +109,13 @@ export async function createProject(input: {
   }
   if (manifest.length === 0) return undefined
   const status = input.status ?? 'active'
+  const visibility = input.visibility ?? 'private'
   await runSql(`
-    INSERT INTO one_turn_projects (id, owner, name, shape, status, entry, manifest, bytes, origin)
-    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
-  `, [id, input.owner, input.name, input.shape, status, input.entry, JSON.stringify(manifest), bytes, input.origin ?? null])
+    INSERT INTO one_turn_projects (id, owner, name, shape, status, entry, manifest, bytes, origin, visibility)
+    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
+  `, [id, input.owner, input.name, input.shape, status, input.entry, JSON.stringify(manifest), bytes, input.origin ?? null, visibility])
   return {
-    id, owner: input.owner, name: input.name, shape: input.shape, status, entry: input.entry,
+    id, owner: input.owner, name: input.name, shape: input.shape, status, visibility, entry: input.entry,
     files: manifest.length, bytes, createdAt: Date.now(), updatedAt: Date.now(),
   }
 }
@@ -134,7 +141,7 @@ export async function listProjects(owner: string, includeDeleted = false): Promi
 export async function shelf(): Promise<ProjectSummary[]> {
   if (!storeConfigured()) return []
   const rows = await runSql<Record<string, unknown>>(
-    "SELECT * FROM one_turn_projects WHERE status = 'adoptable' ORDER BY updated_at DESC LIMIT 100")
+    "SELECT * FROM one_turn_projects WHERE status = 'adoptable' AND visibility = 'shelf' ORDER BY updated_at DESC LIMIT 100")
   return rows.map(toSummary)
 }
 
@@ -202,6 +209,29 @@ export async function saveProjectFiles(
  * @param status - the new status.
  * @returns whether it changed.
  */
+/**
+ * Publish a project to the shelf, or take it back.
+ *
+ * Imported repositories start private and stay private until this is called: a
+ * public site must never publish someone's code because a checkbox defaulted to
+ * yes. Publishing is one deliberate action, and it is reversible.
+ * @param id - the project id.
+ * @param owner - the caller, who must own it.
+ * @param visibility - 'shelf' to offer it, 'private' to withdraw it.
+ * @returns whether it changed.
+ */
+export async function setProjectVisibility(
+  id: string,
+  owner: string,
+  visibility: ProjectVisibility,
+): Promise<boolean> {
+  if (!storeConfigured()) return false
+  const rows = await runSql<{ id: string }>(
+    'UPDATE one_turn_projects SET visibility = $2, updated_at = now() WHERE id = $1 AND owner = $3 RETURNING id',
+    [id, visibility, owner])
+  return rows.length > 0
+}
+
 export async function setProjectStatus(id: string, owner: string, status: ProjectStatus): Promise<boolean> {
   if (!storeConfigured()) return false
   const rows = await runSql<{ id: string }>(

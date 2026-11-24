@@ -43,6 +43,8 @@ export function projectsPageHtml(): string {
   .pill.paused{color:#F0B429;border-color:#4a3a10;background:#221a08}
   .pill.adoptable{color:#9ecbff;border-color:#1d2f45;background:#0e1720}
   .pill.deleted{color:#F06868;border-color:#4a1a1a;background:#1d0f0f}
+  .pill.private{color:#8a8a93}
+  .pill.shelf{color:#9ecbff;border-color:#1d2f45;background:#0e1720}
   button{font:inherit;font-size:.78rem;padding:.32rem .6rem;border-radius:.4rem;cursor:pointer;
     border:1px solid #31313a;background:#1f1f27;color:#d6d6dd}
   button.primary{background:#C1440E;border-color:#C1440E;color:#fff;font-weight:700}
@@ -84,6 +86,7 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
     div.className = 'card'
     div.innerHTML = '<div class="main"><div class="name">' + esc(p.name) + '</div>'
       + '<div class="meta"><span class="pill ' + esc(p.status) + '">' + esc(p.status) + '</span> '
+      + '<span class="pill ' + esc(p.visibility) + '">' + esc(p.visibility) + '</span> '
       + esc(p.shape) + ' · ' + p.files + ' file' + (p.files === 1 ? '' : 's') + ' · ' + kib(p.bytes)
       + ' · ' + when(p.updatedAt) + '</div>'
       + '<div class="row">' + actions + '</div></div>'
@@ -118,7 +121,9 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
       mine.projects.forEach((p) => {
         const buttons = '<button data-open="' + esc(p.id) + '">Open</button>'
           + (p.status === 'active' ? '<button data-set="paused" data-id="' + esc(p.id) + '">Pause</button>' : '')
-          + (p.status !== 'adoptable' ? '<button data-set="adoptable" data-id="' + esc(p.id) + '">Offer to shelf</button>' : '')
+          + (p.visibility === 'shelf'
+              ? '<button data-publish="private" data-id="' + esc(p.id) + '">Make private</button>'
+              : '<button data-publish="shelf" data-id="' + esc(p.id) + '">Publish to shelf</button>')
           + '<button data-set="deleted" data-id="' + esc(p.id) + '">Delete</button>'
         mineBox.append(card(p, buttons))
       })
@@ -140,6 +145,12 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
     document.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', async () => {
       b.disabled = true
       const ok = await act('/api/projects/status', { id: b.dataset.id, status: b.dataset.set })
+      if (!ok) b.textContent = 'failed'
+      await load()
+    }))
+    document.querySelectorAll('[data-publish]').forEach((b) => b.addEventListener('click', async () => {
+      b.disabled = true
+      const ok = await act('/api/projects/publish', { id: b.dataset.id, visibility: b.dataset.publish })
       if (!ok) b.textContent = 'failed'
       await load()
     }))

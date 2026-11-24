@@ -22,7 +22,8 @@ import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
 import { listObjects, r2Configured, storageCheck } from './r2.ts'
 import {
   adoptProject, createProject, deleteProject, listProjects, projectsConfigured, readProject,
-  saveProjectFiles, setProjectStatus, shelf, usageOf, type ProjectFile, type ProjectStatus,
+  saveProjectFiles, setProjectStatus, setProjectVisibility, shelf, usageOf,
+  type ProjectFile, type ProjectStatus, type ProjectVisibility,
 } from './projects.ts'
 import { projectsPageHtml } from './projects-page.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
@@ -482,6 +483,8 @@ export function apply(ctx: Context): void {
           entry: str(parsed, 'entry') === '' ? (files[0]?.path ?? 'index.html') : str(parsed, 'entry'),
           files,
           ...(str(parsed, 'origin') === '' ? {} : { origin: str(parsed, 'origin') }),
+          // A guest may never publish; only the operator can create a shelf item directly.
+          ...(caller.owner && str(parsed, 'visibility') === 'shelf' ? { visibility: 'shelf' as ProjectVisibility } : {}),
         })
         if (project === undefined) { respond(res, 503, { error: 'storage is not configured yet' }); return }
         respond(res, 200, { ok: true, project })
@@ -517,8 +520,9 @@ export function apply(ctx: Context): void {
         if (project === undefined) { respond(res, 404, { error: 'no such project' }); return }
         const caller = callerOf(req)
         const mine = caller !== undefined && (caller.id === project.owner || caller.owner)
-        // A paused or adoptable project is readable — that is what makes it a shelf.
-        if (!mine && project.status !== 'adoptable' && project.status !== 'paused') {
+        // Someone else's project is readable only when it was deliberately published.
+        // Status alone is not enough: an imported repository is not a shelf item.
+        if (!mine && project.visibility !== 'shelf') {
           respond(res, 403, { error: 'this project is private' }); return
         }
         respond(res, 200, { ok: true, project, mine })
@@ -592,6 +596,26 @@ export function apply(ctx: Context): void {
         const project = await adoptProject(str(parsed, 'id'), caller.id)
         respond(res, project === undefined ? 404 : 200,
           project === undefined ? { error: 'not adoptable' } : { ok: true, project })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+
+  // Publishing is deliberate and reversible. Nothing arrives on the public shelf by
+  // accident — imported code starts private, and only this route changes that.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/projects/publish', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const caller = callerOf(req)
+      if (caller === undefined) { respond(res, 401, { error: 'no session' }); return }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const visibility = str(parsed, 'visibility') === 'shelf' ? 'shelf' : 'private'
+        const ok = await setProjectVisibility(str(parsed, 'id'), caller.id, visibility)
+        respond(res, ok ? 200 : 404, ok ? { ok: true, visibility } : { error: 'not found, or not yours' })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
       }

@@ -79,8 +79,10 @@ export async function ensureStoreSchema(): Promise<void> {
        manifest jsonb NOT NULL DEFAULT '[]',
        bytes integer NOT NULL DEFAULT 0,
        origin text,
+       visibility text NOT NULL DEFAULT 'private',
        created_at timestamptz NOT NULL DEFAULT now(),
        updated_at timestamptz NOT NULL DEFAULT now())`,
+    `ALTER TABLE one_turn_projects ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'private'`,
     `CREATE INDEX IF NOT EXISTS one_turn_projects_owner ON one_turn_projects (owner, updated_at DESC)`,
     `CREATE INDEX IF NOT EXISTS one_turn_projects_status ON one_turn_projects (status, updated_at DESC)`,
   ]
