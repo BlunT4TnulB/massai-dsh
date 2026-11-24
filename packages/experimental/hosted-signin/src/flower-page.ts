@@ -90,8 +90,10 @@ const skillPoints = centres
   .slice(0, 12);
 let focus = null;   // { x, y, label }
 let focusUntil = 0;
-let trail = [];     // recent actions, oldest first: [{ skill, at }]
+let trail = [];     // recent actions, oldest first: [{ skill, at, session }]
 let trailTotal = 0;
+let agents = [];    // distinct sessions at work: [{ id, steps, lastSkill }]
+let simulated = false;
 
 /** Colour per capability, so the work has a texture rather than one hue. */
 const SKILL_COLOR = {
@@ -131,13 +133,40 @@ function drawTrail(now) {
   });
 }
 
+/**
+ * A clearly-labelled simulation, used only when nothing real has happened.
+ *
+ * The page never pretends this is live work: `simulated` is set, a badge appears,
+ * and the nodes are generated from a time-seeded wobble rather than from data.
+ */
+function simulate(now) {
+  const seed = Math.floor(now / 30000);
+  const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs'];
+  trail = [];
+  for (let i = 0; i < 14; i += 1) {
+    const wobble = Math.sin(seed * 0.7 + i * 1.3);
+    trail.push({
+      skill: pool[Math.abs(Math.floor(wobble * 3) + i) % pool.length],
+      at: now - (14 - i) * 9000,
+    });
+  }
+  agents = [{ id: 'demo-1', steps: 9, lastSkill: 'geometry' }, { id: 'demo-2', steps: 5, lastSkill: 'docs' }];
+  simulated = true;
+}
+
 async function poll() {
   try {
     const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
     const data = await response.json();
     trail = Array.isArray(data.trail) ? data.trail : [];
+    agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
+    simulated = trail.length === 0;
+    // Nothing real yet: show a labelled simulation rather than a dead page.
+    if (simulated) simulate(Date.now());
+    const badge = document.getElementById('simulated');
+    if (badge) badge.style.opacity = simulated ? '.75' : '0';
     const counter = document.getElementById('counter');
     if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions in this session' : '';
     const hot = data.focus;
@@ -243,6 +272,42 @@ function lines() {
 
   // the session's shape: every action since the tab opened, colour-coded
   drawTrail(performance.now());
+
+  // the agents at work: one body per session, with its steps strung behind it
+  if (agents.length > 0) {
+    agents.forEach((agent, index) => {
+      const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.4;
+      const w = project(Math.cos(angle) * 1.55, Math.sin(angle) * 1.55, Math.sin(yaw + index) * 0.35);
+      const radius = DPR * (4 + Math.min(6, agent.steps * 0.6));
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(239,220,164,0.10)';
+      ctx.strokeStyle = 'rgba(239,220,164,0.55)';
+      ctx.lineWidth = DPR * 1.2;
+      ctx.fill();
+      ctx.stroke();
+      // its steps, faintly strung outward: the path this agent has taken
+      const mine = trail.filter((step) => step.session === undefined || step.session.slice(0, 6) === agent.id).slice(-8);
+      mine.forEach((step, stepIndex) => {
+        const hop = (stepIndex + 1) * 0.16;
+        const p = project(Math.cos(angle) * (1.55 + hop), Math.sin(angle) * (1.55 + hop), 0);
+        const colour = SKILL_COLOR[step.skill] || SKILL_COLOR.general;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, DPR * 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + colour + ',0.55)';
+        ctx.fill();
+        if (stepIndex > 0) {
+          const prev = project(Math.cos(angle) * (1.55 + hop - 0.16), Math.sin(angle) * (1.55 + hop - 0.16), 0);
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.strokeStyle = 'rgba(' + colour + ',0.16)';
+          ctx.lineWidth = DPR * 0.8;
+          ctx.stroke();
+        }
+      });
+    });
+  }
 
   // the live point: a pulsing ring around whatever is being built right now
   if (focus !== null && performance.now() < focusUntil) {
@@ -379,6 +444,8 @@ export function flowerPageHtml(hideHelp = false): string {
     color:#6f6f78;letter-spacing:.08em}
   .settled{position:fixed;left:0;right:0;bottom:2.1rem;text-align:center;font-size:.66rem;
     color:#4f4f58;letter-spacing:.12em;text-transform:uppercase}
+  .sim{position:fixed;left:0;right:0;bottom:.9rem;text-align:center;font-size:.62rem;
+    color:#5a4a30;letter-spacing:.14em;text-transform:uppercase;transition:opacity .8s ease}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -392,6 +459,7 @@ export function flowerPageHtml(hideHelp = false): string {
 <p class="caption" id="caption"></p>
 <p class="counter" id="counter"></p>
 <p class="settled" id="settled"></p>
+<p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="hint" id="hint"><b>drag</b> to turn · <b>scroll</b> to zoom · <b>click</b> a point to move${hideHelp ? '' : ' · arrows work too'}</p>
 <a class="plain" href="/map">plain map for screen readers</a>
 <script>${FLOWER_SCRIPT}</script>

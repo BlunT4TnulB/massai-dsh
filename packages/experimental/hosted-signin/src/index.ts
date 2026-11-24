@@ -26,7 +26,7 @@ import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
-import { classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
+import { agentsOf, classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
@@ -360,7 +360,7 @@ export function apply(ctx: Context): void {
       const rawArguments = typeof typed.data?.arguments === 'string'
         ? typed.data.arguments
         : JSON.stringify(typed.data?.arguments ?? {})
-      classifyToolCall(name, rawArguments)
+      classifyToolCall(name, rawArguments, String(session.id))
     }
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
@@ -706,6 +706,7 @@ export function apply(ctx: Context): void {
           events: readActivity(now),
           trail: trailOf(now),
           counts: countsOf(now),
+          agents: agentsOf(now),
           windowMinutes: 10,
         })
         return

@@ -21,6 +21,8 @@ export interface ActivityEvent {
   readonly label: string
   /** Epoch ms. */
   readonly at: number
+  /** Which session did it, when known: the "agent" the orbit draws. */
+  readonly session?: string
 }
 
 /** How long an event stays warm. */
@@ -33,8 +35,8 @@ const CAPACITY = 120
 const events: ActivityEvent[] = []
 
 /** Record one piece of activity. */
-export function recordActivity(skill: string, label: string): void {
-  events.push({ skill, label, at: Date.now() })
+export function recordActivity(skill: string, label: string, session?: string): void {
+  events.push({ skill, label, at: Date.now(), ...(session === undefined || session === '' ? {} : { session }) })
   while (events.length > CAPACITY) events.shift()
 }
 
@@ -87,6 +89,28 @@ export function countsOf(now = Date.now()): { total: number; bySkill: Record<str
   return { total: warm.length, bySkill }
 }
 
+/**
+ * The agents at work: distinct sessions in the window, with how much each did.
+ * @param now - current epoch ms.
+ * @returns up to six agents, busiest first; the id is a short fingerprint, never the raw session.
+ */
+export function agentsOf(now = Date.now()): Array<{ id: string; steps: number; lastSkill: string }> {
+  const warm = readActivity(now)
+  const bySession = new Map<string, { steps: number; lastSkill: string }>()
+  for (const event of warm) {
+    if (event.session === undefined) continue
+    // A short label is enough to tell two agents apart and reveals nothing else.
+    const id = event.session.slice(0, 6)
+    const current = bySession.get(id)
+    if (current === undefined) bySession.set(id, { steps: 1, lastSkill: event.skill })
+    else bySession.set(id, { steps: current.steps + 1, lastSkill: event.skill })
+  }
+  return [...bySession.entries()]
+    .map(([id, value]) => ({ id, ...value }))
+    .sort((a, b) => b.steps - a.steps)
+    .slice(0, 6)
+}
+
 /** Forget everything (restart, or between demos). */
 export function clearActivity(): void {
   events.length = 0
@@ -126,7 +150,7 @@ function skillOfCommand(command: string): string | undefined {
  * @param rawArguments - the raw argument string from the event.
  * @returns the activity that was recorded, when the call was classifiable.
  */
-export function classifyToolCall(name: string, rawArguments: string): ActivityEvent | undefined {
+export function classifyToolCall(name: string, rawArguments: string, session?: string): ActivityEvent | undefined {
   let args: Record<string, unknown> = {}
   try {
     const parsed = JSON.parse(rawArguments) as unknown
@@ -144,6 +168,6 @@ export function classifyToolCall(name: string, rawArguments: string): ActivityEv
     scripting: 'writing a script', testing: 'checking the work', docs: 'writing the document',
     scanner: 'working on the scanner', service: 'wiring a service', general: 'working',
   }
-  recordActivity(skill, labels[skill] ?? 'working')
+  recordActivity(skill, labels[skill] ?? 'working', session)
   return readActivity()[0]
 }
