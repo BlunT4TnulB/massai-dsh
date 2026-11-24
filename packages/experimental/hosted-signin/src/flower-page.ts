@@ -303,6 +303,21 @@ function drawHalo(now) {
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // The shape, stated: at full retreat the whole thing is one sphere, so it gets
+  // a limb — faint, and gone as soon as you travel in.
+  const retreat = Math.max(0, Math.min(1, (1.35 - zoom) / 0.55));
+  if (retreat > 0.02) {
+    const rim = Math.min(innerWidth, innerHeight) * FIT * zoom;
+    const g2 = ctx.createRadialGradient(cx, cy, rim * 0.72, cx, cy, rim);
+    g2.addColorStop(0, 'rgba(217,130,43,0)');
+    g2.addColorStop(0.82, 'rgba(224,170,110,' + (0.05 * retreat).toFixed(3) + ')');
+    g2.addColorStop(1, 'rgba(247,205,140,' + (0.13 * retreat).toFixed(3) + ')');
+    ctx.beginPath();
+    ctx.arc(cx, cy, rim, 0, Math.PI * 2);
+    ctx.fillStyle = g2;
+    ctx.fill();
+  }
+
   for (const mote of dust) {
     const p = project(mote.x, mote.y, mote.z);
     ctx.beginPath();
@@ -591,9 +606,12 @@ function drawGalaxy(now) {
   // and the next. The sky is never all of it, which is what makes it feel endless.
   if (EXTRA_CIRCLES.length > 0) {
     ctx.globalCompositeOperation = 'lighter';
+    // At full retreat every family is present: the complete sphere, which is the
+    // shape this has always been. Travelling inward lets the deeper families step
+    // back so the structure you are entering can lead.
+    const inward = Math.max(0, Math.min(1, (zoom - 1.05) / 1.9));
     const reveal = function (familyIndex) {
-      const begin = 1.0 + familyIndex * 0.85;
-      return Math.max(0, Math.min(1, (zoom - begin) / 0.9));
+      return 1 - inward * (0.35 + familyIndex * 0.12);
     };
     for (let fi = 0; fi < EXTRA_CIRCLES.length; fi += 1) {
       const alpha = reveal(fi);
@@ -895,7 +913,7 @@ canvas.addEventListener('pointermove', function (event) {
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
     const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-    zoom = Math.max(0.5, Math.min(16, zoomAtPinch * (now / pinchStart)));
+    zoom = Math.max(0.42, Math.min(16, zoomAtPinch * (now / pinchStart)));
     return;
   }
   if (!reduce) {
@@ -966,7 +984,7 @@ canvas.addEventListener('pointercancel', function (event) {
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
-  zoom = Math.max(0.5, Math.min(16, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.42, Math.min(16, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;
