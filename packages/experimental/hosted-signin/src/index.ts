@@ -26,6 +26,7 @@ import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
+import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -664,6 +665,22 @@ export function apply(ctx: Context): void {
     .catch(() => undefined)
 
 
+
+
+  // The immersive flower: the mark as a place you can turn, zoom and click through.
+  ctx.webServer.register({
+    kind: 'exact', path: '/flower', auth: 'anonymous',
+    handler: (req, res) => {
+      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
+      const html = Buffer.from(flowerPageHtml(isMaster(comfort)))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // The map: the seven destinations, drawn as the flower of life. Server rendered
   // because navigation must not depend on a script arriving.

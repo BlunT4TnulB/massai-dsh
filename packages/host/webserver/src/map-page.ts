@@ -109,7 +109,7 @@ export function mapPageHtml(hideHelp = false): string {
   ${nodes.map(node => `<li><a href="${node.href}">${node.label}</a><span>${node.what}</span></li>`).join('\n  ')}
 </ul>
 
-<p class="foot"><a href="/">back to the door</a> · <a href="/settings">how much help</a></p>
+<p class="foot"><a href="/flower">the immersive flower →</a> · <a href="/">back to the door</a> · <a href="/settings">how much help</a></p>
 </main></body></html>`
 }
 
