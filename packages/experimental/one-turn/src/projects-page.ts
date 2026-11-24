@@ -66,7 +66,7 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
 <h2>Yours</h2>
 <div id="mine"><p class="empty">Loading…</p></div>
 
-<h2>The shelf</h2>
+<h2>Community library</h2>
 <div id="shelf"><p class="empty">Loading…</p></div>
 
 <div id="detail"></div>
@@ -133,7 +133,7 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
     const shelfBox = el('shelf')
     shelfBox.innerHTML = ''
     if (!shelfData.projects || shelfData.projects.length === 0) {
-      shelfBox.innerHTML = '<p class="empty">The shelf is empty. When someone offers a project, it appears here for others to adopt.</p>'
+      shelfBox.innerHTML = '<p class="empty">The community library is empty. When someone publishes a project here, it appears for others to look inside and adopt.</p>'
     } else {
       shelfData.projects.forEach((p) => {
         shelfBox.append(card(p, '<button class="primary" data-adopt="' + esc(p.id) + '">Adopt this</button>'

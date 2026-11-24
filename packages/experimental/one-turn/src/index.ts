@@ -644,6 +644,22 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // /library is the community shelf, presented as the library it is. Same data,
+  // one predictable address to share.
+  ctx.webServer.register({
+    kind: 'exact', path: '/library', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(projectsPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
   // A browsable view of the supported shapes, for the intake screen.
   ctx.webServer.register({
     kind: 'exact', path: '/api/one-turn/shapes', auth: 'anonymous',
