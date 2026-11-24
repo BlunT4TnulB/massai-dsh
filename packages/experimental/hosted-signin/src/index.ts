@@ -939,7 +939,8 @@ export function apply(ctx: Context): void {
   // Is the database configured and reachable? One honest answer, owner-only.
   ctx.webServer.register({
     kind: 'exact', path: '/api/db/status', auth: 'required',
-    handler: async (_req, res) => {
+    handler: async (req, res) => {
+      if (refuseUnlessOwner(req, res)) return
       try {
         respond(res, 200, await databaseStatus())
       } catch (error) {
