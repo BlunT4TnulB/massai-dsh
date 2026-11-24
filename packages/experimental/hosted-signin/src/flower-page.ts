@@ -55,17 +55,18 @@ const ICOSA = [
 ].map(norm);
 
 const axes = [];
-const addAxis = function (v) {
+const addAxis = function (v, kind) {
   const n = norm(v);
-  if (!axes.some(function (a) { return Math.abs(dot(a, n)) > 0.9999; })) axes.push(n);
+  if (axes.some(function (a) { return Math.abs(dot(a.n, n)) > 0.9999; })) return;
+  axes.push({ n: n, kind: kind });
 };
 // six through the vertices
-for (const v of ICOSA) addAxis(v);
+for (const v of ICOSA) addAxis(v, 'vertex');
 // fifteen through the edges
 for (let i = 0; i < ICOSA.length; i += 1) {
   for (let j = i + 1; j < ICOSA.length; j += 1) {
     const d = Math.hypot(ICOSA[i][0] - ICOSA[j][0], ICOSA[i][1] - ICOSA[j][1], ICOSA[i][2] - ICOSA[j][2]);
-    if (d < 1.2) addAxis([ICOSA[i][0] + ICOSA[j][0], ICOSA[i][1] + ICOSA[j][1], ICOSA[i][2] + ICOSA[j][2]]);
+    if (d < 1.2) addAxis([ICOSA[i][0] + ICOSA[j][0], ICOSA[i][1] + ICOSA[j][1], ICOSA[i][2] + ICOSA[j][2]], 'edge');
   }
 }
 // ten through the faces
@@ -80,7 +81,7 @@ for (let i = 0; i < ICOSA.length; i += 1) {
           ICOSA[i][0] + ICOSA[j][0] + ICOSA[k][0],
           ICOSA[i][1] + ICOSA[j][1] + ICOSA[k][1],
           ICOSA[i][2] + ICOSA[j][2] + ICOSA[k][2],
-        ]);
+        ], 'face');
       }
     }
   }
@@ -94,14 +95,14 @@ const keyOf = function (v) {
 };
 for (let i = 0; i < axes.length; i += 1) {
   for (let j = i + 1; j < axes.length; j += 1) {
-    const line = cross(axes[i], axes[j]);
+    const line = cross(axes[i].n, axes[j].n);
     if (Math.hypot(line[0], line[1], line[2]) < 1e-6) continue;
     for (const sign of [1, -1]) {
       const p = norm([line[0] * sign, line[1] * sign, line[2] * sign]);
       const key = keyOf(p);
       if (seen.has(key)) continue;
       seen.add(key);
-      nodes.push(p);
+      nodes.push({ p: p, a: i, b: j });
     }
   }
 }
@@ -190,6 +191,14 @@ let ripples = [];
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
 let simLevel = 0;
+let hoverNode = -1;
+let diveNode = -1;
+let diveGlow = 0;
+let auto = true;
+let pointers = new Map();
+let pinchStart = 0;
+let zoomAtPinch = 1;
+const KIND = { vertex: 'vertex', edge: 'edge', face: 'face' };
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -251,7 +260,7 @@ function drawHalo(now) {
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
   const reach = Math.max(innerWidth, innerHeight) * 0.82;
-  breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
+  breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
   life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
   g.addColorStop(0, 'rgba(' + Math.round(58 * self.memory) + ',' + Math.round(34 * self.memory) + ','
@@ -286,9 +295,15 @@ function circlePath(axis, steps) {
   }
   return out;
 }
-const GREAT = axes.map(function (axis) { return circlePath(axis, EMBEDDED || innerWidth < 700 ? 56 : 84); });
+const GREAT = axes.map(function (axis) { return circlePath(axis.n, EMBEDDED || innerWidth < 700 ? 56 : 84); });
 
-function strokeCircle(points, now, front) {
+function circleWeight(index) {
+  const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
+  if (chosen === null) return 1;
+  return (index === chosen.a || index === chosen.b) ? 2.6 : 0.55;
+}
+
+function strokeCircle(index, points, now, front) {
   ctx.beginPath();
   let started = false;
   for (const point of points) {
@@ -297,9 +312,12 @@ function strokeCircle(points, now, front) {
     if (!started) { ctx.moveTo(p.x, p.y); started = true; }
     else ctx.lineTo(p.x, p.y);
   }
+  const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
+  const weight = chosen === null ? 1 : ((index === chosen.a || index === chosen.b) ? 2.6 : 0.55);
   const base = front ? 0.30 : 0.10;
-  ctx.strokeStyle = 'rgba(' + GOLD + ',' + (base * life + 0.04 * breath).toFixed(3) + ')';
-  ctx.lineWidth = DPR * (front ? 0.9 : 0.6);
+  ctx.strokeStyle = 'rgba(' + (weight > 2 ? '255,240,215' : GOLD) + ','
+    + Math.min(1, (base * life + 0.04 * breath) * weight).toFixed(3) + ')';
+  ctx.lineWidth = DPR * (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
   ctx.stroke();
   void now;
 }
@@ -307,7 +325,7 @@ function strokeCircle(points, now, front) {
 function drawGalaxy(now) {
   // back hemisphere first, then the nodes, then the front: depth without sorting
   // thousands of segments.
-  for (const points of GREAT) strokeCircle(points, now, false);
+  GREAT.forEach(function (points, index) { strokeCircle(index, points, now, false); });
   for (const line of FLOWER) {
     ctx.beginPath();
     let started = false;
@@ -324,23 +342,24 @@ function drawGalaxy(now) {
   }
 
   // the matter: every intersection, dimmed by depth, warmed by work
-  const ordered = nodes.map(function (n) {
-    const p = project(n[0], n[1], n[2]);
-    return { n: n, p: p };
+  const ordered = nodes.map(function (node, index) {
+    const p = project(node.p[0], node.p[1], node.p[2]);
+    return { node: node, index: index, p: p };
   }).sort(function (a, b) { return a.p.depth - b.p.depth; });
   for (const entry of ordered) {
     const p = entry.p;
     if (p.z < -0.55) continue;
     const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
-    const hot = heat(now, entry.n[0], entry.n[1], entry.n[2]);
-    const sprite = glowSprite(hot > 0.1 ? GREEN : GOLD);
-    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4);
-    ctx.globalAlpha = Math.min(1, (0.10 + 0.5 * near) * life + hot * 0.4);
+    const hot = heat(now, entry.node.p[0], entry.node.p[1], entry.node.p[2]);
+    const picked = entry.index === hoverNode || entry.index === diveNode;
+    const sprite = glowSprite(hot > 0.1 ? GREEN : picked ? '255,244,225' : GOLD);
+    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4) * (picked ? 3.2 : 1);
+    ctx.globalAlpha = Math.min(1, (0.10 + 0.5 * near) * life + hot * 0.4 + (picked ? 0.6 : 0));
     ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
     ctx.globalAlpha = 1;
   }
 
-  for (const points of GREAT) strokeCircle(points, now, true);
+  GREAT.forEach(function (points, index) { strokeCircle(index, points, now, true); });
   for (const line of FLOWER) {
     ctx.beginPath();
     let started = false;
@@ -426,6 +445,25 @@ function frame(now) {
   const live = focus !== null && now < focusUntil;
   bloom += ((live ? 1 : 0) - bloom) * 0.035;
   const spinning = Math.abs(velYaw) + Math.abs(velPitch) + Math.abs(velRoll) > 0.00008;
+  // The dive: aim the chosen star at the viewer and come close enough to see the
+  // two circles that cross there. Returning is the same motion, unwound.
+  if (diveNode >= 0 && !dragging && !spinning) {
+    const node = nodes[diveNode].p;
+    const wantYaw = Math.atan2(-node[0], node[2]);
+    const wantPitch = Math.atan2(node[1], Math.hypot(node[0], node[2]));
+    let dx = (wantYaw - yaw) % (Math.PI * 2);
+    if (dx > Math.PI) dx -= Math.PI * 2;
+    if (dx < -Math.PI) dx += Math.PI * 2;
+    yaw += dx * 0.055;
+    pitch += ((wantPitch * 0.75) - pitch) * 0.055;
+    roll += (0 - roll) * 0.055;
+    zoom += (2.0 - zoom) * 0.05;
+    diveGlow += (1 - diveGlow) * 0.06;
+  } else if (diveNode < 0) {
+    diveGlow += (0 - diveGlow) * 0.06;
+    if (!dragging && !spinning && zoom > 1.02) zoom += (1 - zoom) * 0.05;
+  }
+
   if (!dragging && spinning) {
     yaw += velYaw * dt;
     pitch += velPitch * dt;
@@ -443,7 +481,7 @@ function frame(now) {
       yaw += (targetYaw - yaw) * 0.03;
       pitch += (-0.30 - pitch) * 0.03;
       roll += (0 - roll) * 0.03;
-    } else if (!reduce) {
+    } else if (!reduce && auto) {
       yaw += dt * IDLE_SPEED;
       roll += (0 - roll) * 0.01;
     }
@@ -472,19 +510,25 @@ function applyLevel(level) {
   }
   agents = [];
   for (let a = 0; a < Math.min(6, level); a += 1) agents.push({ id: 'sim-' + a, steps: 2 + a * 2 });
-  const target = nodes[(level * 97) % nodes.length];
+  const target = nodes[(level * 97) % nodes.length].p;
   focus = { x: target[0], y: target[1], z: target[2] };
   focusUntil = performance.now() + 600000;
   ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
-  if (counter) counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles';
+  if (counter) {
+    counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles'
+      + ' · ' + nodes.length + ' ways in';
+  }
 }
 const slider = document.getElementById('level');
 if (slider) {
   slider.addEventListener('input', function () { applyLevel(Number(slider.value)); });
   applyLevel(Number(slider.value));
 }
-if (counter) counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles';
+if (counter) {
+    counter.textContent = 'galaxy · ' + nodes.length + ' intersections · ' + axes.length + ' circles'
+      + ' · ' + nodes.length + ' ways in';
+  }
 
 async function poll() {
   try {
@@ -500,7 +544,7 @@ async function poll() {
     if (badge) badge.style.opacity = simulated ? '0.7' : '0';
     const hot = data.focus;
     if (!hot) return;
-    const target = nodes[Math.abs(SKILL_ORDER.indexOf(hot.skill) + 3) % nodes.length];
+    const target = nodes[Math.abs(SKILL_ORDER.indexOf(hot.skill) + 3) % nodes.length].p;
     focus = { x: target[0], y: target[1], z: target[2] };
     focusUntil = performance.now() + 25000;
     ripples.push({ t0: performance.now(), strength: 1 });
@@ -546,7 +590,35 @@ setInterval(pollVitals, 15000);
 
 // --- interaction ----------------------------------------------------------
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
+function nodeAt(clientX, clientY) {
+  let best = -1;
+  let bestDistance = 22 * DPR;
+  for (let i = 0; i < nodes.length; i += 1) {
+    const p = project(nodes[i].p[0], nodes[i].p[1], nodes[i].p[2]);
+    if (p.z < -0.1) continue;
+    const distance = Math.hypot(p.x - clientX * DPR, p.y - clientY * DPR);
+    if (distance < bestDistance) { bestDistance = distance; best = i; }
+  }
+  return best;
+}
+
+function describe(index) {
+  if (index < 0) return '';
+  const node = nodes[index];
+  const pair = [axes[node.a].kind, axes[node.b].kind].sort();
+  return pair[0] + ' × ' + pair[1] + ' · node ' + index;
+}
+
 canvas.addEventListener('pointerdown', function (event) {
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size === 2) {
+    // pinch: two fingers decide distance, the way a hand would
+    const two = [...pointers.values()];
+    pinchStart = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+    zoomAtPinch = zoom;
+    dragging = false;
+    return;
+  }
   dragging = true;
   dragMode = event.button === 2 || event.shiftKey ? 'roll' : 'turn';
   velYaw = 0; velPitch = 0; velRoll = 0;
@@ -555,11 +627,26 @@ canvas.addEventListener('pointerdown', function (event) {
   canvas.style.cursor = 'grabbing';
 });
 canvas.addEventListener('pointermove', function (event) {
+  if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size === 2 && pinchStart > 0) {
+    const two = [...pointers.values()];
+    const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+    zoom = Math.max(0.55, Math.min(3.2, zoomAtPinch * (now / pinchStart)));
+    return;
+  }
   if (!reduce) {
     lookX += ((event.clientX / innerWidth - 0.5) * 0.16 - lookX) * 0.06;
     lookY += ((event.clientY / innerHeight - 0.5) * 0.11 - lookY) * 0.06;
   }
-  if (!dragging) return;
+  if (!dragging) {
+    // Hovering a star names it and lights its two circles: the mind shows its
+    // wiring before you commit to entering it.
+    hoverNode = nodeAt(event.clientX, event.clientY);
+    canvas.style.cursor = hoverNode >= 0 ? 'pointer' : 'grab';
+    const label = document.getElementById('nodeName');
+    if (label) label.textContent = describe(hoverNode);
+    return;
+  }
   const parts = (canvas.dataset.drag || '0,0').split(',');
   const dx = event.clientX - Number(parts[0]);
   const dy = event.clientY - Number(parts[1]);
@@ -575,9 +662,27 @@ canvas.addEventListener('pointermove', function (event) {
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
   if (hint) hint.style.opacity = '0';
 });
-canvas.addEventListener('pointerup', function () {
+canvas.addEventListener('pointerup', function (event) {
+  pointers.delete(event.pointerId);
+  if (pointers.size < 2) pinchStart = 0;
+  if (!dragging) return;
   dragging = false;
   canvas.style.cursor = 'grab';
+  // A tap enters the star under it; a tap on empty space comes back out.
+  const picked = nodeAt(event.clientX, event.clientY);
+  if (picked >= 0) {
+    diveNode = picked;
+    const label = document.getElementById('nodeName');
+    if (label) label.textContent = describe(picked);
+  } else if (diveNode >= 0) {
+    diveNode = -1;
+    const label = document.getElementById('nodeName');
+    if (label) label.textContent = '';
+  }
+});
+canvas.addEventListener('pointercancel', function (event) {
+  pointers.delete(event.pointerId);
+  dragging = false;
 });
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
@@ -592,6 +697,14 @@ addEventListener('keydown', function (event) {
   if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
   if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; }
+  // Space stills the whole thing: sometimes you want to study the mind, not watch it.
+  if (event.key === ' ') {
+    event.preventDefault();
+    auto = !auto;
+    const state = document.getElementById('still');
+    if (state) state.textContent = auto ? '' : 'still';
+  }
+  if (event.key === 'Escape') { diveNode = -1; const label = document.getElementById('nodeName'); if (label) label.textContent = ''; }
 });
 setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 8000);
 void SHAPE;
@@ -657,12 +770,14 @@ export function flowerPageHtml(embed = false): string {
   <a class="back" href="/">← the door</a>
 </div>
 <p class="caption" id="caption"></p>
+<p class="node-name" id="nodeName"></p>
+<p class="still" id="still"></p>
 <p class="counter" id="counter"></p>
 <p class="settled" id="settled"></p>
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to travel around it · <b>shift-drag</b> to roll · <b>scroll</b> closer · let go and it goes on without you</p>
+<p class="hint" id="hint"><b>drag</b> to travel · <b>tap a star</b> to enter it · <b>pinch</b> or <b>scroll</b> for depth · <b>space</b> to still it · <b>esc</b> to come back</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">
