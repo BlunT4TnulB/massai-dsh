@@ -73,8 +73,15 @@ export function focusOf(now = Date.now()): { skill: string; label: string } | un
  * @param now - current epoch ms.
  * @returns the warm events in chronological order.
  */
-export function trailOf(now = Date.now()): ActivityEvent[] {
-  return readActivity(now).reverse()
+export function trailOf(now = Date.now()): Array<{
+  skill: string; label: string; at: number; agent?: string
+}> {
+  return readActivity(now).reverse().map(event => ({
+    skill: event.skill,
+    label: event.label,
+    at: event.at,
+    ...(event.session === undefined ? {} : { agent: agentId(event.session) }),
+  }))
 }
 
 /**
@@ -90,6 +97,25 @@ export function countsOf(now = Date.now()): { total: number; bySkill: Record<str
 }
 
 /**
+ * A short, stable, non-revealing id for a session.
+ *
+ * Truncating the session id looked fine until two test sessions called "agent-a"
+ * and "agent-b" both became "agent-" and were counted as one agent. A hash fixes
+ * the collision and reveals nothing: the same session always hashes the same, and
+ * no prefix of the real id leaks.
+ * @param session - the raw session id.
+ * @returns six base-36 characters.
+ */
+export function agentId(session: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < session.length; index += 1) {
+    hash ^= session.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36).padStart(6, '0').slice(0, 6)
+}
+
+/**
  * The agents at work: distinct sessions in the window, with how much each did.
  * @param now - current epoch ms.
  * @returns up to six agents, busiest first; the id is a short fingerprint, never the raw session.
@@ -99,8 +125,7 @@ export function agentsOf(now = Date.now()): Array<{ id: string; steps: number; l
   const bySession = new Map<string, { steps: number; lastSkill: string }>()
   for (const event of warm) {
     if (event.session === undefined) continue
-    // A short label is enough to tell two agents apart and reveals nothing else.
-    const id = event.session.slice(0, 6)
+    const id = agentId(event.session)
     const current = bySession.get(id)
     if (current === undefined) bySession.set(id, { steps: 1, lastSkill: event.skill })
     else bySession.set(id, { steps: current.steps + 1, lastSkill: event.skill })

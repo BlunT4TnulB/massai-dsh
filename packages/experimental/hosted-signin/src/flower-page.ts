@@ -287,7 +287,7 @@ function lines() {
       ctx.fill();
       ctx.stroke();
       // its steps, faintly strung outward: the path this agent has taken
-      const mine = trail.filter((step) => step.session === undefined || step.session.slice(0, 6) === agent.id).slice(-8);
+      const mine = trail.filter((step) => step.agent === undefined || step.agent === agent.id).slice(-8);
       mine.forEach((step, stepIndex) => {
         const hop = (stepIndex + 1) * 0.16;
         const p = project(Math.cos(angle) * (1.55 + hop), Math.sin(angle) * (1.55 + hop), 0);
