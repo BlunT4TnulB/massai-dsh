@@ -178,21 +178,76 @@ function FlowerMark({ size }: { size: number }) {
 }
 
 
+
+/**
+ * The sanctum as a stage: the live flower embedded in the blank state.
+ *
+ * The mark at 96 pixels was a logo. This is the room: a same-origin frame of
+ * `/flower?embed=1` (chrome hidden, object fitted to the frame), cropped to a
+ * circle so it reads as a portal rather than an embedded page. It is deliberately
+ * the largest thing on an empty conversation — the composer is where you type,
+ * but this is what the place looks like before you do.
+ *
+ * On narrow screens the frame is dropped for the SVG mark: a full canvas inside a
+ * phone's chat view costs more than it gives, and the small mark still turns.
+ * @param props.size - rendered edge length in pixels.
+ * @returns the stage element tree.
+ */
+function SanctumStage({ size }: { size: number }) {
+  return (
+    <div className={css.sanctum} style={{ width: size, height: size }} aria-hidden="true">
+      <iframe
+        className={css.sanctumFrame}
+        src="/flower?embed=1"
+        title="The Massai flower"
+        loading="eager"
+        tabIndex={-1}
+        scrolling="no"
+      />
+      <span className={css.sanctumVeil} />
+    </div>
+  )
+}
+
+/**
+ * How large the stage may be: most of the smaller viewport axis, capped so the
+ * headline and composer still breathe.
+ * @returns the edge length in pixels.
+ */
+function stageSize(): number {
+  const smaller = Math.min(window.innerWidth, window.innerHeight)
+  return Math.max(320, Math.min(640, Math.round(smaller * 0.66)))
+}
+
 /**
  * Render the hero chrome (headline only; no composer, no workspace row).
  * @param props - see {@link HeroShellProps}.
  * @returns the centered hero element tree.
  */
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
+  const [stagePx, setStagePx] = useState(() => (typeof window === 'undefined' ? 480 : stageSize()))
+  const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : window.innerWidth >= 900))
+  useEffect(() => {
+    const measure = (): void => {
+      setStagePx(stageSize())
+      setWide(window.innerWidth >= 900)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => { window.removeEventListener('resize', measure) }
+  }, [])
   return (
     <div className={css.root}>
       <div className={css.stack}>
-        {/* The mark sits above the words: it is the first thing the eye lands on,
-            and the one thing in the app you can turn with your hand. */}
-        <div className={css.markRow}>
-          {renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
-            fallback: <FlowerMark size={96} />,
-          })}
+        {/* The sanctum sits above the words: the place, before anything is said.
+            The small turnable mark is the fallback when the viewport cannot carry
+            the full stage comfortably. */}
+        <div className={css.markRow} data-wide={wide ? 'true' : 'false'}>
+          {wide
+            ? <SanctumStage size={stagePx} />
+            : renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
+                fallback: <FlowerMark size={96} />,
+              })}
           <LiveActivity />
         </div>
         <div className={css.headline}>

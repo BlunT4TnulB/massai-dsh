@@ -188,7 +188,8 @@ const FLOWER_SKIN = flowerWrap(BODY.radius * 0.995, 6);
 
 // Centring: one fit against the body's own radius, and the exact middle of the
 // viewport. Every body occupies the same share of the smaller dimension.
-const FIT = 0.37;
+const EMBEDDED = new URLSearchParams(location.search).get('embed') === '1';
+const FIT = EMBEDDED ? 0.46 : 0.37;
 
 const DOOR_NAMES = ['Talk', 'Projects', 'Library', 'You', 'Limits', 'Tip jar', 'Help'];
 const doors = DOOR_NAMES.map(function (label, index) {
@@ -740,9 +741,9 @@ setTimeout(function () { if (hint) hint.style.opacity = '0'; }, 8000);
  * Render the immersive flower page.
  * @returns the page HTML.
  */
-export function flowerPageHtml(): string {
+export function flowerPageHtml(embed = false): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<html lang="en"${embed ? ' class="embed"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>The flower — Massai</title>
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="description" content="The Massai mark as a place: turn it, zoom it, and use its points to move.">
@@ -784,7 +785,12 @@ export function flowerPageHtml(): string {
   @media (max-width: 640px){ .shapes{display:none} .sim-ui{left:50%;transform:translateX(-50%)} }
   .shapes a:hover{color:#7ee2a8}
   @media (prefers-reduced-motion: reduce) { .hint{transition:none} }
-</style></head><body>
+  /* Embedded as a stage: the object is the whole frame. */
+  body.embed .overlay, body.embed .hint, body.embed .shapes, body.embed .sim-ui,
+  body.embed .being, body.embed .confession, body.embed .counter, body.embed .settled,
+  body.embed .sim { display: none !important }
+  body.embed { background: #08080a }
+</style></head><body${embed ? ' class="embed"' : ''}>
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
 <div class="overlay">
   <div class="brand"><img src="/massai-crest.svg" alt="" width="22" height="22"><span>MASSAI</span></div>

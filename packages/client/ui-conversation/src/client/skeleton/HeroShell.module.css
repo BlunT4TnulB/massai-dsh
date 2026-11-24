@@ -236,12 +236,46 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
+/* The sanctum: the live flower as the largest thing in an empty conversation.
+   Cropped to a circle so it reads as a portal, with a soft veil on the edge so
+   it dissolves into the page instead of ending at a frame. */
+.sanctum {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: none;
+  box-shadow: 0 0 120px rgba(217, 130, 43, .10), inset 0 0 60px rgba(0, 0, 0, .55);
+}
+
+.sanctumFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #08080a;
+  color-scheme: dark;
+}
+
+.sanctumVeil {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 62%, rgba(8, 8, 10, .85) 100%);
+}
+
 /* The brand mark as a turnable object: a perspective stage, one slowly turning
    flower of life inside it, and nineteen points you can see and hover. */
 .markRow {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 18px;
+}
+
+.markRow[data-wide='false'] {
+  gap: 8px;
 }
 
 .mark {

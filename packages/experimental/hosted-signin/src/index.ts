@@ -758,7 +758,8 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/flower', auth: 'anonymous',
     handler: (req, res) => {
-      const html = Buffer.from(flowerPageHtml())
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const html = Buffer.from(flowerPageHtml(url.searchParams.get('embed') === '1'))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
