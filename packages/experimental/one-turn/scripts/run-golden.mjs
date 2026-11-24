@@ -30,6 +30,30 @@ if (token === '') {
 const tasks = JSON.parse(await readFile(join(root, 'golden', 'tasks.json'), 'utf8'))
 const selected = tasks.slice(0, limit)
 
+/**
+ * Post one task and return the trial record.
+ *
+ * A network hiccup is not a failed build, and counting it as one poisons the rate.
+ * So a transport error is retried twice before it is allowed to become a failure.
+ */
+async function postWithRetry(url, body, attempts = 3) {
+  let lastError
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-one-turn-token': token },
+        body: JSON.stringify(body),
+      })
+      return response
+    } catch (error) {
+      lastError = error
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempt))
+    }
+  }
+  throw lastError
+}
+
 /** Post one task and return the trial record. */
 async function runOne(task) {
   const body = {
@@ -42,11 +66,7 @@ async function runOne(task) {
     ...(task.audience === undefined ? {} : { audience: task.audience }),
     name: task.id,
   }
-  const response = await fetch(`${base}/api/one-turn/run`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-one-turn-token': token },
-    body: JSON.stringify(body),
-  })
+  const response = await postWithRetry(`${base}/api/one-turn/run`, body)
   const payload = await response.json()
   if (task.expectRefusal === true) {
     return {
