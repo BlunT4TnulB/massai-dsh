@@ -582,6 +582,28 @@ function drawGalaxy(now) {
   }
   ctx.globalCompositeOperation = 'source-over';
 
+  // Inner shells: the same circles, smaller and dimmer, so the eye reads a body
+  // with layers of light rather than a single skin. Drawn additive beside the
+  // root so the centre gains depth without gaining weight.
+  ctx.globalCompositeOperation = 'lighter';
+  for (const shell of [{ r: 0.86, a: 0.16 }, { r: 0.70, a: 0.11 }, { r: 0.55, a: 0.07 }]) {
+    for (let i = 0; i < GREAT.length; i += 1) {
+      const points = GREAT[i];
+      ctx.beginPath();
+      let started = false;
+      for (const point of points) {
+        const p = project(point[0] * shell.r, point[1] * shell.r, point[2] * shell.r);
+        if (p.z <= 0) { started = false; continue; }
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.strokeStyle = 'rgba(232,186,132,' + (shell.a * life).toFixed(3) + ')';
+      ctx.lineWidth = DPR * 0.55;
+      ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+
   GREAT.forEach(function (points, index) { strokeCircle(index, points, now, true); });
   for (const line of FLOWER) {
     ctx.beginPath();
@@ -657,6 +679,62 @@ function drawGalaxy(now) {
     drawGalaxyAt(now, anchorNode, 0.34 / Math.pow(1.75, band), yaw * (2 + band) + band, 0.85 - band * 0.1);
     void strength;
   }
+}
+
+/**
+ * Draw one great-circle arc between two stars: the shortest path over the sphere,
+ * sampled so it can be dashed and animated.
+ * @param a - unit direction of the start.
+ * @param b - unit direction of the end.
+ * @param steps - samples along the arc.
+ * @returns the arc as unit directions.
+ */
+function arcBetween(a, b, steps) {
+  const angle = Math.acos(Math.max(-1, Math.min(1, dot(a, b))));
+  const out = [];
+  if (angle < 1e-4) return out;
+  const sin = Math.sin(angle);
+  for (let t = 0; t <= steps; t += 1) {
+    const u = t / steps;
+    const wa = Math.sin((1 - u) * angle) / sin;
+    const wb = Math.sin(u * angle) / sin;
+    out.push(norm([a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb]));
+  }
+  return out;
+}
+
+/**
+ * The paths of use: consecutive moments of work, joined over the sphere and lit
+ * so the light travels along them. This is what makes the body read as thinking
+ * while it is being used, rather than as a still object with a counter.
+ */
+function drawPathways(now) {
+  if (trail.length < 2) return;
+  const recent = trail.slice(-10);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineWidth = DPR * 1.1;
+  for (let i = 1; i < recent.length; i += 1) {
+    const from = nodes[(recent[i - 1].skill.length * 37 + i) % nodes.length].p;
+    const to = nodes[(recent[i].skill.length * 53 + i * 7) % nodes.length].p;
+    const arc = arcBetween(from, to, 18);
+    if (arc.length === 0) continue;
+    const fresh = Math.max(0.15, 1 - (now - (recent[i].at || now)) / 90000);
+    ctx.beginPath();
+    let started = false;
+    for (const point of arc) {
+      const p = project(point[0], point[1], point[2]);
+      if (p.z <= -0.15) { started = false; continue; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    // the dash walks along the arc: light running down a pathway
+    ctx.setLineDash([DPR * 3, DPR * 9]);
+    ctx.lineDashOffset = -((now * 0.06) % (DPR * 12));
+    ctx.strokeStyle = 'rgba(126,226,168,' + (0.10 + 0.34 * fresh).toFixed(3) + ')';
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 function drawTrail(now) {
@@ -772,6 +850,7 @@ function frame(now) {
   drawHalo(now);
   drawTrail(now);
   drawGalaxy(now);
+  drawPathways(now);
   drawAgents();
   drawRipples(now);
   drawMood();
@@ -963,10 +1042,14 @@ canvas.addEventListener('pointerup', function (event) {
     return;
   }
   if (picked === PORTAL) {
-    // The only star that leads anywhere: it asks the room around it to open.
-    try { window.parent.postMessage({ type: 'massai:enter' }, '*'); } catch (error) { void error; }
     const label = document.getElementById('nodeName');
     if (label) label.textContent = 'entering…';
+    // Embedded in the app, the door asks the room to open. Standing alone on the
+    // web, the door is the way in: it walks you to the workshop.
+    try {
+      if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter' }, '*');
+      else setTimeout(function () { location.href = '/access'; }, 420);
+    } catch (error) { void error; }
   } else if (picked >= 0) {
     diveNode = picked;
     const label = document.getElementById('nodeName');
@@ -1074,7 +1157,7 @@ export function flowerPageHtml(embed = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to travel · <b>tap a star</b> to enter it · <b>pinch</b> or <b>scroll</b> for depth · <b>space</b> to still it · <b>esc</b> to come back</p>
+<p class="hint" id="hint"><b>drag</b> to travel · <b>shift-drag</b> to roll · <b>pinch</b>/<b>scroll</b> for depth · one star is a door</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">

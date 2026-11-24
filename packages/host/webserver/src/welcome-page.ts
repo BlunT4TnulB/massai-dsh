@@ -73,6 +73,13 @@ const SHELL_CSS = `
   .sub b{color:#E7E7EC;font-weight:600}
   /* the one button */
   .paused{border:1px solid #5a3a12;background:#1d1710;color:#E8D3A8;border-radius:.6rem;padding:.85rem 1rem;font-size:.92rem;line-height:1.6;margin:0 0 1rem}
+  .into{display:block;text-align:center;padding:1.15rem 1rem 1rem;margin:0 0 1rem;border-radius:.9rem;
+    background:radial-gradient(120% 180% at 50% 0%,#3a1c06,#14100c 62%);border:1px solid #7a3d12;
+    text-decoration:none;box-shadow:0 0 60px rgba(217,130,43,.18), inset 0 0 40px rgba(217,130,43,.06)}
+  .into:hover{border-color:#C1440E;box-shadow:0 0 90px rgba(217,130,43,.28), inset 0 0 50px rgba(217,130,43,.10)}
+  .into-title{display:block;font-size:1.22rem;font-weight:700;letter-spacing:.06em;color:#FFF3E2}
+  .into-note{display:block;margin-top:.4rem;font-size:.74rem;letter-spacing:.16em;
+    text-transform:uppercase;color:#b98f5f}
   .hero{display:block;text-align:center;padding:.85rem 1rem;border-radius:.6rem;background:#C1440E;
     color:#fff;font-weight:700;font-size:1.02rem;text-decoration:none;letter-spacing:.01em}
   .hero:hover{background:#d4531a}
@@ -255,6 +262,13 @@ export function welcomePage(line?: number, cookieHeader = ''): string {
     <h1 id="door-title">${headline}</h1>
     <p class="sub">Point at what you want — <b>a tool, a site, an app, a workflow</b> — and it gets
     built in front of you. You do not need to know anything to start.</p>
+
+    <!-- The immersion comes before the explanation: the mind is the first thing
+         you meet, and the one button that opens it says what the tagline says. -->
+    <a class="into" href="/flower">
+      <span class="into-title">Into the Unknown</span>
+      <span class="into-note">enter the mind — drag, roll, dive · find the one door</span>
+    </a>
 
     ${tankEmpty ? `
     <p class="paused"><b>The free preview is paused.</b> The workshop's model credit has run out, so
