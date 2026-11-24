@@ -187,7 +187,28 @@ function decodeCookie(value: string, secret: Buffer): CookiePayload | undefined 
   return { version: 2, ...payload, id: decoded.id as PeerId }
 }
 
+/**
+ * The secret that signs browser sessions.
+ *
+ * It is normally generated once per deployment and stored in the credential
+ * provider. On an ephemeral host that store does not survive a redeploy, so every
+ * deploy was silently logging every device out — which looked like the app
+ * "breaking" on a second device and removed the install prompt at the same time.
+ *
+ * When the operator has configured `DSH_WEB_TOKEN`, deriving the secret from it
+ * makes sessions survive deploys: same token, same secret, same cookie. The token
+ * is already the deployment's root credential, so nothing weaker is being trusted.
+ * @returns the stable secret bytes, or undefined to fall back to a stored random one.
+ */
+function stableSecret(): Buffer | undefined {
+  const configured = process.env.DSH_WEB_TOKEN
+  if (configured === undefined || configured === '') return undefined
+  return createHash('sha256').update(`dsh-session-secret:${configured}`).digest()
+}
+
 async function initializeSecret(credentials: CredentialProvider): Promise<Buffer> {
+  const stable = stableSecret()
+  if (stable !== undefined) return stable
   const generated: StoredSecretPayload = {
     version: STORED_SECRET_VERSION,
     secret: encodeBase64Url(randomBytes(SECRET_BYTES)),
