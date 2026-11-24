@@ -473,7 +473,8 @@ export function apply(ctx: Context): void {
       const caller = callerOf(req)
       if (caller === undefined) { respond(res, 401, { error: 'no session: start a free preview first' }); return }
       try {
-        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        // The operator may import a whole repository; a guest may save a page.
+        const parsed = JSON.parse(await readBody(req, caller.owner ? 2_000_000 : 256_000)) as Record<string, unknown>
         const files = filesFrom(parsed['files'])
         if (files.length === 0) { respond(res, 400, { error: 'no files supplied' }); return }
         const project = await createProject({
@@ -541,7 +542,7 @@ export function apply(ctx: Context): void {
       if (caller === undefined) { respond(res, 401, { error: 'no session' }); return }
       const url = new URL(req.url ?? '/', 'https://placeholder')
       try {
-        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const parsed = JSON.parse(await readBody(req, caller.owner ? 2_000_000 : 256_000)) as Record<string, unknown>
         const project = await saveProjectFiles(
           url.searchParams.get('id') ?? str(parsed, 'id'), caller.id, filesFrom(parsed['files']))
         if (project === undefined) { respond(res, 404, { error: 'not found, or not yours' }); return }
