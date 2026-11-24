@@ -81,6 +81,23 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
   const kib = (bytes) => bytes < 1024 ? bytes + ' B' : Math.round(bytes / 1024) + ' KB'
   const when = (at) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
+  // The same colours the live trail uses, so a finished project looks like the
+  // session that made it.
+  const SKILL_COLOR = {
+    geometry: '#7ee2a8', dashboard: '#9ecbff', 'web-app': '#EFDCA4', scripting: '#D9822B',
+    testing: '#c8a0ff', docs: '#b4bec8', scanner: '#96dcdc', service: '#f0b48c', general: '#8a8a93',
+  }
+
+  /** A thin bar: what kinds of files built this project. */
+  const fingerprint = (slices) => {
+    if (!Array.isArray(slices) || slices.length === 0) return ''
+    const parts = slices.map((s) => '<span title="' + esc(s.skill) + ' ' + Math.round(s.share * 100) + '%" '
+      + 'style="display:block;height:100%;width:' + Math.max(3, Math.round(s.share * 100)) + '%;background:'
+      + (SKILL_COLOR[s.skill] || SKILL_COLOR.general) + '"></span>').join('')
+    return '<div style="display:flex;height:3px;border-radius:2px;overflow:hidden;margin-top:.35rem;'
+      + 'opacity:.85;background:#1f1f26">' + parts + '</div>'
+  }
+
   const card = (p, actions) => {
     const div = document.createElement('div')
     div.className = 'card'
@@ -89,6 +106,7 @@ Offer one to the shelf and it stops being yours alone — it becomes something t
       + '<span class="pill ' + esc(p.visibility) + '">' + esc(p.visibility) + '</span> '
       + esc(p.shape) + ' · ' + p.files + ' file' + (p.files === 1 ? '' : 's') + ' · ' + kib(p.bytes)
       + ' · ' + when(p.updatedAt) + '</div>'
+      + fingerprint(p.fingerprint)
       + '<div class="row">' + actions + '</div></div>'
     return div
   }

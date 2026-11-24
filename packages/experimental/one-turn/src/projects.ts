@@ -32,6 +32,51 @@ export interface ProjectFile {
   readonly content: string
 }
 
+/**
+ * One slice of a project's work fingerprint: what kind of files built it.
+ *
+ * The same vocabulary the live activity uses, derived from file extensions, so a
+ * finished project reads as the same shape a person watched being made.
+ */
+export interface FingerprintSlice {
+  /** A capability id, shared with the skill catalog and the live activity. */
+  readonly skill: string
+  /** Roughly how much of the project this kind of file is, 0–1. */
+  readonly share: number
+}
+
+/** Category of one file path, for the fingerprint. Kept small and local. */
+function skillOfPath(path: string): string {
+  const lower = path.toLowerCase()
+  if (/\.(dxf|stl|step|obj|geo)$/.test(lower) || /geometry|vector|flower|shader/.test(lower)) return 'geometry'
+  if (/\.(csv|tsv)$/.test(lower) || /dashboard|chart|report/.test(lower)) return 'dashboard'
+  if (/\.(tsx|jsx|html|css)$/.test(lower)) return 'web-app'
+  if (/\.(py|sh|ps1)$/.test(lower)) return 'scripting'
+  if (/\.(test|spec)\./.test(lower)) return 'testing'
+  if (/\.(md|tex)$/.test(lower) || /readme|resume|invoice|spec/.test(lower)) return 'docs'
+  if (/scan|inventory|cambium/.test(lower)) return 'scanner'
+  if (/api|server|route|endpoint/.test(lower)) return 'service'
+  return 'general'
+}
+
+/**
+ * Build a project's fingerprint from its manifest.
+ * @param manifest - the stored file list.
+ * @returns up to four slices, biggest first.
+ */
+function fingerprintOf(manifest: readonly { path: string }[]): FingerprintSlice[] {
+  if (manifest.length === 0) return []
+  const counts = new Map<string, number>()
+  for (const file of manifest) {
+    const skill = skillOfPath(file.path)
+    counts.set(skill, (counts.get(skill) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([skill, files]) => ({ skill, share: files / manifest.length }))
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 4)
+}
+
 /** A project's metadata, without file bytes. */
 export interface ProjectSummary {
   readonly id: string
@@ -43,6 +88,8 @@ export interface ProjectSummary {
   readonly entry: string
   readonly files: number
   readonly bytes: number
+  /** What kinds of files built it — the same vocabulary the live activity uses. */
+  readonly fingerprint: readonly FingerprintSlice[]
   readonly createdAt: number
   readonly updatedAt: number
 }
@@ -65,7 +112,13 @@ function keyOf(id: string, path: string): string {
 /** Map a database row to a summary. */
 function toSummary(row: Record<string, unknown>): ProjectSummary {
   const manifest = (typeof row['manifest'] === 'string' ? JSON.parse(row['manifest']) : row['manifest']) as unknown
-  const files = Array.isArray(manifest) ? manifest.length : 0
+  const paths = Array.isArray(manifest)
+    ? manifest.flatMap((item) => {
+        const path = (item as { path?: unknown }).path
+        return typeof path === 'string' ? [{ path }] : []
+      })
+    : []
+  const files = paths.length
   return {
     id: String(row['id']),
     owner: String(row['owner']),
@@ -76,6 +129,7 @@ function toSummary(row: Record<string, unknown>): ProjectSummary {
     entry: String(row['entry'] ?? ''),
     files,
     bytes: Number(row['bytes'] ?? 0),
+    fingerprint: fingerprintOf(paths),
     createdAt: Date.parse(String(row['created_at'] ?? '')) || Date.now(),
     updatedAt: Date.parse(String(row['updated_at'] ?? '')) || Date.now(),
   }
@@ -116,7 +170,9 @@ export async function createProject(input: {
   `, [id, input.owner, input.name, input.shape, status, input.entry, JSON.stringify(manifest), bytes, input.origin ?? null, visibility])
   return {
     id, owner: input.owner, name: input.name, shape: input.shape, status, visibility, entry: input.entry,
-    files: manifest.length, bytes, createdAt: Date.now(), updatedAt: Date.now(),
+    files: manifest.length, bytes,
+    fingerprint: fingerprintOf(manifest.map(item => ({ path: item.path }))),
+    createdAt: Date.now(), updatedAt: Date.now(),
   }
 }
 

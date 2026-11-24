@@ -113,8 +113,11 @@ function drawTrail(now) {
   trail.forEach((event, index) => {
     const age = Math.max(0, now - event.at);
     const freshness = Math.max(0.08, 1 - age / 600000);
-    const angle = -Math.PI / 2 + (index / Math.max(1, trail.length)) * Math.PI * 2;
-    const radius = base * (0.82 + 0.18 * (index / Math.max(1, trail.length)));
+    // A long session winds into a spiral instead of crowding one ring: the radius
+    // steps outward every 40 actions, so 200 calls read as three turns.
+    const turn = index / 40;
+    const angle = -Math.PI / 2 + (turn % 1) * Math.PI * 2;
+    const radius = base * (0.74 + 0.06 * Math.min(4, Math.floor(turn)) + 0.12 * (turn % 1));
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
     const colour = SKILL_COLOR[event.skill] || SKILL_COLOR.general;
@@ -138,7 +141,13 @@ async function poll() {
     const counter = document.getElementById('counter');
     if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions in this session' : '';
     const hot = data.focus;
-    if (!hot) return;
+    if (!hot) {
+      // Nothing live: keep the last session's shape on screen, dimmed, and say
+      // "settled" so an empty ring is never mistaken for a broken one.
+      const settled = document.getElementById('settled');
+      if (settled) settled.textContent = trail.length > 0 ? 'session settled' : '';
+      return;
+    }
     const index = SKILL_ORDER.indexOf(hot.skill);
     const point = index >= 0 ? skillPoints[index % skillPoints.length] : null;
     if (!point) return;
@@ -368,6 +377,8 @@ export function flowerPageHtml(hideHelp = false): string {
     color:#7ee2a8;opacity:0;transition:opacity .6s ease;letter-spacing:.02em}
   .counter{position:fixed;left:0;right:0;bottom:3.2rem;text-align:center;font-size:.72rem;
     color:#6f6f78;letter-spacing:.08em}
+  .settled{position:fixed;left:0;right:0;bottom:2.1rem;text-align:center;font-size:.66rem;
+    color:#4f4f58;letter-spacing:.12em;text-transform:uppercase}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -380,6 +391,7 @@ export function flowerPageHtml(hideHelp = false): string {
 </div>
 <p class="caption" id="caption"></p>
 <p class="counter" id="counter"></p>
+<p class="settled" id="settled"></p>
 <p class="hint" id="hint"><b>drag</b> to turn · <b>scroll</b> to zoom · <b>click</b> a point to move${hideHelp ? '' : ' · arrows work too'}</p>
 <a class="plain" href="/map">plain map for screen readers</a>
 <script>${FLOWER_SCRIPT}</script>
