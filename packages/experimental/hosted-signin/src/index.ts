@@ -743,7 +743,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/access', auth: 'anonymous',
     handler: (req, res) => {
-      const html = Buffer.from(accessPageHtml())
+      const html = Buffer.from(accessPageHtml(undefined, String(req.headers.cookie ?? '')))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
