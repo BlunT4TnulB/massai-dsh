@@ -469,8 +469,12 @@ function strokeCircle(index, points, now, front) {
   const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
   const weight = chosen === null ? 1 : ((index === chosen.a || index === chosen.b) ? 2.6 : 0.55);
   const base = front ? 0.30 : 0.10;
+  // The further in you travel, the more the circles step back: up close the
+  // individual great circles read as straight lines, which is the opposite of a
+  // galaxy. The stars and the fog carry that depth instead.
+  const soft = Math.max(0.18, Math.min(1, 1.45 - zoom * 0.28));
   ctx.strokeStyle = 'rgba(' + (weight > 2 ? '255,240,215' : GOLD) + ','
-    + Math.min(1, (base * life + 0.04 * breath) * weight).toFixed(3) + ')';
+    + Math.min(1, (base * life + 0.04 * breath) * weight * soft).toFixed(3) + ')';
   ctx.lineWidth = DPR * (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
   ctx.stroke();
   void now;
@@ -717,14 +721,15 @@ function drawGalaxy(now) {
   // Endless finding: every band of zoom grows another galaxy inside the last.
   // The root never moves — it is always the fixed flower — but each child is
   // anchored on a different star, so no two journeys repeat.
-  for (let band = 0; band < ZOOM_BANDS.length; band += 1) {
-    if (zoom <= ZOOM_BANDS[band]) break;
-    const strength = Math.min(1, (zoom - ZOOM_BANDS[band]) / (ZOOM_BANDS[band] * 0.6));
-    const anchorNode = diveNode >= 0 && band === 0
-      ? nodes[diveNode].p
-      : nodes[(daySeed + band * 53 + Math.floor(band * 7919)) % nodes.length].p;
-    drawGalaxyAt(now, anchorNode, 0.34 / Math.pow(1.75, band), yaw * (2 + band) + band, 0.85 - band * 0.1);
-    void strength;
+  // Children only exist inside a star you entered. Without a dive there is one
+  // body and nothing else, so the view can never grow a second sphere beside the
+  // first (which read as a bug, because it was one).
+  if (diveNode >= 0) {
+    for (let band = 0; band < ZOOM_BANDS.length; band += 1) {
+      if (zoom <= ZOOM_BANDS[band]) break;
+      const anchorNode = nodes[diveNode].p;
+      drawGalaxyAt(now, anchorNode, 0.26 / Math.pow(1.9, band), yaw * (2 + band) + band, 0.75 - band * 0.1);
+    }
   }
 }
 
@@ -868,8 +873,9 @@ function frame(now) {
     zoom += (2.0 - zoom) * 0.05;
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
+    // No automatic retreat: where you put the camera is yours to keep. Coming back
+    // out is an explicit act (reset, escape, or tapping empty space).
     diveGlow += (0 - diveGlow) * 0.06;
-    if (!dragging && !spinning && zoom > 1.02) zoom += (1 - zoom) * 0.05;
   }
 
   if (!dragging && spinning) {
