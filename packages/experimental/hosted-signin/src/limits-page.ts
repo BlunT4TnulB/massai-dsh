@@ -49,7 +49,7 @@ export function limitFacts(): LimitFacts {
  * Render the disclosure page.
  * @returns the page HTML.
  */
-export function limitsPageHtml(): string {
+export function limitsPageHtml(showTips = true): string {
   const f = limitFacts()
   const money = (value: number): string => (value < 1 ? `${(value * 100).toFixed(0)}¢` : `$${value.toFixed(2)}`)
   return `<!doctype html>
@@ -117,7 +117,7 @@ service restarts. If a conversation matters, build from it — the artifact is w
 Deleting is always something you choose.</p>
 </div>
 
-<h2>Tips that save you money and time</h2>
+${showTips ? `<h2>Tips that save you money and time</h2>
 <ul>
   <li><b>Be specific.</b> One clear paragraph beats five vague ones — fewer messages, better results.</li>
   <li><b>Ask for the smallest thing that works first</b>, then add. Big rewrites burn allowance fast.</li>
@@ -126,7 +126,7 @@ Deleting is always something you choose.</p>
   <li><b>Off-peak is half price.</b> Some providers discount outside peak hours — <a href="/rates">rates page</a>.</li>
   <li><b>Your own key never competes for the free allowance.</b> If you are serious, bring one.</li>
   <li><b>Look at what was spent.</b> <a href="/usage">Usage</a> shows every call, per model, in dollars.</li>
-</ul>
+</ul>` : ''}
 
 <h2>If you want to go further than easy mode</h2>
 <table>

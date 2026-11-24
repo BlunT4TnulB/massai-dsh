@@ -449,7 +449,6 @@ export function apply(ctx: Context): void {
     ['/privacy', privacyPageHtml()],
     ['/aup', aupPageHtml()],
     ['/support', supportPageHtml(process.env.KO_FI_URL ?? '')],
-    ['/limits', limitsPageHtml()],
   ] as Array<[string, string]>) {
     ctx.webServer.register({
       kind: 'exact', path, auth: 'anonymous',
@@ -464,6 +463,22 @@ export function apply(ctx: Context): void {
       },
     })
   }
+
+  // /limits is rendered per visitor so the comfort choice applies: a person who
+  // asked for no tips does not get a tips section.
+  ctx.webServer.register({
+    kind: 'exact', path: '/limits', auth: 'anonymous',
+    handler: (req, res) => {
+      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
+      const body = Buffer.from(limitsPageHtml(comfort.tips))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(body.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
 
   // Right to erasure: wipes this account's usage ledger, credit and counters.
   // Projects and files follow when project storage lands.
@@ -696,6 +711,18 @@ export function apply(ctx: Context): void {
         'content-length': String(html.byteLength),
         'cache-control': 'no-store',
       })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
+
+  // /limits honours the comfort choice: people who asked for no tips get none.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/limits/render', auth: 'anonymous',
+    handler: (req, res) => {
+      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
+      const html = Buffer.from(limitsPageHtml(comfort.tips))
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(html.byteLength), 'cache-control': 'no-store' })
       res.end(req.method === 'HEAD' ? undefined : html)
     },
   })
