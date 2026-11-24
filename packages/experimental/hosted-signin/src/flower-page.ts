@@ -136,8 +136,8 @@ function drawTrail(now) {
 /**
  * A clearly-labelled simulation, used only when nothing real has happened.
  *
- * The page never pretends this is live work: `simulated` is set, a badge appears,
- * and the nodes are generated from a time-seeded wobble rather than from data.
+ * The page never pretends this is live work: the simulated flag is set, a badge
+ * appears, and the nodes are generated from a time-seeded wobble rather than data.
  */
 function simulate(now) {
   const seed = Math.floor(now / 30000);
