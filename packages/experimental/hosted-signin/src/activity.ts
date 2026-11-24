@@ -53,7 +53,10 @@ export function focusOf(now = Date.now()): { skill: string; label: string } | un
   if (warm.length === 0) return undefined
   const scores = new Map<string, { score: number; label: string }>()
   for (const event of warm) {
-    const weight = 1 - Math.max(0, now - event.at) / WINDOW_MS
+    // Half-life of two minutes: "what is happening now" should beat "what happened
+    // a while ago", even if there was more of it. A ten-minute window with linear
+    // weighting made six quick taps and one recent action look identical.
+    const weight = Math.pow(0.5, Math.max(0, now - event.at) / 120000)
     const current = scores.get(event.skill)
     if (current === undefined) scores.set(event.skill, { score: weight, label: event.label })
     else scores.set(event.skill, { score: current.score + weight, label: current.label })
