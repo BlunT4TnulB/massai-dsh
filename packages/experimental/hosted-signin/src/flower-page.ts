@@ -152,6 +152,35 @@ const ZOOM_BANDS = [1.5, 2.4, 3.8, 5.6, 8.0, 11.0];
 const ANCHOR = EMBEDDED ? 0.40 : 0.5;
 
 const spriteCache = new Map();
+
+/** Soft fog blobs: one sprite per nebula tint, drawn scaled and additively. */
+const fogCache = new Map();
+function fogSprite(tint) {
+  if (fogCache.has(tint)) return fogCache.get(tint);
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, 'rgba(' + tint + ',0.55)');
+  grad.addColorStop(0.42, 'rgba(' + tint + ',0.20)');
+  grad.addColorStop(0.75, 'rgba(' + tint + ',0.05)');
+  grad.addColorStop(1, 'rgba(' + tint + ',0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  fogCache.set(tint, c);
+  return c;
+}
+
+// The fog: a handful of enormous soft blobs wandering on slow Lissajous paths.
+// They are not the mind, they are the air the mind hangs in.
+const FOG = [
+  { tint: '214,150,90', radius: 0.95, ax: 0.30, ay: 0.22, sx: 0.000021, sy: 0.000017, phase: 0.0 },
+  { tint: '150,120,200', radius: 0.80, ax: 0.26, ay: 0.30, sx: -0.000016, sy: 0.000023, phase: 1.7 },
+  { tint: '110,190,170', radius: 0.62, ax: 0.34, ay: 0.18, sx: 0.000019, sy: -0.000014, phase: 3.1 },
+  { tint: '240,190,120', radius: 1.15, ax: 0.20, ay: 0.26, sx: -0.000011, sy: -0.000019, phase: 4.6 },
+];
 function glowSprite(tint) {
   if (spriteCache.has(tint)) return spriteCache.get(tint);
   const size = 64;
@@ -303,6 +332,24 @@ function drawHalo(now) {
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // The fog: slow, enormous, additive. Everything above it is drawn over fog, so
+  // the whole body sits inside something rather than in empty space.
+  ctx.globalCompositeOperation = 'lighter';
+  const fogScale = Math.min(innerWidth, innerHeight) * FIT * 2.6;
+  for (const blob of FOG) {
+    const x = cx + Math.cos(now * blob.sx + blob.phase) * innerWidth * blob.ax;
+    const y = cy + Math.sin(now * blob.sy + blob.phase * 1.3) * innerHeight * blob.ay;
+    const radius = fogScale * blob.radius * (0.94 + 0.06 * breath);
+    ctx.globalAlpha = (0.030 + 0.012 * breath) * life;
+    ctx.drawImage(fogSprite(blob.tint), x - radius, y - radius, radius * 2, radius * 2);
+  }
+  // the entity's own core veil: brightest where the body is densest
+  const vein = fogScale * 0.42;
+  ctx.globalAlpha = (0.05 + 0.02 * breath) * life;
+  ctx.drawImage(fogSprite('255,214,160'), cx - vein, cy - vein, vein * 2, vein * 2);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
   // The shape, stated: at full retreat the whole thing is one sphere, so it gets
   // a limb — faint, and gone as soon as you travel in.
   const retreat = Math.max(0, Math.min(1, (1.35 - zoom) / 0.55));
