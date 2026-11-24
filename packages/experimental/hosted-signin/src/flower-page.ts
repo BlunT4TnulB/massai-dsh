@@ -30,88 +30,166 @@ const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // --- shapes ---------------------------------------------------------------
-// Three bodies, same presence. The flower is the mark; the two solids are the
-// candidates under review. Which one it is comes from the URL so they can be
-// compared without a deploy: ?shape=icosa | dodeca | flower
-const SHAPE = (new URLSearchParams(location.search).get('shape') || 'icosa').toLowerCase();
+// Four bodies, one presence. The two candidates under review are the buckyball
+// and the 3-fold icosahedron; the flower is what it came from.
+//   ?shape=bucky | threefold | icosa | dodeca | flower
+const SHAPE = (new URLSearchParams(location.search).get('shape') || 'bucky').toLowerCase();
 const PHI = (1 + Math.sqrt(5)) / 2;
 
-function normalise(list) {
-  return list.map(function (v) {
-    const r = Math.hypot(v[0], v[1], v[2]) || 1;
-    return [v[0] / r, v[1] / r, v[2] / r];
-  });
-}
-
-function edgesOf(vertices) {
-  // Every pair at the minimum distance: the true edge set of a regular solid.
+const norm = function (v) {
+  const r = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / r, v[1] / r, v[2] / r];
+};
+const lerp3 = function (a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+};
+const dist3 = function (a, b) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+};
+const dedupe = function (list) {
+  const out = [];
+  for (const v of list) {
+    if (!out.some(function (q) { return dist3(q, v) < 1e-6; })) out.push(v);
+  }
+  return out;
+};
+const edgesOf = function (vertices) {
   let shortest = Infinity;
   for (let i = 0; i < vertices.length; i += 1) {
     for (let j = i + 1; j < vertices.length; j += 1) {
-      const d = Math.hypot(vertices[i][0] - vertices[j][0], vertices[i][1] - vertices[j][1], vertices[i][2] - vertices[j][2]);
+      const d = dist3(vertices[i], vertices[j]);
       if (d < shortest) shortest = d;
     }
   }
   const out = [];
   for (let i = 0; i < vertices.length; i += 1) {
     for (let j = i + 1; j < vertices.length; j += 1) {
-      const d = Math.hypot(vertices[i][0] - vertices[j][0], vertices[i][1] - vertices[j][1], vertices[i][2] - vertices[j][2]);
-      if (d < shortest * 1.12) out.push([vertices[i], vertices[j]]);
+      if (dist3(vertices[i], vertices[j]) < shortest * 1.12) out.push([vertices[i], vertices[j]]);
     }
   }
   return out;
-}
+};
+const trianglesOf = function (vertices) {
+  let shortest = Infinity;
+  for (let i = 0; i < vertices.length; i += 1) {
+    for (let j = i + 1; j < vertices.length; j += 1) {
+      const d = dist3(vertices[i], vertices[j]);
+      if (d < shortest) shortest = d;
+    }
+  }
+  const near = function (a, b) { return dist3(a, b) < shortest * 1.12; };
+  const out = [];
+  for (let i = 0; i < vertices.length; i += 1) {
+    for (let j = i + 1; j < vertices.length; j += 1) {
+      for (let k = j + 1; k < vertices.length; k += 1) {
+        if (near(vertices[i], vertices[j]) && near(vertices[j], vertices[k]) && near(vertices[i], vertices[k])) {
+          out.push([vertices[i], vertices[j], vertices[k]]);
+        }
+      }
+    }
+  }
+  return out;
+};
 
-// icosahedron: twelve vertices, thirty edges, the shape of a football's cousin
-const ICOSA = normalise([
+const ICOSA = [
   [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
   [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
   [PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, 1], [-PHI, 0, -1],
-]);
-// dodecahedron: twenty vertices, thirty edges, twelve faces
-const DODECA = normalise([
+].map(norm);
+const DODECA = [
   [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
   [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
   [0, 1 / PHI, PHI], [0, 1 / PHI, -PHI], [0, -1 / PHI, PHI], [0, -1 / PHI, -PHI],
   [1 / PHI, PHI, 0], [1 / PHI, -PHI, 0], [-1 / PHI, PHI, 0], [-1 / PHI, -PHI, 0],
   [PHI, 0, 1 / PHI], [PHI, 0, -1 / PHI], [-PHI, 0, 1 / PHI], [-PHI, 0, -1 / PHI],
-]);
+].map(norm);
 
-// The flower: nineteen centres lifted onto a shell, so it is a ball and not a
-// pancake, with the flat flower as its seam pattern.
-const RS = 2.02;
-const FLAT = [];
-const A = [1, 0];
-const B = [0.5, Math.sqrt(3) / 2];
-for (let i = -2; i <= 2; i += 1) {
-  for (let j = -2; j <= 2; j += 1) {
-    const x = i * A[0] + j * B[0];
-    const y = i * A[1] + j * B[1];
-    if (Math.hypot(x, y) <= 2 + 1e-6) FLAT.push([x, y]);
+const ICO_EDGES = edgesOf(ICOSA);
+const ICO_FACES = trianglesOf(ICOSA);
+
+// The buckyball: truncate every corner of the icosahedron. Two points one third
+// along each edge give sixty vertices, ninety edges, twelve pentagons and twenty
+// hexagons — the most reference points of anything here.
+const BUCKY = dedupe(ICO_EDGES.flatMap(function (edge) {
+  return [norm(lerp3(edge[0], edge[1], 1 / 3)), norm(lerp3(edge[0], edge[1], 2 / 3))];
+}));
+const BUCKY_PENTA = ICOSA.map(norm);
+const BUCKY_HEXA = ICO_EDGES.map(function (edge) {
+  return norm(lerp3(edge[0], edge[1], 0.5));
+});
+const BUCKY_PANELS = BUCKY_PENTA.concat(BUCKY_HEXA);
+
+// The 3-fold icosahedron: every face split into three around its centre. Thirty
+// two vertices, ninety edges, sixty triangular panels — threefold symmetry.
+const THREEFOLD = dedupe(ICOSA.concat(ICO_FACES.map(function (face) {
+  return norm([
+    (face[0][0] + face[1][0] + face[2][0]) / 3,
+    (face[0][1] + face[1][1] + face[2][1]) / 3,
+    (face[0][2] + face[1][2] + face[2][2]) / 3,
+  ]);
+})));
+const THREEFOLD_PANELS = ICO_FACES.map(function (face) {
+  return norm([
+    (face[0][0] + face[1][0] + face[2][0]) / 3,
+    (face[0][1] + face[1][1] + face[2][1]) / 3,
+    (face[0][2] + face[1][2] + face[2][2]) / 3,
+  ]);
+});
+
+// The flower, wrapped onto the sphere: nineteen circles carried from the flat
+// mark onto the surface. This is the transform — the logo becomes the skin.
+function flowerWrap(radius, circles) {
+  const out = [];
+  const centres = [];
+  const A = [1, 0];
+  const B = [0.5, Math.sqrt(3) / 2];
+  for (let i = -2; i <= 2; i += 1) {
+    for (let j = -2; j <= 2; j += 1) {
+      const x = i * A[0] + j * B[0];
+      const y = i * A[1] + j * B[1];
+      if (Math.hypot(x, y) <= 2 + 1e-6) centres.push([x, y]);
+    }
   }
-}
-const FLOWER = [];
-for (const point of FLAT) {
-  const r = Math.hypot(point[0], point[1]);
-  const z = Math.sqrt(Math.max(0, RS * RS - r * r));
-  FLOWER.push([point[0], point[1], z]);
-  if (z > 0.18) FLOWER.push([point[0], point[1], -z]);
+  const scale = radius / 2.0;
+  for (const c of centres) {
+    for (const hemis of [1, -1]) {
+      const line = [];
+      for (let t = 0; t <= circles * 2; t += 1) {
+        const angle = (t / (circles * 2)) * Math.PI * 2;
+        const px = (c[0] + Math.cos(angle)) * scale;
+        const py = (c[1] + Math.sin(angle)) * scale;
+        const rr = Math.hypot(px, py);
+        if (rr > radius) { line.push(null); continue; }
+        line.push([px, py, hemis * Math.sqrt(Math.max(0, radius * radius - rr * rr))]);
+      }
+      out.push(line);
+    }
+  }
+  return out;
 }
 
-const BODY = SHAPE === 'dodeca'
-  ? { name: 'dodecahedron', vertices: DODECA, radius: 1 }
-  : SHAPE === 'flower'
-    ? { name: 'flower', vertices: FLOWER, radius: RS }
-    : { name: 'icosahedron', vertices: ICOSA, radius: 1 };
+const BODY = SHAPE === 'icosa'
+  ? { name: 'icosahedron', vertices: ICOSA, radius: 1, panels: [] }
+  : SHAPE === 'dodeca'
+    ? { name: 'dodecahedron', vertices: DODECA, radius: 1, panels: [] }
+    : SHAPE === 'threefold'
+      ? { name: '3-fold icosahedron', vertices: THREEFOLD, radius: 1, panels: THREEFOLD_PANELS }
+      : SHAPE === 'flower'
+        ? {
+            name: 'flower ball',
+            vertices: flowerWrap(1, 8).flat().filter(Boolean).map(norm),
+            radius: 1,
+            panels: [],
+          }
+        : { name: 'buckyball', vertices: BUCKY, radius: 1, panels: BUCKY_PANELS };
 const VERTICES = BODY.vertices;
 const EDGES = edgesOf(VERTICES);
+const FLOWER_SKIN = flowerWrap(BODY.radius * 0.995, 6);
 
-// Centring: one radius decides the scale, and the centre is the exact middle of
-// the viewport. The old version scaled by a fraction of the viewport, which let
-// the body run past its edges and read as off-centre.
+// Centring: one fit against the body's own radius, and the exact middle of the
+// viewport. Every body occupies the same share of the smaller dimension.
 const FIT = 0.34;
 
-// --- doors and skill points ----------------------------------------------
 const DOOR_NAMES = ['Talk', 'Projects', 'Library', 'You', 'Limits', 'Tip jar', 'Help'];
 const doors = DOOR_NAMES.map(function (label, index) {
   const v = VERTICES[index % VERTICES.length];
@@ -128,8 +206,10 @@ const SKILL_COLOR = {
   testing: '200,160,255', docs: '180,190,200', scanner: '150,220,220',
   service: '240,180,140', general: GOLD,
 };
-const IDLE_SPEED = 0.00006;
+// Idle movement, thirty percent quicker than it was. Still slow enough to breathe.
+const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
+const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
 
 const spriteCache = new Map();
 function sphereSprite(tint) {
@@ -150,7 +230,6 @@ function sphereSprite(tint) {
   return c;
 }
 
-// --- state ----------------------------------------------------------------
 let yaw = 0.35;
 let pitch = -0.42;
 let roll = 0;
@@ -176,6 +255,7 @@ let simulated = false;
 let ripples = [];
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
+let simLevel = 0;
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -184,16 +264,10 @@ for (let i = 0; i < 90; i += 1) {
   const a = Math.random() * Math.PI * 2;
   const b = Math.acos(2 * Math.random() - 1);
   const r = 1.4 + Math.random() * 2.2;
-  dust.push({
-    x: Math.sin(b) * Math.cos(a) * r,
-    y: Math.sin(b) * Math.sin(a) * r,
-    z: Math.cos(b) * r,
-    s: 0.4 + Math.random() * 0.8,
-  });
+  dust.push({ x: Math.sin(b) * Math.cos(a) * r, y: Math.sin(b) * Math.sin(a) * r, z: Math.cos(b) * r, s: 0.4 + Math.random() * 0.8 });
 }
 
 const DPR = Math.min(innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1);
-
 function resize() {
   canvas.width = Math.floor(innerWidth * DPR);
   canvas.height = Math.floor(innerHeight * DPR);
@@ -220,16 +294,9 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  // Fit is absolute, not a fraction of the screen: the body always occupies the
-  // same share of the smaller dimension, so it is centred at every window size.
   const scale = zoom * Math.min(innerWidth, innerHeight) * (FIT / BODY.radius);
   const k = distance / (distance + z3);
-  return {
-    x: innerWidth / 2 + x2 * scale * k,
-    y: innerHeight / 2 + y3 * scale * k,
-    k: k,
-    depth: z3,
-  };
+  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight / 2 + y3 * scale * k, k: k, depth: z3 };
 }
 
 function drawSprite(tint, x, y, radius, alpha) {
@@ -267,7 +334,6 @@ function drawHalo(now) {
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   for (const mote of dust) {
     const p = project(mote.x, mote.y, mote.z);
     ctx.beginPath();
@@ -277,16 +343,43 @@ function drawHalo(now) {
   }
 }
 
+function drawFlowerSkin() {
+  // The transform: the flat flower carried onto the surface, both hemispheres.
+  ctx.lineWidth = DPR * 0.55;
+  for (const line of FLOWER_SKIN) {
+    ctx.beginPath();
+    let started = false;
+    for (const point of line) {
+      if (point === null) { started = false; continue; }
+      const p = project(point[0], point[1], point[2]);
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = 'rgba(247,205,140,' + (0.045 + 0.03 * breath).toFixed(3) + ')';
+    ctx.stroke();
+  }
+}
+
+function drawPanels(now) {
+  for (const panel of BODY.panels) {
+    const p = project(panel[0], panel[1], panel[2]);
+    const near = Math.max(0, Math.min(1, (p.k - 0.62) / 0.5));
+    const radius = DPR * 1.8 * p.k;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.05 + 0.16 * near + 0.02 * breath).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.7;
+    ctx.stroke();
+  }
+  void now;
+}
+
 function drawEdges(now) {
-  // Back to front so the far edges are dimmer than the near ones — the cheapest
-  // and most honest way to read a solid as solid.
-  const drawn = EDGES
-    .map(function (edge) {
-      const a = project(edge[0][0], edge[0][1], edge[0][2]);
-      const b = project(edge[1][0], edge[1][1], edge[1][2]);
-      return { a: a, b: b, near: (a.k + b.k) / 2 };
-    })
-    .sort(function (p, q) { return p.near - q.near; });
+  const drawn = EDGES.map(function (edge) {
+    const a = project(edge[0][0], edge[0][1], edge[0][2]);
+    const b = project(edge[1][0], edge[1][1], edge[1][2]);
+    return { a: a, b: b, near: (a.k + b.k) / 2 };
+  }).sort(function (p, q) { return p.near - q.near; });
   for (const edge of drawn) {
     const heat = (heatAt(edge.a.x, edge.a.y, 0, now) + heatAt(edge.b.x, edge.b.y, 0, now)) / 2;
     const glow = Math.max(0, Math.min(1, (edge.near - 0.62) / 0.5));
@@ -294,44 +387,39 @@ function drawEdges(now) {
     ctx.moveTo(edge.a.x, edge.a.y);
     ctx.lineTo(edge.b.x, edge.b.y);
     ctx.strokeStyle = 'rgba(247,205,140,'
-      + ((0.04 + self.wisdom * 0.05) + glow * 0.22 + heat * 0.30).toFixed(3) + ')';
-    ctx.lineWidth = DPR * (0.7 + 1.1 * glow);
+      + ((0.035 + self.wisdom * 0.045) + glow * 0.20 + heat * 0.30).toFixed(3) + ')';
+    ctx.lineWidth = DPR * (0.6 + 1.0 * glow);
     ctx.stroke();
   }
 }
 
 function drawVertices(now) {
-  const ordered = VERTICES
-    .map(function (v) {
-      const p = project(v[0], v[1], v[2]);
-      return { v: v, p: p, depth: p.depth };
-    })
-    .sort(function (a, b) { return a.depth - b.depth; });
+  const ordered = VERTICES.map(function (v) {
+    const p = project(v[0], v[1], v[2]);
+    return { v: v, p: p, depth: p.depth };
+  }).sort(function (a, b) { return a.depth - b.depth; });
   for (const entry of ordered) {
     const heat = heatAt(entry.v[0], entry.v[1], entry.v[2], now);
     const isDoor = doors.some(function (d) {
       return Math.abs(d.x - entry.v[0]) < 1e-9 && Math.abs(d.y - entry.v[1]) < 1e-9 && Math.abs(d.z - entry.v[2]) < 1e-9;
     });
     const tint = heat > 0.06 ? GREEN : GOLD;
-    const base = Math.min(innerWidth, innerHeight) * 0.028 * (FIT / BODY.radius) * (isDoor ? 1.5 : 1);
+    const base = Math.min(innerWidth, innerHeight) * 0.020 * (FIT / BODY.radius) * (isDoor ? 1.7 : 1);
     const radius = base * entry.p.k * (1 + heat * 0.15);
-    const depthFade = 0.30 + 0.70 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
+    const depthFade = 0.28 + 0.72 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
     drawSprite(tint, entry.p.x, entry.p.y, radius, (depthFade + heat * 0.4) * life);
   }
 }
 
 function drawCentres(now) {
-  // Spokes from the centre: the vector-equilibrium idea, where every direction is
-  // equal. It also gives the object a middle, which is what makes it read centred.
-  ctx.lineWidth = DPR * 0.5;
+  ctx.lineWidth = DPR * 0.45;
   for (const v of VERTICES) {
     const a = project(0, 0, 0);
     const b = project(v[0], v[1], v[2]);
-    const near = b.k;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.015 + 0.045 * Math.max(0, near - 0.62) + 0.015 * breath).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.010 + 0.030 * Math.max(0, b.k - 0.62) + 0.010 * breath).toFixed(3) + ')';
     ctx.stroke();
   }
   void now;
@@ -455,6 +543,8 @@ function frame(now) {
   }
 
   drawHalo(now);
+  drawFlowerSkin();
+  drawPanels(now);
   drawCentres(now);
   drawEdges(now);
   drawTrail(now);
@@ -467,33 +557,59 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-// --- self-awareness -------------------------------------------------------
-function simulate(now) {
-  const seed = Math.floor(now / 30000);
-  const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs'];
-  trail = [];
-  for (let i = 0; i < 14; i += 1) {
-    const wobble = Math.sin(seed * 0.7 + i * 1.3);
-    trail.push({ skill: pool[Math.abs(Math.floor(wobble * 3) + i) % pool.length], at: now - (14 - i) * 9000 });
+// --- simulation: a slider that ramps the intelligence levels ---------------
+function applyLevel(level) {
+  simLevel = level;
+  const nameEl = document.getElementById('levelName');
+  if (nameEl) nameEl.textContent = LEVELS[level] || '';
+  if (level === 0) {
+    trail = [];
+    agents = [];
+    focus = null;
+    simulated = true;
+    return;
   }
-  agents = [{ id: 'demo-1', steps: 9, lastSkill: 'geometry' }, { id: 'demo-2', steps: 5, lastSkill: 'docs' }];
+  const now = Date.now();
+  const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs', 'scanner', 'service'];
+  const count = level * 6;
+  trail = [];
+  for (let i = 0; i < count; i += 1) {
+    trail.push({
+      skill: pool[(i * (level + 1)) % pool.length],
+      at: now - (count - i) * (9000 / level),
+      agent: 'sim-' + (i % Math.min(6, level)),
+    });
+  }
+  agents = [];
+  for (let a = 0; a < Math.min(6, level); a += 1) {
+    agents.push({ id: 'sim-' + a, steps: 2 + a * 2, lastSkill: pool[a % pool.length] });
+  }
+  const point = skillPoints[level % skillPoints.length];
+  focus = { x: point[0], y: point[1], z: point[2], label: 'simulated level ' + level + ' — ' + (LEVELS[level] || '') };
+  focusUntil = performance.now() + 600000;
+  ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
+  if (counter) counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length + ' edges';
+}
+const slider = document.getElementById('level');
+if (slider) {
+  slider.addEventListener('input', function () { applyLevel(Number(slider.value)); });
+  applyLevel(Number(slider.value));
 }
 
+// --- live data -------------------------------------------------------------
 async function poll() {
   try {
     const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
     const data = await response.json();
+    if (simLevel > 0) return;
     trail = Array.isArray(data.trail) ? data.trail : [];
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
-    if (simulated) simulate(Date.now());
-    if (counter) {
-      counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length
-        + ' edges' + (trailTotal > 0 ? ' · ' + trailTotal + ' actions' : '');
-    }
+    if (counter) counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length
+      + ' edges' + (trailTotal > 0 ? ' · ' + trailTotal + ' actions' : '');
     const badge = document.getElementById('simulated');
     if (badge) badge.style.opacity = simulated ? '0.75' : '0';
     const hot = data.focus;
@@ -508,13 +624,8 @@ async function poll() {
     focus = { x: point[0], y: point[1], z: point[2], label: hot.label };
     focusUntil = performance.now() + 25000;
     ripples.push({ t0: performance.now(), strength: 1 });
-    if (caption) {
-      caption.textContent = hot.label;
-      caption.style.opacity = '1';
-    }
-  } catch {
-    /* a live view that fails is still a flower */
-  }
+    if (caption) { caption.textContent = hot.label; caption.style.opacity = '1'; }
+  } catch { /* a live view that fails is still a flower */ }
 }
 poll();
 setInterval(poll, 2500);
@@ -548,21 +659,17 @@ async function pollVitals() {
         + ' · ' + (v.projects || 0) + ' works kept · ' + (v.lessons || 0) + ' lessons held';
       status.style.color = self.notice === '' ? '#57575f' : '#8a6a3a';
     }
-  } catch {
-    /* not knowing how you are is also a state */
-  }
+  } catch { /* not knowing how you are is also a state */ }
 }
 pollVitals();
 setInterval(pollVitals, 15000);
 
-// --- interaction: all three axes, with a throw ---------------------------
+// --- interaction -----------------------------------------------------------
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
   dragMode = event.button === 2 || event.shiftKey ? 'roll' : 'turn';
-  velYaw = 0;
-  velPitch = 0;
-  velRoll = 0;
+  velYaw = 0; velPitch = 0; velRoll = 0;
   canvas.setPointerCapture(event.pointerId);
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
   canvas.style.cursor = 'grabbing';
@@ -599,7 +706,6 @@ canvas.addEventListener('pointermove', function (event) {
   if (hint) hint.style.opacity = '0';
 });
 canvas.addEventListener('pointerup', function () {
-  // The throw keeps its momentum and settles back into the idle turn. No clicks.
   dragging = false;
   canvas.style.cursor = 'grab';
 });
@@ -656,9 +762,16 @@ export function flowerPageHtml(): string {
     color:#57575f;letter-spacing:.12em;transition:color .8s ease}
   .confession{position:fixed;left:0;right:0;top:4rem;text-align:center;font-size:.72rem;
     color:#8a6a3a;font-style:italic;opacity:0;transition:opacity 3s ease;padding:0 2rem}
+  .sim-ui{position:fixed;left:1.1rem;bottom:1.2rem;display:flex;align-items:center;gap:.55rem;
+    font-size:.68rem;color:#6f6f78;letter-spacing:.06em;background:rgba(12,12,14,.6);
+    border:1px solid #24242b;border-radius:999px;padding:.3rem .8rem;backdrop-filter:blur(6px)}
+  .sim-ui input{width:8rem;accent-color:#C1440E}
+  .sim-ui #levelName{color:#EFDCA4;min-width:5.6rem}
   .shapes{position:fixed;left:0;right:0;bottom:1.2rem;text-align:center;font-size:.7rem;
-    color:#5f5f68;letter-spacing:.06em}
+    color:#5f5f68;letter-spacing:.06em;pointer-events:none}
+  .shapes a{pointer-events:auto}
   .shapes a{color:#6f6f78;text-decoration:none}
+  @media (max-width: 640px){ .shapes{display:none} .sim-ui{left:50%;transform:translateX(-50%)} }
   .shapes a:hover{color:#7ee2a8}
   @media (prefers-reduced-motion: reduce) { .hint{transition:none} }
 </style></head><body>
@@ -674,7 +787,12 @@ export function flowerPageHtml(): string {
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
 <p class="hint" id="hint"><b>drag</b> to turn it · <b>shift-drag</b> (or right-drag) to roll · <b>scroll</b> closer · throw it and it keeps spinning</p>
-<span class="shapes"><a href="/flower?shape=icosa">icosahedron</a> · <a href="/flower?shape=dodeca">dodecahedron</a> · <a href="/flower?shape=flower">flower</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
+<div class="sim-ui">
+    <label for="level">simulate intelligence</label>
+    <input type="range" id="level" min="0" max="5" step="1" value="0">
+    <span id="levelName">dormant</span>
+  </div>
+  <span class="shapes"><a href="/flower?shape=bucky">buckyball</a> · <a href="/flower?shape=threefold">3-fold icosahedron</a> · <a href="/flower?shape=flower">flower</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
 </body></html>`
 }
