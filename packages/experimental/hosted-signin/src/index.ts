@@ -360,7 +360,8 @@ export function apply(ctx: Context): void {
       const rawArguments = typeof typed.data?.arguments === 'string'
         ? typed.data.arguments
         : JSON.stringify(typed.data?.arguments ?? {})
-      classifyToolCall(name, rawArguments, String(session.id))
+      const classified = classifyToolCall(name, rawArguments, String(session.id))
+      if (classified !== undefined) touchSession(String(session.id), classified.skill)
     }
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
@@ -393,6 +394,22 @@ export function apply(ctx: Context): void {
   ) => void
   const explained = new Set<string>()
   onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
+    // The control node: notes the operator queued from the hive arrive here, once,
+    // labelled as the operator speaking. This runs before the money gate because a
+    // direction can change what the step is about to do.
+    const sessionId = String((agent.session as { id?: string }).id ?? '')
+    const operatorNotes = takeNotes(sessionId)
+    if (operatorNotes.length > 0) {
+      const notice = {
+        role: 'user' as const,
+        source: { kind: 'user' as const },
+        content: [{
+          type: 'text' as const,
+          text: `[operator note — not the user speaking] ${operatorNotes.join(' ')}`,
+        }],
+      }
+      return { kind: 'enter', messages: [...((rest as { messages?: unknown[] }).messages ?? []), notice] }
+    }
     if (!databaseConfigured()) return next()
     const userId = String(agent.session.header?.userId ?? '')
     const verdict = await checkBudget(userId).catch(() => ({ allowed: true } as const))
@@ -693,6 +710,37 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+
+  // The hive: who is working, readable by anyone, and steerable only by the owner.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/hive', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        respond(res, 200, { nodes: hiveNodes(), ...hiveSummary() })
+        return
+      }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const owner = process.env.DSH_WEB_TOKEN ?? ''
+      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
+        respond(res, 401, { error: 'owner token required' }); return
+      }
+      void (async () => {
+        try {
+          const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+          const hashed = String(parsed['node'] ?? '')
+          const note = String(parsed['note'] ?? '').trim()
+          if (note === '') { respond(res, 400, { error: 'a note is required' }); return }
+          const session = sessionFor(hashed)
+          const queued = session === undefined ? undefined : queueNote(session, note)
+          respond(res, queued === undefined ? 404 : 200,
+            queued === undefined ? { error: 'no live session with that id' } : { ok: true, queued })
+        } catch (error) {
+          respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+        }
+      })()
+    },
+  })
 
   // The live view: what the workshop is doing, for the flower to turn toward.
   // Coarse by design — a capability and a few words, nothing about the content.
