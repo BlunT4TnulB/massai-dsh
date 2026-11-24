@@ -7,7 +7,7 @@
  * @module @deepseek-ai/dsh-hosted-signin
  */
 
-import { randomUUID } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
@@ -116,6 +116,20 @@ function apiKeyOf(text: string, contentType: string | undefined): string {
   return (new URLSearchParams(text).get('apiKey') ?? '').trim()
 }
 
+/** The cookie that marks this browser as the operator's. */
+const OWNER_COOKIE = 'dsh_owner'
+
+/**
+ * The marker value: an HMAC of a fixed string keyed by the deployment token.
+ * Holding the token is what makes the operator the operator, so the token itself
+ * is the key — the cookie is a proof, never the secret.
+ * @param token - the deployment token.
+ * @returns the marker value.
+ */
+function ownerMarker(token: string): string {
+  return createHmac('sha256', token).update('massai-owner').digest('hex')
+}
+
 /**
  * Whether this request is the operator.
  *
@@ -132,9 +146,16 @@ function apiKeyOf(text: string, contentType: string | undefined): string {
  */
 function isOwnerRequest(req: IncomingMessage, peer?: unknown): boolean {
   const configured = process.env.DSH_WEB_TOKEN ?? ''
-  if (configured !== '' && String(req.headers['x-one-turn-token'] ?? '') === configured) return true
-  const id = String((peer as { id?: unknown } | undefined)?.id ?? '')
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  if (configured === '' ) return false
+  if (String(req.headers['x-one-turn-token'] ?? '') === configured) return true
+  // The browser proves itself with a marker cookie signed by the token itself, so
+  // it cannot be forged and no token has to live in the page.
+  const marker = ownerMarker(configured)
+  for (const part of String(req.headers.cookie ?? '').split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === OWNER_COOKIE && rest.join('=') === marker) return true
+  }
+  return false
 }
 
 /**
@@ -748,6 +769,28 @@ export function apply(ctx: Context): void {
   })
 
 
+
+
+  // Claim the operator console in this browser: one visit with the token sets a
+  // signed marker cookie, and the token never has to be stored in the page.
+  ctx.webServer.register({
+    kind: 'exact', path: '/owner', auth: 'anonymous',
+    handler: (req, res) => {
+      const configured = process.env.DSH_WEB_TOKEN ?? ''
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const supplied = url.searchParams.get('token') ?? String(req.headers['x-one-turn-token'] ?? '')
+      if (configured === '' || supplied !== configured) {
+        respond(res, 403, { error: 'operator token required: /owner?token=…' })
+        return
+      }
+      res.writeHead(303, {
+        'cache-control': 'no-store',
+        location: '/admin',
+        'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
+      })
+      res.end()
+    },
+  })
 
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({

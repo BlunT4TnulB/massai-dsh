@@ -9,6 +9,7 @@
  * @module @deepseek-ai/dsh-one-turn
  */
 
+import { createHmac } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
@@ -37,7 +38,7 @@ import type { IntakeAnswers } from './spec.ts'
 export const inject = ['webServer']
 
 
-/** Read one cookie value from the request. */
+
 function cookieValue(req: IncomingMessage, name: string): string {
   const raw = String(req.headers.cookie ?? '')
   for (const part of raw.split(';')) {
@@ -122,6 +123,27 @@ async function readBody(req: IncomingMessage, limit = 64 * 1024): Promise<string
     chunks.push(buffer)
   }
   return Buffer.concat(chunks).toString('utf8')
+}
+
+
+/**
+ * Whether this request carries the operator's signed marker cookie.
+ *
+ * The marker is an HMAC keyed by the deployment token, so a browser that has it
+ * proved it once by presenting the token; nothing here can be forged without the
+ * token itself. Duplicated from the hosting layer on purpose: this package must
+ * not depend on the sign-in plugin, and the rule is three lines.
+ */
+function isOwnerRequest(req: IncomingMessage): boolean {
+  const token = process.env.DSH_WEB_TOKEN ?? ''
+  if (token === '') return false
+  if (String(req.headers['x-one-turn-token'] ?? '') === token) return true
+  const marker = createHmac('sha256', token).update('massai-owner').digest('hex')
+  for (const part of String(req.headers.cookie ?? '').split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === 'dsh_owner' && rest.join('=') === marker) return true
+  }
+  return false
 }
 
 /** Read one string field from an unknown object. */
@@ -453,6 +475,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/one-turn/store', auth: 'anonymous',
     handler: async (req, res) => {
+      if (!isOwnerRequest(req)) { respond(res, 403, { error: 'operator only' }); return }
       if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
         const stats = await trialStats()
