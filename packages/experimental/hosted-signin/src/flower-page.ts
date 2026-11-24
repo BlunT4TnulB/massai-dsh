@@ -30,9 +30,6 @@ const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // --- geometry -------------------------------------------------------------
-// Nineteen circles on a hexagonal lattice: the whole flower. Two layers of them
-// become thirty-eight spheres, which is what makes it read as an object rather
-// than a drawing.
 const R = 1;
 const A = [R, 0];
 const B = [R / 2, R * Math.sqrt(3) / 2];
@@ -44,14 +41,15 @@ for (let i = -2; i <= 2; i += 1) {
     if (Math.hypot(x, y) <= 2 * R + 1e-6) centres.push([x, y]);
   }
 }
-const LAYER_Z = 0.34;
 
 function intersections() {
   const out = [];
   for (let i = 0; i < centres.length; i += 1) {
     for (let j = i + 1; j < centres.length; j += 1) {
-      const [x1, y1] = centres[i];
-      const [x2, y2] = centres[j];
+      const x1 = centres[i][0];
+      const y1 = centres[i][1];
+      const x2 = centres[j][0];
+      const y2 = centres[j][1];
       const dx = x2 - x1;
       const dy = y2 - y1;
       const d = Math.hypot(dx, dy);
@@ -75,23 +73,30 @@ function intersections() {
 }
 const lattice = intersections();
 
-// --- the seven doors ------------------------------------------------------
-const doors = [
-  { x: 0, y: 0, label: 'Talk', href: '/' },
-  { x: 1, y: 0, label: 'Projects', href: '/projects' },
-  { x: 0.5, y: Math.sqrt(3) / 2, label: 'Library', href: '/library' },
-  { x: -0.5, y: Math.sqrt(3) / 2, label: 'You', href: '/me' },
-  { x: -1, y: 0, label: 'Limits', href: '/limits' },
-  { x: -0.5, y: -Math.sqrt(3) / 2, label: 'Tip jar', href: '/support' },
-  { x: 0.5, y: -Math.sqrt(3) / 2, label: 'Help', href: '/settings' },
-];
+// The web: lattice points close enough to be joined by a filament. This is the
+// structure the flower *implies* and never draws.
+const filaments = [];
+for (let i = 0; i < lattice.length; i += 1) {
+  for (let j = i + 1; j < lattice.length; j += 1) {
+    const d = Math.hypot(lattice[i][0] - lattice[j][0], lattice[i][1] - lattice[j][1]);
+    if (d > 0.36 && d < 0.72) filaments.push([lattice[i], lattice[j], d]);
+  }
+}
 
-// Skill points: the outer centres. The twelve that are not doors.
+// --- doors and skill points -----------------------------------------------
+const doors = [
+  { x: 0, y: 0, label: 'Talk' },
+  { x: 1, y: 0, label: 'Projects' },
+  { x: 0.5, y: Math.sqrt(3) / 2, label: 'Library' },
+  { x: -0.5, y: Math.sqrt(3) / 2, label: 'You' },
+  { x: -1, y: 0, label: 'Limits' },
+  { x: -0.5, y: -Math.sqrt(3) / 2, label: 'Tip jar' },
+  { x: 0.5, y: -Math.sqrt(3) / 2, label: 'Help' },
+];
 const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
 const skillPoints = centres.filter(function (c) { return Math.hypot(c[0], c[1]) > 1.5; }).slice(0, 12);
 
-// --- palette and restraint -------------------------------------------------
-// One palette. One glow. One speed. Everything angelic comes from restraint.
+// --- palette, restraint ---------------------------------------------------
 const GOLD = '247,205,140';
 const GREEN = '126,226,168';
 const BLUE = '158,203,255';
@@ -102,9 +107,7 @@ const SKILL_COLOR = {
 };
 const IDLE_SPEED = 0.00006;
 
-// --- sphere sprites -------------------------------------------------------
-// One soft sphere is rendered once per tint and drawn many times: a radial
-// gradient per sphere per frame would be the only expensive thing here.
+// --- sprite cache ---------------------------------------------------------
 const spriteCache = new Map();
 function sphereSprite(tint) {
   if (spriteCache.has(tint)) return spriteCache.get(tint);
@@ -115,8 +118,8 @@ function sphereSprite(tint) {
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(size * 0.42, size * 0.38, 0, size / 2, size / 2, size / 2);
   grad.addColorStop(0, 'rgba(255,250,240,0.95)');
-  grad.addColorStop(0.18, 'rgba(' + tint + ',0.75)');
-  grad.addColorStop(0.55, 'rgba(' + tint + ',0.22)');
+  grad.addColorStop(0.18, 'rgba(' + tint + ',0.72)');
+  grad.addColorStop(0.55, 'rgba(' + tint + ',0.20)');
   grad.addColorStop(1, 'rgba(' + tint + ',0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, size, size);
@@ -124,7 +127,7 @@ function sphereSprite(tint) {
   return c;
 }
 
-// --- camera ---------------------------------------------------------------
+// --- state ----------------------------------------------------------------
 let yaw = 0.35;
 let pitch = -0.42;
 let zoom = 1;
@@ -133,16 +136,36 @@ let hovered = -1;
 let last = performance.now();
 let bloom = 0;
 let breath = 0;
+let lookX = 0;
+let lookY = 0;
 let trail = [];
 let trailTotal = 0;
 let agents = [];
 let focus = null;
 let focusUntil = 0;
 let simulated = false;
-let counter = document.getElementById('counter');
-let caption = document.getElementById('caption');
+let ripples = [];
+const counter = document.getElementById('counter');
+const caption = document.getElementById('caption');
+
+// Dust: a slow cloud the object hangs inside. Pure atmosphere.
+const dust = [];
+for (let i = 0; i < 90; i += 1) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 0.8 + Math.random() * 2.2;
+  dust.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, z: (Math.random() - 0.5) * 2.4, s: 0.4 + Math.random() * 0.8 });
+}
 
 const DPR = Math.min(innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1);
+// Layers: four depths on a wide screen, two on a phone. Volume costs fill rate.
+const LAYERS = innerWidth < 700
+  ? [{ z: -0.28, alpha: 0.30, size: 1.07 }, { z: 0.28, alpha: 0.70, size: 0.98 }]
+  : [
+      { z: -0.52, alpha: 0.18, size: 1.16 },
+      { z: -0.17, alpha: 0.34, size: 1.07 },
+      { z: 0.17, alpha: 0.52, size: 1.00 },
+      { z: 0.52, alpha: 0.74, size: 0.94 },
+    ];
 
 function resize() {
   canvas.width = Math.floor(innerWidth * DPR);
@@ -154,10 +177,10 @@ resize();
 addEventListener('resize', resize);
 
 function project(x, y, z) {
-  const cy = Math.cos(yaw);
-  const sy = Math.sin(yaw);
-  const cp = Math.cos(pitch);
-  const sp = Math.sin(pitch);
+  const cy = Math.cos(yaw + lookX);
+  const sy = Math.sin(yaw + lookX);
+  const cp = Math.cos(pitch + lookY);
+  const sp = Math.sin(pitch + lookY);
   const x1 = x * cy - z * sy;
   const z1 = x * sy + z * cy;
   const y1 = y * cp - z1 * sp;
@@ -175,52 +198,83 @@ function drawSprite(tint, x, y, radius, alpha) {
   ctx.globalAlpha = 1;
 }
 
+/** Bloom from proximity to the work, plus whatever ripple is passing through. */
+function heatAt(x, y, now) {
+  let heat = 0;
+  if (focus !== null) {
+    const d = Math.hypot(x - focus.x, y - focus.y);
+    heat += Math.max(0, 1 - d / 2.4) * bloom;
+  }
+  for (const ripple of ripples) {
+    const radius = ((now - ripple.t0) / 1000) * 1.5;
+    const band = Math.abs(Math.hypot(x, y) - radius);
+    if (band < 0.22) heat += (1 - band / 0.22) * ripple.strength * Math.max(0, 1 - radius / 4);
+  }
+  return heat;
+}
+
 function drawHalo(now) {
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
-  const reach = Math.max(innerWidth, innerHeight) * 0.8;
-  // The breath: a slow, even pulse that owes nothing to activity. This is what
-  // makes the object feel *present* rather than merely rendered — it would keep
-  // breathing if nobody ever built anything.
+  const reach = Math.max(innerWidth, innerHeight) * 0.82;
   breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
-  const breathe = 1 + 0.04 * breath;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-  g.addColorStop(0, 'rgba(58,34,16,' + (0.55 + 0.12 * breath + 0.22 * bloom).toFixed(3) + ')');
-  g.addColorStop(0.35, 'rgba(20,15,12,' + (0.88 + 0.06 * breath).toFixed(3) + ')');
-  g.addColorStop(0.75, 'rgba(11,11,13,0.98)');
+  g.addColorStop(0, 'rgba(58,34,16,' + (0.52 + 0.10 * breath + 0.20 * bloom).toFixed(3) + ')');
+  g.addColorStop(0.35, 'rgba(20,15,12,' + (0.88 + 0.05 * breath).toFixed(3) + ')');
+  g.addColorStop(0.78, 'rgba(11,11,13,0.98)');
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // One thin world-space ring, so the object reads as suspended in something.
+  // one thin world ring, so the object hangs inside something rather than floating
   ctx.beginPath();
-  const ringRadius = 2.35;
   for (let t = 0; t <= 96; t += 1) {
     const angle = (t / 96) * Math.PI * 2;
-    const p = project(Math.cos(angle) * ringRadius, Math.sin(angle) * ringRadius, 0);
+    const p = project(Math.cos(angle) * 2.4, Math.sin(angle) * 2.4, 0);
     if (t === 0) ctx.moveTo(p.x, p.y);
     else ctx.lineTo(p.x, p.y);
   }
   ctx.closePath();
-  ctx.strokeStyle = 'rgba(217,130,43,0.10)';
+  ctx.strokeStyle = 'rgba(217,130,43,0.09)';
   ctx.lineWidth = DPR * 0.8;
   ctx.stroke();
+
+  // dust, projected and dimmed by depth
+  for (const mote of dust) {
+    const p = project(mote.x, mote.y, mote.z);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, DPR * mote.s * p.k, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.16 * (p.k - 0.5)).toFixed(3) + ')';
+    ctx.fill();
+  }
 }
 
-/** Bloom for one sphere: stronger near the active skill point. */
-function bloomAt(x, y) {
-  if (focus === null) return 0;
-  const d = Math.hypot(x - focus.x, y - focus.y);
-  return Math.max(0, 1 - d / 2.4) * bloom;
+function drawWeb(now) {
+  // Filaments between lattice points: the structure the flower implies.
+  ctx.lineWidth = DPR * 0.5;
+  for (const fil of filaments) {
+    const a = project(fil[0][0], fil[0][1], 0);
+    const b = project(fil[1][0], fil[1][1], 0);
+    const heat = (heatAt(fil[0][0], fil[0][1], now) + heatAt(fil[1][0], fil[1][1], now)) / 2;
+    const closeness = 1 - (fil[2] - 0.36) / 0.36;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = 'rgba(247,205,140,' + (0.03 + 0.05 * closeness + heat * 0.25).toFixed(3) + ')';
+    ctx.stroke();
+  }
+  for (const point of lattice) {
+    const p = project(point[0], point[1], 0);
+    const heat = heatAt(point[0], point[1], now);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, DPR * (0.7 + 1.7 * (p.k - 0.55)) * (1 + heat * 1.2), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,236,205,' + (0.10 + 0.22 * (p.k - 0.5) + heat * 0.55).toFixed(3) + ')';
+    ctx.fill();
+  }
 }
 
 function drawSpheres(now) {
-  // two layers: the back one dimmer and slightly larger, for parallax
-  const layers = [
-    { z: -LAYER_Z, alpha: 0.34, size: 1.06 },
-    { z: LAYER_Z, alpha: 0.72, size: 1 },
-  ];
-  for (const layer of layers) {
+  for (const layer of LAYERS) {
     const ordered = centres
       .map(function (c) { return { c: c, depth: project(c[0], c[1], layer.z).depth }; })
       .sort(function (p, q) { return p.depth - q.depth; });
@@ -228,25 +282,14 @@ function drawSpheres(now) {
       const c = entry.c;
       const p = project(c[0], c[1], layer.z);
       const isDoor = doors.some(function (d) { return Math.abs(d.x - c[0]) < 1e-6 && Math.abs(d.y - c[1]) < 1e-6; });
-      const heat = bloomAt(c[0], c[1]);
-      const tint = heat > 0.05 ? GREEN : GOLD;
-      const base = Math.min(innerWidth, innerHeight) * 0.30 * 0.92 * layer.size;
-      const radius = base * p.k * (isDoor ? 1.10 : 1);
+      const heat = heatAt(c[0], c[1], now);
+      const tint = heat > 0.06 ? GREEN : GOLD;
+      const base = Math.min(innerWidth, innerHeight) * 0.30 * 0.90 * layer.size;
+      const radius = base * p.k * (isDoor ? 1.08 : 1) * (1 + heat * 0.10);
       const brightness = layer.alpha * (0.55 + 0.45 * (p.k - 0.55))
-        + heat * 0.5 + breath * 0.06 * layer.alpha;
+        + heat * 0.45 + breath * 0.05 * layer.alpha;
       drawSprite(tint, p.x, p.y, radius, brightness);
     }
-  }
-}
-
-function drawLattice() {
-  for (const point of lattice) {
-    const p = project(point[0], point[1], 0);
-    const heat = bloomAt(point[0], point[1]);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, DPR * (0.7 + 1.6 * (p.k - 0.55)) * (1 + heat), 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,236,205,' + (0.10 + 0.22 * (p.k - 0.5) + heat * 0.5).toFixed(3) + ')';
-    ctx.fill();
   }
 }
 
@@ -261,10 +304,9 @@ function drawTrail(now) {
     const turn = index / 40;
     const angle = -Math.PI / 2 + (turn % 1) * Math.PI * 2;
     const radius = base * (0.72 + 0.055 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
-    const colour = SKILL_COLOR[event.skill] || GOLD;
-    drawSprite(colour, x, y, DPR * (2.2 + 3.4 * freshness), 0.10 + 0.55 * freshness);
+    drawSprite(SKILL_COLOR[event.skill] || GOLD,
+      cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
+      DPR * (2.2 + 3.2 * freshness), 0.08 + 0.5 * freshness);
   });
 }
 
@@ -272,56 +314,83 @@ function drawAgents() {
   agents.forEach(function (agent, index) {
     const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.45;
     const p = project(Math.cos(angle) * 1.62, Math.sin(angle) * 1.62, Math.sin(yaw + index) * 0.36);
-    const heat = bloomAt(Math.cos(angle) * 1.62, Math.sin(angle) * 1.62);
-    drawSprite(GOLD, p.x, p.y, DPR * (7 + Math.min(7, agent.steps * 0.7)), 0.35 + 0.3 * heat);
+    drawSprite(GOLD, p.x, p.y, DPR * (7 + Math.min(7, agent.steps * 0.7)), 0.34);
     const mine = trail.filter(function (step) {
       return step.agent === undefined || step.agent === agent.id;
     }).slice(-8);
     mine.forEach(function (step, i) {
       const hop = (i + 1) * 0.17;
       const q = project(Math.cos(angle) * (1.62 + hop), Math.sin(angle) * (1.62 + hop), 0);
-      const colour = SKILL_COLOR[step.skill] || GOLD;
-      drawSprite(colour, q.x, q.y, DPR * 2.0, 0.5);
+      drawSprite(SKILL_COLOR[step.skill] || GOLD, q.x, q.y, DPR * 2.0, 0.5);
     });
   });
 }
 
 function drawDoors(now) {
-  const front = project(0, 0, LAYER_Z);
   doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, LAYER_Z + 0.02);
+    const p = project(door.x, door.y, LAYERS[LAYERS.length - 1].z + 0.02);
     const active = index === hovered;
-    const heat = bloomAt(door.x, door.y);
-    const radius = DPR * (active ? 12 : 8) * (0.85 + 0.5 * (p.k - 0.6)) * (1 + heat * 0.3);
+    const heat = heatAt(door.x, door.y, now);
+    const radius = DPR * (active ? 11 : 8) * (0.85 + 0.5 * (p.k - 0.6)) * (1 + heat * 0.35);
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = active ? 'rgba(255,238,205,0.95)' : 'rgba(239,220,164,0.5)';
-    ctx.shadowColor = 'rgba(217,130,43,0.9)';
-    ctx.shadowBlur = DPR * (active ? 22 : 12);
+    ctx.fillStyle = active ? 'rgba(255,238,205,0.92)' : 'rgba(239,220,164,0.42)';
+    ctx.shadowColor = 'rgba(217,130,43,0.85)';
+    ctx.shadowBlur = DPR * (active ? 20 : 11);
     ctx.fill();
     ctx.shadowBlur = 0;
     if (active || zoom > 1.2) {
       ctx.font = (DPR * 12).toFixed(0) + 'px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = active ? 'rgba(255,240,215,0.98)' : 'rgba(220,210,190,0.72)';
+      ctx.fillStyle = active ? 'rgba(255,240,215,0.95)' : 'rgba(220,210,190,0.66)';
       ctx.fillText(door.label, p.x, p.y - radius - DPR * 8);
     }
   });
-  void front;
+}
+
+function drawRipples(now) {
+  for (const ripple of ripples) {
+    const radius = ((now - ripple.t0) / 1000) * 1.5;
+    const life = Math.max(0, 1 - radius / 4);
+    if (life <= 0) continue;
+    ctx.beginPath();
+    for (let t = 0; t <= 128; t += 1) {
+      const angle = (t / 128) * Math.PI * 2;
+      const p = project(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+      if (t === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(126,226,168,' + (life * 0.16).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 1.1;
+    ctx.stroke();
+  }
+  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.5 < 4; });
 }
 
 function drawFocus(now) {
   if (focus === null) return;
-  const p = project(focus.x, focus.y, LAYER_Z + 0.03);
-  const pulse = 12 + 7 * Math.sin(now * 0.0035);
+  const p = project(focus.x, focus.y, LAYERS[LAYERS.length - 1].z + 0.03);
+  const pulse = 11 + 6 * Math.sin(now * 0.0035);
   ctx.beginPath();
-  ctx.arc(p.x, p.y, (16 + pulse) * DPR * (0.72 + 0.4 * (p.k - 0.6)), 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(126,226,168,0.8)';
-  ctx.lineWidth = DPR * 1.4;
-  ctx.shadowColor = 'rgba(126,226,168,0.9)';
-  ctx.shadowBlur = DPR * 18;
+  ctx.arc(p.x, p.y, (15 + pulse) * DPR * (0.72 + 0.4 * (p.k - 0.6)), 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(126,226,168,0.72)';
+  ctx.lineWidth = DPR * 1.3;
+  ctx.shadowColor = 'rgba(126,226,168,0.85)';
+  ctx.shadowBlur = DPR * 16;
   ctx.stroke();
   ctx.shadowBlur = 0;
+}
+
+function drawMood(now) {
+  // The hour tints the whole thing: amber at noon, indigo deep at night. A four
+  // percent wash — enough to feel time pass, not enough to notice why.
+  const hour = new Date().getHours();
+  const dayness = Math.max(0, Math.cos(((hour - 13) / 24) * Math.PI * 2));
+  ctx.fillStyle = 'rgba(' + Math.round(60 + 30 * dayness) + ',' + Math.round(34 + 40 * dayness) + ','
+    + Math.round(90 - 40 * dayness) + ',' + (0.05 + 0.03 * dayness).toFixed(3) + ')';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  void now;
 }
 
 function frame(now) {
@@ -332,28 +401,30 @@ function frame(now) {
     return;
   }
   const live = focus !== null && now < focusUntil;
-  bloom += (((live ? 1 : 0)) - bloom) * 0.04;
+  bloom += ((live ? 1 : 0) - bloom) * 0.035;
 
   if (live && !dragging) {
     const targetYaw = -Math.atan2(focus.y, focus.x);
-    yaw += (targetYaw - yaw) * 0.035;
-    pitch += (-0.30 - pitch) * 0.035;
+    yaw += (targetYaw - yaw) * 0.03;
+    pitch += (-0.30 - pitch) * 0.03;
   } else if (!dragging && !reduce) {
     yaw += dt * IDLE_SPEED;
   }
 
   drawHalo(now);
+  drawWeb(now);
   drawTrail(now);
   drawSpheres(now);
-  drawLattice();
   drawAgents();
   drawDoors(now);
+  drawRipples(now);
   drawFocus(now);
+  drawMood(now);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-// --- polling: the object turns toward whatever is being built --------------
+// --- polling --------------------------------------------------------------
 function simulate(now) {
   const seed = Math.floor(now / 30000);
   const pool = ['geometry', 'dashboard', 'web-app', 'scripting', 'testing', 'docs'];
@@ -376,7 +447,7 @@ async function poll() {
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
     if (simulated) simulate(Date.now());
-    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions · 38 spheres · 61 points' : '';
+    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions · 76 spheres · 61 points' : '';
     const badge = document.getElementById('simulated');
     if (badge) badge.style.opacity = simulated ? '0.75' : '0';
     const hot = data.focus;
@@ -390,6 +461,7 @@ async function poll() {
     if (!point) return;
     focus = { x: point[0], y: point[1], label: hot.label };
     focusUntil = performance.now() + 25000;
+    ripples.push({ t0: performance.now(), strength: 1 });
     if (caption) {
       caption.textContent = hot.label;
       caption.style.opacity = '1';
@@ -401,19 +473,24 @@ async function poll() {
 poll();
 setInterval(poll, 2500);
 
-// --- interaction ----------------------------------------------------------
+// --- interaction: attention without demands -------------------------------
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
   canvas.setPointerCapture(event.pointerId);
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
 });
 canvas.addEventListener('pointermove', function (event) {
+  // It notices where you are. A few degrees of gaze, no commitment, no target.
+  if (!reduce) {
+    const targetX = (event.clientX / innerWidth - 0.5) * 0.18;
+    const targetY = (event.clientY / innerHeight - 0.5) * 0.12;
+    lookX += (targetX - lookX) * 0.06;
+    lookY += (targetY - lookY) * 0.06;
+  }
   if (dragging) {
     const parts = (canvas.dataset.drag || '0,0').split(',');
-    const lx = Number(parts[0]);
-    const ly = Number(parts[1]);
-    yaw += (event.clientX - lx) * 0.005;
-    pitch = Math.max(-1.15, Math.min(1.15, pitch + (event.clientY - ly) * 0.004));
+    yaw += (event.clientX - Number(parts[0])) * 0.005;
+    pitch = Math.max(-1.15, Math.min(1.15, pitch + (event.clientY - Number(parts[1])) * 0.004));
     canvas.dataset.drag = event.clientX + ',' + event.clientY;
     if (hint) hint.style.opacity = '0';
     return;
@@ -421,7 +498,7 @@ canvas.addEventListener('pointermove', function (event) {
   let best = -1;
   let bestDistance = 28 * DPR;
   doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, LAYER_Z + 0.02);
+    const p = project(door.x, door.y, LAYERS[LAYERS.length - 1].z + 0.02);
     const distance = Math.hypot(p.x - event.clientX * DPR, p.y - event.clientY * DPR);
     if (distance < bestDistance) { bestDistance = distance; best = index; }
   });
@@ -430,9 +507,10 @@ canvas.addEventListener('pointermove', function (event) {
 });
 canvas.addEventListener('pointerup', function () {
   // Nothing is clicked here on purpose. A presence that navigates is a menu;
-  // the map page is where leaving is meant to happen.
+  // leaving is what /map is for.
   dragging = false;
 });
+addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
   zoom = Math.max(0.65, Math.min(2.2, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
