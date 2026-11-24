@@ -2,6 +2,36 @@
 import { useEffect, useState } from 'react'
 import css from './ConversationRoot.module.css'
 
+/** One shared poller for the whole app: the header and the hero both mount this
+ *  widget, and two copies would double the requests for the same answer. */
+const listeners = new Set<(focus: ActivityFocus | undefined, total: number) => void>()
+let pollTimer = 0
+let lastFocus: ActivityFocus | undefined
+let lastTotal = 0
+
+/** Start the single poll loop if it is not already running. */
+function startPolling(): void {
+  if (pollTimer !== 0) return
+  let cancelled = false
+  const poll = async (): Promise<void> => {
+    if (!cancelled && document.visibilityState === 'visible') {
+      try {
+        const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } })
+        if (response.ok) {
+          const data = await response.json() as { focus?: ActivityFocus | null; counts?: ActivityCounts }
+          lastFocus = data.focus ?? undefined
+          lastTotal = data.counts?.total ?? 0
+          listeners.forEach(listener => listener(lastFocus, lastTotal))
+        }
+      } catch {
+        /* silence is correct: this is decoration, not function */
+      }
+    }
+    if (!cancelled) pollTimer = window.setTimeout(() => { void poll() }, 4000)
+  }
+  void poll()
+}
+
 /** What the server says is happening, if anything. */
 interface ActivityFocus {
   /** A capability id from the skill catalog. */
@@ -24,35 +54,17 @@ interface ActivityCounts {
  * @returns the current focus, or undefined when nothing is happening.
  */
 function useActivity(): { focus: ActivityFocus | undefined; total: number } {
-  const [focus, setFocus] = useState<ActivityFocus | undefined>(undefined)
-  const [total, setTotal] = useState(0)
+  const [state, setState] = useState<{ focus: ActivityFocus | undefined; total: number }>({
+    focus: lastFocus,
+    total: lastTotal,
+  })
   useEffect(() => {
-    let cancelled = false
-    let timer = 0
-    const poll = async (): Promise<void> => {
-      if (document.visibilityState !== 'visible') return
-      try {
-        const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } })
-        if (!response.ok) return
-        const data = await response.json() as {
-          focus?: ActivityFocus | null
-          counts?: ActivityCounts
-        }
-        if (!cancelled) {
-          setFocus(data.focus ?? undefined)
-          setTotal(data.counts?.total ?? 0)
-        }
-      } catch {
-        /* silence is correct: this is decoration, not function */
-      }
-    }
-    const loop = (): void => {
-      timer = window.setTimeout(() => { void poll().then(loop) }, 4000)
-    }
-    void poll().then(loop)
-    return () => { cancelled = true; window.clearTimeout(timer) }
+    const listener = (focus: ActivityFocus | undefined, total: number): void => { setState({ focus, total }) }
+    listeners.add(listener)
+    startPolling()
+    return () => { listeners.delete(listener) }
   }, [])
-  return { focus, total }
+  return state
 }
 
 /** The categories, as short words for a narrow header. */

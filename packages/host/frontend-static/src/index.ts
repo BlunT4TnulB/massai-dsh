@@ -111,8 +111,15 @@ async function serveStatic(
       headers = { 'content-type': HTML_MIME, 'cache-control': 'no-store' }
     } else {
       body = await readFile(target)
-      // Weak: gzip changes the transferred bytes.
-      const cache = { 'cache-control': 'no-cache', etag: `W/"${createHash('sha1').update(body).digest('base64url')}"` }
+      // A hashed file never changes its name, so it can be cached forever. The
+      // entry bundle is 392 KB gzipped on a phone: revalidating it every visit was
+      // a round trip for nothing. Everything else keeps no-cache + ETag, which is
+      // right for names that can be reused.
+      const hashed = /-[A-Za-z0-9_-]{8,}\.(?:js|css|woff2?)$/.test(target)
+      const etag = `W/"${createHash('sha1').update(body).digest('base64url')}"`
+      const cache = hashed
+        ? { 'cache-control': 'public, max-age=31536000, immutable', etag }
+        : { 'cache-control': 'no-cache', etag }
       if (request.headers.get('if-none-match') === cache.etag) return new Response(null, { status: 304, headers: cache })
       headers = { 'content-type': MIME[extname(target)] ?? 'application/octet-stream', ...cache }
     }

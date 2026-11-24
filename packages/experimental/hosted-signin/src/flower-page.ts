@@ -199,7 +199,9 @@ let zoom = 1;
 let dragging = false;
 let hovered = -1;
 let last = performance.now();
-const DPR = Math.min(2, window.devicePixelRatio || 1);
+// Fill rate is the cost here: on a phone, 2× on a full-screen canvas is four
+// times the pixels for a difference nobody can see at this line weight.
+const DPR = Math.min(innerWidth < 700 ? 1.5 : 2, window.devicePixelRatio || 1);
 
 function resize() {
   canvas.width = Math.floor(innerWidth * DPR);
@@ -347,6 +349,11 @@ function lines() {
 function frame(now) {
   const dt = Math.min(64, now - last);
   last = now;
+  // Hidden tab: keep the loop alive but draw nothing.
+  if (document.visibilityState === 'hidden') {
+    requestAnimationFrame(frame);
+    return;
+  }
   const live = focus !== null && now < focusUntil;
   if (live && !dragging) {
     // Turn the focused point toward the viewer: the face of the medallion.

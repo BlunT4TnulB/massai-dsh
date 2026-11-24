@@ -116,6 +116,12 @@ function FlowerMark({ size }: { size: number }) {
     const tick = (now: number): void => {
       const dt = Math.min(64, now - last)
       last = now
+      // A hidden tab draws nothing: the mark is decoration, and a phone in a
+      // pocket should not pay for it.
+      if (document.visibilityState === 'hidden') {
+        raf = requestAnimationFrame(tick)
+        return
+      }
       if (!drag.current.active) {
         // Idle: one slow axis, with the tilt easing home.
         drag.current.ry = (drag.current.ry + dt * 0.012) % 360
