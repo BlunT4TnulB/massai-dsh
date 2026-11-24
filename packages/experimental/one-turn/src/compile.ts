@@ -164,6 +164,7 @@ export function compile(spec: OneTurnSpec): CompiledMask {
   if (spec.lessons !== '') add('lessons', spec.lessons)
   if (spec.voice !== '') add('voice', spec.voice)
 
+  if (spec.skills !== '') add('skills', spec.skills)
   if (spec.library !== '') add('library', spec.library)
 
   add('protocol', OUTPUT_PROTOCOL)

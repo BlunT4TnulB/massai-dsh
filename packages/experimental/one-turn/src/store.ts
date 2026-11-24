@@ -210,6 +210,12 @@ export interface LibraryProfile {
   readonly extensions: Array<{ readonly ext: string; readonly files: number }>
   /** Repository names, for the console. */
   readonly names: readonly string[]
+  /** Every published project with the paths it contains, for skill inference. */
+  readonly projects_detail: ReadonlyArray<{
+    readonly name: string
+    readonly shape: string
+    readonly paths: readonly string[]
+  }>
   /** Epoch ms when this profile was computed. */
   readonly at: number
 }
@@ -224,14 +230,18 @@ export async function libraryProfile(): Promise<LibraryProfile | undefined> {
     "SELECT name, bytes, manifest FROM one_turn_projects WHERE visibility = 'shelf' AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 200")
   if (rows.length === 0) return undefined
   const counts = new Map<string, number>()
+  const detail: Array<{ name: string; shape: string; paths: string[] }> = []
   let bytes = 0
   for (const row of rows) {
     bytes += Number(row.bytes ?? 0)
     const manifest = (typeof row.manifest === 'string' ? JSON.parse(row.manifest) : row.manifest) as unknown
     if (!Array.isArray(manifest)) continue
-    for (const item of manifest) {
+    const paths = manifest.flatMap(item => {
       const path = (item as { path?: unknown }).path
-      if (typeof path !== 'string') continue
+      return typeof path === 'string' ? [path] : []
+    })
+    detail.push({ name: row.name, shape: String(row.shape ?? ''), paths })
+    for (const path of paths) {
       const ext = path.includes('.') ? (path.split('.').at(-1) ?? '').toLowerCase() : ''
       if (ext === '' || ext.length > 6) continue
       counts.set(ext, (counts.get(ext) ?? 0) + 1)
@@ -245,6 +255,7 @@ export async function libraryProfile(): Promise<LibraryProfile | undefined> {
       .sort((a, b) => b.files - a.files)
       .slice(0, 6),
     names: rows.slice(0, 12).map(row => row.name),
+    projects_detail: detail,
     at: Date.now(),
   }
 }

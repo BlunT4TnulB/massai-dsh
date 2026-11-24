@@ -12,6 +12,7 @@
 import { decisionBlock, readings } from './ambiguity.ts'
 import { lessonBlock } from './lessons.ts'
 import { libraryBlock } from './library.ts'
+import { skillBlock, skillsFor } from './skills.ts'
 import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { readVoice, voiceBlock } from './voice.ts'
 import {
@@ -198,6 +199,7 @@ export function normalise(answers: IntakeAnswers): Normalised {
       voice: voiceBlock(readVoice(), false),
       extrapolated: extrapolationBlock(extrapolate(answers, shape)),
       library: libraryBlock(),
+      skills: skillBlock(skillsFor(goal, shape)),
       techLimits: clean(answers.techLimits) === ''
         ? `one file, opened directly by the person; no build step, no network at run time (${spec_shape_hint(shape)})`
         : clean(answers.techLimits),

@@ -19,6 +19,7 @@ import { isAmbiguous, readings } from './ambiguity.ts'
 import { extrapolate, extrapolationBlock } from './extrapolator/index.ts'
 import { hydrateLessons, lessonsFor, readLessons, recordLesson } from './lessons.ts'
 import { currentLibrary, hydrateLibrary } from './library.ts'
+import { catalogOf, skillsFor } from './skills.ts'
 import { ensureStoreSchema, storeConfigured, trialStats } from './store.ts'
 import { listObjects, r2Configured, storageCheck } from './r2.ts'
 import {
@@ -657,6 +658,25 @@ export function apply(ctx: Context): void {
         'cache-control': 'no-store',
       })
       res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
+
+  // The skill catalog: what the workshop has demonstrably built, and what a given
+  // request would reach for. Free — it is the context the mask gets before a call.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/one-turn/skills', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const goal = url.searchParams.get('goal') ?? ''
+      const shape = url.searchParams.get('shape') ?? ''
+      const catalog = catalogOf()
+      respond(res, 200, {
+        catalog,
+        matched: goal === '' ? [] : skillsFor(goal, shape),
+        count: catalog.length,
+      })
     },
   })
 

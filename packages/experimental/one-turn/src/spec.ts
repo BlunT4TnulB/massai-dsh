@@ -92,6 +92,8 @@ export interface OneTurnSpec {
   readonly extrapolated: string
   /** The workshop's own library, as a convention hint. Empty when the shelf is bare. */
   readonly library: string
+  /** Capabilities the request can lean on, inferred from what the library holds. */
+  readonly skills: string
   /** Data input, or '' when none. */
   readonly data: string
   /** The files the artifact must consist of. */

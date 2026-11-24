@@ -9,6 +9,7 @@
  * @module @deepseek-ai/dsh-one-turn/library
  */
 
+import { inferSkills, setCatalog, type Skill } from './skills.ts'
 import { libraryProfile, storeConfigured, type LibraryProfile } from './store.ts'
 
 /** What is remembered in memory. */
@@ -19,6 +20,8 @@ export async function hydrateLibrary(): Promise<number> {
   try {
     if (!storeConfigured()) return 0
     cache = await libraryProfile()
+    // The catalog is derived from the same rows: paths in, capabilities out.
+    setCatalog(inferSkills((cache?.projects_detail ?? []).map(project => ({ name: project.name, paths: project.paths }))))
     return cache?.projects ?? 0
   } catch {
     return 0
