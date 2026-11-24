@@ -858,7 +858,7 @@ export function apply(ctx: Context): void {
   // A favicon request for a missing file is a browser habit; send it to a real one.
   ctx.webServer.register({
     kind: 'exact', path: '/favicon.ico', auth: 'anonymous',
-    handler: (req, res) => {
+    handler: (_req, res) => {
       res.writeHead(302, { location: '/icon-192.png', 'cache-control': 'public, max-age=86400' })
       res.end()
     },
