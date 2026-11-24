@@ -340,10 +340,10 @@ export function accessPageHtml(line?: number, cookieHeader = ''): string {
     </div>` : ''}
 
     <div class="foot">
-      <p class="ask">Prefer an AI that runs on your own machine? <a href="/local">That is free forever →</a></p>` : ''}
+      ${comfort.tips ? `<p class="ask">Prefer an AI that runs on your own machine? <a href="/local">That is free forever →</a></p>
+      <p class="fine">Costs and capabilities of every backend:
+      <a href="/providers">the providers page</a>. Nothing here is required if you started free.</p>` : ''}
       <p class="ask" style="margin-bottom:.5rem"><a href="/limits" style="color:#8a8a93;font-size:.82rem">Every limit and requirement, before you start →</a></p>
-      ${comfort.tips ? `<p class="fine">Costs and capabilities of every backend:
-      <a href="/providers">the providers page</a>. Nothing here is required if you started free.</p>
     </div>
     ${clerkReady ? clerkScript(publishableKey) : ''}`)
 }
