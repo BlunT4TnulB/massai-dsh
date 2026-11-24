@@ -25,6 +25,7 @@ import {
 import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
+import { comfortCookie, comfortFromCookie, comfortPageHtml, preset, type ComfortTier } from './comfort.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -646,6 +647,57 @@ export function apply(ctx: Context): void {
   void deepSeekBalance(process.env.DEEPSEEK_API_KEY ?? '')
     .then(reading => publishBalance(reading))
     .catch(() => undefined)
+
+
+  // How much help is on screen. One cookie, no account, changeable from any page.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/comfort', auth: 'anonymous',
+    handler: async (req, res) => {
+      const current = comfortFromCookie(String(req.headers.cookie ?? ''))
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        respond(res, 200, { comfort: current })
+        return
+      }
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
+        const tierRaw = parsed['tier']
+        const base = typeof tierRaw === 'string' && (tierRaw === 'guided' || tierRaw === 'practised' || tierRaw === 'master')
+          ? preset(tierRaw as ComfortTier)
+          : current
+        const bool = (key: keyof typeof base): boolean =>
+          typeof parsed[key] === 'boolean' ? parsed[key] as boolean : base[key]
+        const comfort = {
+          tier: base.tier,
+          disclaimers: bool('disclaimers'),
+          tips: bool('tips'),
+          legal: bool('legal'),
+          examples: bool('examples'),
+          hints: bool('hints'),
+          badges: bool('badges'),
+        }
+        res.setHeader('set-cookie', comfortCookie(comfort))
+        respond(res, 200, { ok: true, comfort })
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  // The page behind the switches.
+  ctx.webServer.register({
+    kind: 'exact', path: '/settings', auth: 'anonymous',
+    handler: (req, res) => {
+      const comfort = comfortFromCookie(String(req.headers.cookie ?? ''))
+      const html = Buffer.from(comfortPageHtml(comfort))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // Is the database configured and reachable? One honest answer, owner-only.
   ctx.webServer.register({

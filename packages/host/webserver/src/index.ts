@@ -707,7 +707,10 @@ export class WebServer extends Service {
             const override = target.searchParams.get('line')
             const requested = override === null ? undefined : Number(override)
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
-            res.end(welcomePage(requested !== undefined && Number.isFinite(requested) ? requested : undefined))
+            res.end(welcomePage(
+              requested !== undefined && Number.isFinite(requested) ? requested : undefined,
+              String(req.headers.cookie ?? ''),
+            ))
             return
           }
           res.writeHead(admission.status, { 'Cache-Control': 'no-store' })
