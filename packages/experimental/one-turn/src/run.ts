@@ -91,7 +91,7 @@ const REQUIREMENT_STOPWORDS: ReadonlySet<string> = new Set([
   'shows', 'show', 'visible', 'prominent', 'clearly', 'clearly', 'defaults', 'default', 'creates',
   'create', 'prints', 'print', 'includes', 'include', 'each', 'every', 'which', 'when', 'into',
   'onto', 'above', 'below', 'without', 'there', 'their', 'them', 'they', 'your', 'yours', 'its',
-  'instead',
+  'instead', 'whitespace', 'spaces', 'content', 'correctly', 'properly',
 ])
 
 /** Feature words that different vocabularies spell differently. */

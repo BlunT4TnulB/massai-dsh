@@ -54,6 +54,8 @@ const ENVIRONMENT = [
   'There is no internet at build time: no CDN links, no package installs, no fonts from the network.',
   'Anything visual must work from a single file opened directly in a browser.',
   'Write real content, never lorem ipsum, never a placeholder image.',
+  'Unknown specifics become bracketed blanks: [your link], [your hours], [price].',
+  'Fake stand-ins are failures: no example.com, no TODO, no "coming soon", no dummy phone numbers.',
 ].join('\n')
 
 /** The report the build must leave behind, so verification is not a guess. */
@@ -69,6 +71,8 @@ const SELF_CHECK = [
   'Before answering: open the entry file mentally as a stranger would.',
   'Walk each acceptance check once. Fix what fails. Then walk them again.',
   'Remove every element that does not serve the brief — unused sections are defects, not generosity.',
+  'Search your own output for these four strings and remove them: "TODO", "FIXME", "lorem ipsum", "example.com".',
+  'Where a value is genuinely unknown, write a bracketed blank like [your link]. Never a fake one.',
 ]
 
 /**
