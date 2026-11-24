@@ -1,7 +1,7 @@
 // The composer remains in ConversationRoot so switching out of the blank-draft
 // phase does not remount its textarea.
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import {
   IconChevronDownOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
@@ -72,44 +72,104 @@ export interface HeroShellProps {
 }
 
 
+/** The nineteen points of a flower of life: seven centres, twelve intersections. */
+const FLOWER_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [24, 24], [33, 24], [28.5, 31.79], [19.5, 31.79], [15, 24], [19.5, 16.21], [28.5, 16.21],
+  [24, 9.4], [24, 38.6], [9.4, 24], [38.6, 24],
+  [33, 18.8], [33, 29.2], [15, 18.8], [15, 29.2],
+  [19.5, 9.4], [28.5, 9.4], [19.5, 38.6], [28.5, 38.6],
+]
+
 /**
- * The hero fish (34px wide), static at rest. Hovering swims the whale in
- * place: a gentle head-up sway (CSS, on the hitbox hover) while the body
- * itself morphs — SMIL interpolates `d` through the tail-up and tail-down
- * targets on the same 1.6s period, so the tail wags and the fin flutters in
- * real curve deformation. Decorative — hidden from the accessibility tree;
- * reduced motion keeps the static filled logo on hover (sampled at
- * mouseenter; a mid-hover preference change takes effect on the next enter).
- * @param props.hovering - driven by the hitbox parent's pointer state.
- * @returns the fish svg element.
+ * The brand mark as a physical object: a flower of life that turns.
+ *
+ * One SVG inside a perspective stage. Dragging rotates it on two axes, the way a
+ * hand turns a medallion; letting go eases it back into a slow idle turn. Every
+ * intersection is a real dot, so the geometry reads as constructed rather than
+ * decorative — and the points are hoverable, which is the hook if they ever need
+ * to mean something.
+ *
+ * Motion is refused under `prefers-reduced-motion`: the same mark, still, with
+ * the dots still present.
+ * @param props.size - rendered edge length in pixels.
+ * @returns the stage element tree.
  */
-function HeroFish({ hovering }: { hovering: boolean }) {
+function FlowerMark({ size }: { size: number }) {
+  const stage = useRef<HTMLDivElement>(null)
+  const drag = useRef({ active: false, x: 0, y: 0, rx: -12, ry: 18 })
+  const [dragging, setDragging] = useState(false)
+
+  /** Paint the current rotation onto the stage. */
+  const paint = (): void => {
+    const node = stage.current
+    if (node === null) return
+    const { rx, ry } = drag.current
+    node.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`
+  }
+
+  useEffect(() => {
+    paint()
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let raf = 0
+    let last = performance.now()
+    const tick = (now: number): void => {
+      const dt = Math.min(64, now - last)
+      last = now
+      if (!drag.current.active) {
+        // Idle: one slow axis, with the tilt easing home.
+        drag.current.ry = (drag.current.ry + dt * 0.012) % 360
+        drag.current.rx += (-12 - drag.current.rx) * 0.02
+        paint()
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(raf) }
+  }, [])
+
   return (
-    <svg
-      className={css.fish}
-      width={34}
-      height={34}
-      viewBox="0 0 48 48"
-      fill="none"
-      stroke="currentColor"
+    <div
+      className={css.markStage}
+      style={{ width: size, height: size }}
+      onPointerDown={(event) => {
+        drag.current.active = true
+        drag.current.x = event.clientX
+        drag.current.y = event.clientY
+        setDragging(true)
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }}
+      onPointerMove={(event) => {
+        if (!drag.current.active) return
+        drag.current.ry += (event.clientX - drag.current.x) * 1.1
+        drag.current.rx = Math.max(-80, Math.min(80, drag.current.rx - (event.clientY - drag.current.y) * 0.9))
+        drag.current.x = event.clientX
+        drag.current.y = event.clientY
+        paint()
+      }}
+      onPointerUp={() => { drag.current.active = false; setDragging(false) }}
+      onPointerCancel={() => { drag.current.active = false; setDragging(false) }}
       aria-hidden="true"
+      data-dragging={dragging ? 'true' : 'false'}
     >
-      {/* the brand mark: the Flower of Life — ring plus the seven. Hovering
-          tilts the whole ring instead of morphing a body, because geometry
-          should turn, not swim. */}
-      <g transform={hovering ? 'rotate(8 24 24)' : undefined} style={{ transition: 'transform .45s ease' }}>
-        <circle cx="24" cy="24" r="22" strokeWidth="2.2" />
-        <circle cx="24.00" cy="24.00" r="9" strokeWidth="1.7" />
-        <circle cx="33.00" cy="24.00" r="9" strokeWidth="1.7" />
-        <circle cx="28.50" cy="31.79" r="9" strokeWidth="1.7" />
-        <circle cx="19.50" cy="31.79" r="9" strokeWidth="1.7" />
-        <circle cx="15.00" cy="24.00" r="9" strokeWidth="1.7" />
-        <circle cx="19.50" cy="16.21" r="9" strokeWidth="1.7" />
-        <circle cx="28.50" cy="16.21" r="9" strokeWidth="1.7" />
-      </g>
-    </svg>
+      <div ref={stage} className={css.markObject}>
+        <svg viewBox="0 0 48 48" width={size} height={size} fill="none" stroke="currentColor">
+          <circle cx="24" cy="24" r="22" strokeWidth="1.6" opacity="0.95" />
+          <circle cx="24" cy="24" r="9" strokeWidth="1.3" />
+          <circle cx="33" cy="24" r="9" strokeWidth="1.3" />
+          <circle cx="28.5" cy="31.79" r="9" strokeWidth="1.3" />
+          <circle cx="19.5" cy="31.79" r="9" strokeWidth="1.3" />
+          <circle cx="15" cy="24" r="9" strokeWidth="1.3" />
+          <circle cx="19.5" cy="16.21" r="9" strokeWidth="1.3" />
+          <circle cx="28.5" cy="16.21" r="9" strokeWidth="1.3" />
+          {FLOWER_POINTS.map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.85" className={css.markPoint} stroke="none" />
+          ))}
+        </svg>
+      </div>
+    </div>
   )
 }
+
 
 /**
  * Render the hero chrome (headline only; no composer, no workspace row).
@@ -117,26 +177,17 @@ function HeroFish({ hovering }: { hovering: boolean }) {
  * @returns the centered hero element tree.
  */
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
-  const [hovering, setHovering] = useState(false)
   return (
     <div className={css.root}>
       <div className={css.stack}>
+        {/* The mark sits above the words: it is the first thing the eye lands on,
+            and the one thing in the app you can turn with your hand. */}
+        <div className={css.markRow}>
+          {renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
+            fallback: <FlowerMark size={96} />,
+          })}
+        </div>
         <div className={css.headline}>
-          {/* figma 34:10412: fish 34×25 leading the headline, gap 10. */}
-          <span
-            className={css.fishHitbox}
-            onPointerEnter={(event) => {
-              if (event.pointerType !== 'touch'
-                && window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
-                setHovering(true)
-              }
-            }}
-            onPointerLeave={() => { setHovering(false) }}
-          >
-            {renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
-              fallback: <HeroFish hovering={hovering} />,
-            })}
-          </span>
           <span className={css.titleGroup}>
             {/* Own element: keeps the headline text addressable apart from the badge. */}
             <span>{t('hero.headline')}</span>
