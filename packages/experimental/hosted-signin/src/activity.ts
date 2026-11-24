@@ -108,8 +108,6 @@ export function classifyToolCall(name: string, rawArguments: string): ActivityEv
   }
   const path = String(args['path'] ?? args['file'] ?? args['filePath'] ?? args['target'] ?? '')
   const command = String(args['command'] ?? args['cmd'] ?? args['script'] ?? '')
-  const raw = path !== '' ? path : command !== '' ? command : rawArguments.slice(0, 200)
-
   const skill = skillOfPath(path) ?? skillOfCommand(command) ?? (name === 'write' || name === 'edit' ? 'web-app' : undefined)
   if (skill === undefined) return undefined
 
