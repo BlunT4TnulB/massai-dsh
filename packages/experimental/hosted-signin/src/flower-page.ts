@@ -29,70 +29,96 @@ const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// --- geometry: the flower, wrapped onto a ball ----------------------------
-// The flat flower of life is the *seam pattern*; the object is a sphere. Each of
-// the nineteen centres is lifted onto a shell (z = ±sqrt(RS² - r²)), so the
-// silhouette is still the flower while the body is a ball and not a pancake.
+// --- shapes ---------------------------------------------------------------
+// Three bodies, same presence. The flower is the mark; the two solids are the
+// candidates under review. Which one it is comes from the URL so they can be
+// compared without a deploy: ?shape=icosa | dodeca | flower
+const SHAPE = (new URLSearchParams(location.search).get('shape') || 'icosa').toLowerCase();
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+function normalise(list) {
+  return list.map(function (v) {
+    const r = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / r, v[1] / r, v[2] / r];
+  });
+}
+
+function edgesOf(vertices) {
+  // Every pair at the minimum distance: the true edge set of a regular solid.
+  let shortest = Infinity;
+  for (let i = 0; i < vertices.length; i += 1) {
+    for (let j = i + 1; j < vertices.length; j += 1) {
+      const d = Math.hypot(vertices[i][0] - vertices[j][0], vertices[i][1] - vertices[j][1], vertices[i][2] - vertices[j][2]);
+      if (d < shortest) shortest = d;
+    }
+  }
+  const out = [];
+  for (let i = 0; i < vertices.length; i += 1) {
+    for (let j = i + 1; j < vertices.length; j += 1) {
+      const d = Math.hypot(vertices[i][0] - vertices[j][0], vertices[i][1] - vertices[j][1], vertices[i][2] - vertices[j][2]);
+      if (d < shortest * 1.12) out.push([vertices[i], vertices[j]]);
+    }
+  }
+  return out;
+}
+
+// icosahedron: twelve vertices, thirty edges, the shape of a football's cousin
+const ICOSA = normalise([
+  [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
+  [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
+  [PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, 1], [-PHI, 0, -1],
+]);
+// dodecahedron: twenty vertices, thirty edges, twelve faces
+const DODECA = normalise([
+  [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
+  [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
+  [0, 1 / PHI, PHI], [0, 1 / PHI, -PHI], [0, -1 / PHI, PHI], [0, -1 / PHI, -PHI],
+  [1 / PHI, PHI, 0], [1 / PHI, -PHI, 0], [-1 / PHI, PHI, 0], [-1 / PHI, -PHI, 0],
+  [PHI, 0, 1 / PHI], [PHI, 0, -1 / PHI], [-PHI, 0, 1 / PHI], [-PHI, 0, -1 / PHI],
+]);
+
+// The flower: nineteen centres lifted onto a shell, so it is a ball and not a
+// pancake, with the flat flower as its seam pattern.
 const RS = 2.02;
+const FLAT = [];
 const A = [1, 0];
 const B = [0.5, Math.sqrt(3) / 2];
-const flat = [];
 for (let i = -2; i <= 2; i += 1) {
   for (let j = -2; j <= 2; j += 1) {
     const x = i * A[0] + j * B[0];
     const y = i * A[1] + j * B[1];
-    if (Math.hypot(x, y) <= 2 + 1e-6) flat.push([x, y]);
+    if (Math.hypot(x, y) <= 2 + 1e-6) FLAT.push([x, y]);
   }
 }
-const spheres = [];
-for (const point of flat) {
+const FLOWER = [];
+for (const point of FLAT) {
   const r = Math.hypot(point[0], point[1]);
   const z = Math.sqrt(Math.max(0, RS * RS - r * r));
-  spheres.push({ x: point[0], y: point[1], z: z });
-  if (z > 0.18) spheres.push({ x: point[0], y: point[1], z: -z });
+  FLOWER.push([point[0], point[1], z]);
+  if (z > 0.18) FLOWER.push([point[0], point[1], -z]);
 }
 
-// Seams: pairs close enough to be joined. This is what reads as a ball.
-const seams = [];
-for (let i = 0; i < spheres.length; i += 1) {
-  for (let j = i + 1; j < spheres.length; j += 1) {
-    const a = spheres[i];
-    const b = spheres[j];
-    const d = Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-    if (d > 0.55 && d < 1.05) seams.push([a, b, d]);
-  }
-}
+const BODY = SHAPE === 'dodeca'
+  ? { name: 'dodecahedron', vertices: DODECA, radius: 1 }
+  : SHAPE === 'flower'
+    ? { name: 'flower', vertices: FLOWER, radius: RS }
+    : { name: 'icosahedron', vertices: ICOSA, radius: 1 };
+const VERTICES = BODY.vertices;
+const EDGES = edgesOf(VERTICES);
 
-// The cage: a cuboctahedron — Fuller's vector equilibrium — around the ball.
-// Twelve vertices, equal length to the centre, twenty-four edges.
-const CAGE_R = 2.5;
-const CAGE = [];
-for (const s1 of [1, -1]) {
-  for (const s2 of [1, -1]) {
-    CAGE.push([s1 * CAGE_R / Math.SQRT2, s2 * CAGE_R / Math.SQRT2, 0]);
-    CAGE.push([s1 * CAGE_R / Math.SQRT2, 0, s2 * CAGE_R / Math.SQRT2]);
-    CAGE.push([0, s1 * CAGE_R / Math.SQRT2, s2 * CAGE_R / Math.SQRT2]);
-  }
-}
-const cageEdges = [];
-for (let i = 0; i < CAGE.length; i += 1) {
-  for (let j = i + 1; j < CAGE.length; j += 1) {
-    const d = Math.hypot(CAGE[i][0] - CAGE[j][0], CAGE[i][1] - CAGE[j][1], CAGE[i][2] - CAGE[j][2]);
-    if (d < CAGE_R * 1.05) cageEdges.push([CAGE[i], CAGE[j]]);
-  }
-}
+// Centring: one radius decides the scale, and the centre is the exact middle of
+// the viewport. The old version scaled by a fraction of the viewport, which let
+// the body run past its edges and read as off-centre.
+const FIT = 0.34;
 
-const doors = [
-  { x: 0, y: 0, z: RS, label: 'Talk' },
-  { x: 1, y: 0, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Projects' },
-  { x: 0.5, y: Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Library' },
-  { x: -0.5, y: Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'You' },
-  { x: -1, y: 0, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Limits' },
-  { x: -0.5, y: -Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Tip jar' },
-  { x: 0.5, y: -Math.sqrt(3) / 2, z: Math.sqrt(Math.max(0, RS * RS - 1)), label: 'Help' },
-];
+// --- doors and skill points ----------------------------------------------
+const DOOR_NAMES = ['Talk', 'Projects', 'Library', 'You', 'Limits', 'Tip jar', 'Help'];
+const doors = DOOR_NAMES.map(function (label, index) {
+  const v = VERTICES[index % VERTICES.length];
+  return { x: v[0], y: v[1], z: v[2], label: label };
+});
 const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
-const skillPoints = spheres.filter(function (s) { return Math.hypot(s.x, s.y) > 1.5 && s.z > 0; }).slice(0, 8);
+const skillPoints = VERTICES.slice(7, 15);
 
 const GOLD = '247,205,140';
 const GREEN = '126,226,168';
@@ -157,7 +183,7 @@ const dust = [];
 for (let i = 0; i < 90; i += 1) {
   const a = Math.random() * Math.PI * 2;
   const b = Math.acos(2 * Math.random() - 1);
-  const r = 1.2 + Math.random() * 2.1;
+  const r = 1.4 + Math.random() * 2.2;
   dust.push({
     x: Math.sin(b) * Math.cos(a) * r,
     y: Math.sin(b) * Math.sin(a) * r,
@@ -177,7 +203,6 @@ function resize() {
 resize();
 addEventListener('resize', resize);
 
-// Full three-axis rotation: no axis is locked, which is what makes it a ball.
 function project(x, y, z) {
   const ya = yaw + lookX;
   const pa = pitch + lookY;
@@ -188,7 +213,6 @@ function project(x, y, z) {
   const sp = Math.sin(pa);
   const cr = Math.cos(ra);
   const sr = Math.sin(ra);
-  // roll around Z first, then yaw around Y, then pitch around X
   const x1 = x * cr - y * sr;
   const y1 = x * sr + y * cr;
   const x2 = x1 * cy + z * sy;
@@ -196,7 +220,9 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  const scale = zoom * Math.min(innerWidth, innerHeight) * 0.28;
+  // Fit is absolute, not a fraction of the screen: the body always occupies the
+  // same share of the smaller dimension, so it is centred at every window size.
+  const scale = zoom * Math.min(innerWidth, innerHeight) * (FIT / BODY.radius);
   const k = distance / (distance + z3);
   return {
     x: innerWidth / 2 + x2 * scale * k,
@@ -217,12 +243,12 @@ function heatAt(x, y, z, now) {
   let heat = 0;
   if (focus !== null) {
     const d = Math.hypot(x - focus.x, y - focus.y, z - focus.z);
-    heat += Math.max(0, 1 - d / 2.2) * bloom;
+    heat += Math.max(0, 1 - d / 1.1) * bloom;
   }
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 1.6;
+    const radius = ((now - ripple.t0) / 1000) * 0.9;
     const band = Math.abs(Math.hypot(x, y, z) - radius);
-    if (band < 0.24) heat += (1 - band / 0.24) * ripple.strength * Math.max(0, 1 - radius / 4);
+    if (band < 0.12) heat += (1 - band / 0.12) * ripple.strength * Math.max(0, 1 - radius / 2.4);
   }
   return heat;
 }
@@ -251,68 +277,71 @@ function drawHalo(now) {
   }
 }
 
-function drawCage(now) {
-  // The vector equilibrium: twelve vertices equidistant from the centre, a
-  // geometry of balance rather than of surface. Faint enough to be felt.
-  ctx.lineWidth = DPR * 0.6;
-  for (const edge of cageEdges) {
-    const a = project(edge[0][0], edge[0][1], edge[0][2]);
-    const b = project(edge[1][0], edge[1][1], edge[1][2]);
-    const near = (a.k + b.k) / 2;
+function drawEdges(now) {
+  // Back to front so the far edges are dimmer than the near ones — the cheapest
+  // and most honest way to read a solid as solid.
+  const drawn = EDGES
+    .map(function (edge) {
+      const a = project(edge[0][0], edge[0][1], edge[0][2]);
+      const b = project(edge[1][0], edge[1][1], edge[1][2]);
+      return { a: a, b: b, near: (a.k + b.k) / 2 };
+    })
+    .sort(function (p, q) { return p.near - q.near; });
+  for (const edge of drawn) {
+    const heat = (heatAt(edge.a.x, edge.a.y, 0, now) + heatAt(edge.b.x, edge.b.y, 0, now)) / 2;
+    const glow = Math.max(0, Math.min(1, (edge.near - 0.62) / 0.5));
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.02 + 0.05 * (near - 0.55) + 0.03 * breath).toFixed(3) + ')';
+    ctx.moveTo(edge.a.x, edge.a.y);
+    ctx.lineTo(edge.b.x, edge.b.y);
+    ctx.strokeStyle = 'rgba(247,205,140,'
+      + ((0.04 + self.wisdom * 0.05) + glow * 0.22 + heat * 0.30).toFixed(3) + ')';
+    ctx.lineWidth = DPR * (0.7 + 1.1 * glow);
     ctx.stroke();
   }
-  for (const vertex of CAGE) {
-    const p = project(vertex[0], vertex[1], vertex[2]);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, DPR * 1.5 * p.k, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(158,203,255,' + (0.10 + 0.18 * (p.k - 0.5)).toFixed(3) + ')';
-    ctx.fill();
-  }
-  void now;
 }
 
-function drawSpheres(now) {
-  const ordered = spheres
-    .map(function (s) { return { s: s, depth: project(s.x, s.y, s.z).depth }; })
+function drawVertices(now) {
+  const ordered = VERTICES
+    .map(function (v) {
+      const p = project(v[0], v[1], v[2]);
+      return { v: v, p: p, depth: p.depth };
+    })
     .sort(function (a, b) { return a.depth - b.depth; });
   for (const entry of ordered) {
-    const sp = entry.s;
-    const p = project(sp.x, sp.y, sp.z);
-    const heat = heatAt(sp.x, sp.y, sp.z, now);
+    const heat = heatAt(entry.v[0], entry.v[1], entry.v[2], now);
     const isDoor = doors.some(function (d) {
-      return Math.abs(d.x - sp.x) < 1e-6 && Math.abs(d.y - sp.y) < 1e-6 && Math.abs(d.z - sp.z) < 1e-6;
+      return Math.abs(d.x - entry.v[0]) < 1e-9 && Math.abs(d.y - entry.v[1]) < 1e-9 && Math.abs(d.z - entry.v[2]) < 1e-9;
     });
     const tint = heat > 0.06 ? GREEN : GOLD;
-    const base = Math.min(innerWidth, innerHeight) * 0.28 * 0.62;
-    const radius = base * p.k * (isDoor ? 1.35 : 1) * (1 + heat * 0.12);
-    const depthFade = 0.30 + 0.70 * Math.max(0, Math.min(1, (p.k - 0.62) / 0.55));
-    drawSprite(tint, p.x, p.y, radius, (depthFade * 0.95 + heat * 0.45) * life);
+    const base = Math.min(innerWidth, innerHeight) * 0.028 * (FIT / BODY.radius) * (isDoor ? 1.5 : 1);
+    const radius = base * entry.p.k * (1 + heat * 0.15);
+    const depthFade = 0.30 + 0.70 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
+    drawSprite(tint, entry.p.x, entry.p.y, radius, (depthFade + heat * 0.4) * life);
   }
-  // seams last, so they read as the net over the ball
+}
+
+function drawCentres(now) {
+  // Spokes from the centre: the vector-equilibrium idea, where every direction is
+  // equal. It also gives the object a middle, which is what makes it read centred.
   ctx.lineWidth = DPR * 0.5;
-  for (const seam of seams) {
-    const a = project(seam[0].x, seam[0].y, seam[0].z);
-    const b = project(seam[1].x, seam[1].y, seam[1].z);
-    const near = (a.k + b.k) / 2;
-    const heat = (heatAt(seam[0].x, seam[0].y, seam[0].z, now) + heatAt(seam[1].x, seam[1].y, seam[1].z, now)) / 2;
+  for (const v of VERTICES) {
+    const a = project(0, 0, 0);
+    const b = project(v[0], v[1], v[2]);
+    const near = b.k;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(247,205,140,'
-      + ((0.02 + self.wisdom * 0.04) * (0.6 + (near - 0.55)) + heat * 0.3).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.015 + 0.045 * Math.max(0, near - 0.62) + 0.015 * breath).toFixed(3) + ')';
     ctx.stroke();
   }
+  void now;
 }
 
 function drawTrail(now) {
   if (trail.length === 0) return;
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
-  const base = Math.min(innerWidth, innerHeight) * 0.42;
+  const base = Math.min(innerWidth, innerHeight) * (FIT / BODY.radius) * 1.55;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);
     const freshness = Math.max(0.06, 1 - age / 600000);
@@ -321,52 +350,53 @@ function drawTrail(now) {
     const radius = base * (0.70 + 0.05 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
     drawSprite(SKILL_COLOR[event.skill] || GOLD,
       cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius,
-      DPR * (2.0 + 3.0 * freshness) * (0.9 + 0.2 * self.works), (0.08 + 0.45 * freshness) * life);
+      DPR * (2.0 + 2.6 * freshness) * (0.9 + 0.2 * self.works), (0.07 + 0.4 * freshness) * life);
   });
 }
 
 function drawAgents() {
   agents.forEach(function (agent, index) {
     const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.45;
-    const p = project(Math.cos(angle) * 1.75, Math.sin(angle) * 1.75, Math.sin(yaw + index) * 0.5);
-    drawSprite(GOLD, p.x, p.y, DPR * (7 + Math.min(7, agent.steps * 0.7)), 0.34);
+    const orbit = BODY.radius * 1.22;
+    const p = project(Math.cos(angle) * orbit, Math.sin(angle) * orbit, Math.sin(yaw + index) * 0.4);
+    drawSprite(GOLD, p.x, p.y, DPR * (6 + Math.min(6, agent.steps * 0.6)), 0.32);
     const mine = trail.filter(function (step) {
       return step.agent === undefined || step.agent === agent.id;
     }).slice(-8);
     mine.forEach(function (step, i) {
-      const hop = (i + 1) * 0.18;
-      const q = project(Math.cos(angle) * (1.75 + hop), Math.sin(angle) * (1.75 + hop), 0);
-      drawSprite(SKILL_COLOR[step.skill] || GOLD, q.x, q.y, DPR * 2.0, 0.5);
+      const hop = (i + 1) * 0.13;
+      const q = project(Math.cos(angle) * (orbit + hop), Math.sin(angle) * (orbit + hop), 0);
+      drawSprite(SKILL_COLOR[step.skill] || GOLD, q.x, q.y, DPR * 1.9, 0.45);
     });
   });
 }
 
 function drawDoors() {
   doors.forEach(function (door, index) {
-    const p = project(door.x, door.y, door.z + 0.02);
+    const p = project(door.x, door.y, door.z);
     const active = index === hovered;
-    const radius = DPR * (active ? 10 : 7) * (0.85 + 0.5 * (p.k - 0.6));
+    const radius = DPR * (active ? 9 : 6) * (0.85 + 0.5 * (p.k - 0.6));
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = active ? 'rgba(255,238,205,0.92)' : 'rgba(239,220,164,0.42)';
+    ctx.fillStyle = active ? 'rgba(255,238,205,0.92)' : 'rgba(239,220,164,0.36)';
     ctx.shadowColor = 'rgba(217,130,43,0.85)';
-    ctx.shadowBlur = DPR * (active ? 20 : 11);
+    ctx.shadowBlur = DPR * (active ? 18 : 9);
     ctx.fill();
     ctx.shadowBlur = 0;
-    if (active || zoom > 1.2) {
-      ctx.font = (DPR * 12).toFixed(0) + 'px system-ui, sans-serif';
+    if (active || zoom > 1.15) {
+      ctx.font = (DPR * 11).toFixed(0) + 'px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = active ? 'rgba(255,240,215,0.95)' : 'rgba(220,210,190,0.66)';
-      ctx.fillText(door.label, p.x, p.y - radius - DPR * 8);
+      ctx.fillStyle = active ? 'rgba(255,240,215,0.95)' : 'rgba(220,210,190,0.6)';
+      ctx.fillText(door.label, p.x, p.y - radius - DPR * 7);
     }
   });
 }
 
 function drawRipples(now) {
   for (const ripple of ripples) {
-    const radius = ((now - ripple.t0) / 1000) * 1.6;
-    const lifeLeft = Math.max(0, 1 - radius / 4.4);
-    if (lifeLeft <= 0) continue;
+    const radius = ((now - ripple.t0) / 1000) * 0.9;
+    const left = Math.max(0, 1 - radius / 2.4);
+    if (left <= 0) continue;
     ctx.beginPath();
     for (let t = 0; t <= 128; t += 1) {
       const angle = (t / 128) * Math.PI * 2;
@@ -375,11 +405,11 @@ function drawRipples(now) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(126,226,168,' + (lifeLeft * 0.15).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(126,226,168,' + (left * 0.16).toFixed(3) + ')';
     ctx.lineWidth = DPR * 1.1;
     ctx.stroke();
   }
-  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.6 < 4.4; });
+  ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 0.9 < 2.4; });
 }
 
 function drawMood() {
@@ -400,8 +430,6 @@ function frame(now) {
   const live = focus !== null && now < focusUntil;
   bloom += ((live ? 1 : 0) - bloom) * 0.035;
 
-  // Flick spin: the throw keeps going and slows, then attention returns to the
-  // idle turn (or to the work, if there is work).
   const spinning = Math.abs(velYaw) + Math.abs(velPitch) + Math.abs(velRoll) > 0.00008;
   if (!dragging && spinning) {
     yaw += velYaw * dt;
@@ -427,9 +455,10 @@ function frame(now) {
   }
 
   drawHalo(now);
-  drawCage(now);
+  drawCentres(now);
+  drawEdges(now);
   drawTrail(now);
-  drawSpheres(now);
+  drawVertices(now);
   drawAgents();
   drawDoors();
   drawRipples(now);
@@ -461,7 +490,10 @@ async function poll() {
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
     if (simulated) simulate(Date.now());
-    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions · 38 spheres · 24 vectors' : '';
+    if (counter) {
+      counter.textContent = BODY.name + ' · ' + VERTICES.length + ' vertices · ' + EDGES.length
+        + ' edges' + (trailTotal > 0 ? ' · ' + trailTotal + ' actions' : '');
+    }
     const badge = document.getElementById('simulated');
     if (badge) badge.style.opacity = simulated ? '0.75' : '0';
     const hot = data.focus;
@@ -473,7 +505,7 @@ async function poll() {
     const index = SKILL_ORDER.indexOf(hot.skill);
     const point = index >= 0 ? skillPoints[index % skillPoints.length] : null;
     if (!point) return;
-    focus = { x: point.x, y: point.y, z: point.z, label: hot.label };
+    focus = { x: point[0], y: point[1], z: point[2], label: hot.label };
     focusUntil = performance.now() + 25000;
     ripples.push({ t0: performance.now(), strength: 1 });
     if (caption) {
@@ -524,7 +556,6 @@ pollVitals();
 setInterval(pollVitals, 15000);
 
 // --- interaction: all three axes, with a throw ---------------------------
-let lastPointer = { x: 0, y: 0, t: 0 };
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 canvas.addEventListener('pointerdown', function (event) {
   dragging = true;
@@ -534,7 +565,6 @@ canvas.addEventListener('pointerdown', function (event) {
   velRoll = 0;
   canvas.setPointerCapture(event.pointerId);
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
-  lastPointer = { x: event.clientX, y: event.clientY, t: performance.now() };
   canvas.style.cursor = 'grabbing';
 });
 canvas.addEventListener('pointermove', function (event) {
@@ -567,18 +597,16 @@ canvas.addEventListener('pointermove', function (event) {
   }
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
   if (hint) hint.style.opacity = '0';
-  void lastPointer;
 });
 canvas.addEventListener('pointerup', function () {
-  // The throw keeps its momentum and settles back into the idle turn. Nothing is
-  // clicked here on purpose: a presence that navigates is a menu.
+  // The throw keeps its momentum and settles back into the idle turn. No clicks.
   dragging = false;
   canvas.style.cursor = 'grab';
 });
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
-  zoom = Math.max(0.65, Math.min(2.2, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.6, Math.min(2.2, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
   if (event.key === 'ArrowLeft') yaw -= 0.1;
@@ -628,9 +656,10 @@ export function flowerPageHtml(): string {
     color:#57575f;letter-spacing:.12em;transition:color .8s ease}
   .confession{position:fixed;left:0;right:0;top:4rem;text-align:center;font-size:.72rem;
     color:#8a6a3a;font-style:italic;opacity:0;transition:opacity 3s ease;padding:0 2rem}
-  .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
-    pointer-events:auto}
-  .plain:hover{color:#7ee2a8}
+  .shapes{position:fixed;left:0;right:0;bottom:1.2rem;text-align:center;font-size:.7rem;
+    color:#5f5f68;letter-spacing:.06em}
+  .shapes a{color:#6f6f78;text-decoration:none}
+  .shapes a:hover{color:#7ee2a8}
   @media (prefers-reduced-motion: reduce) { .hint{transition:none} }
 </style></head><body>
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
@@ -645,7 +674,7 @@ export function flowerPageHtml(): string {
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
 <p class="hint" id="hint"><b>drag</b> to turn it · <b>shift-drag</b> (or right-drag) to roll · <b>scroll</b> closer · throw it and it keeps spinning</p>
-<a class="plain" href="/map">where everything is →</a>
+<span class="shapes"><a href="/flower?shape=icosa">icosahedron</a> · <a href="/flower?shape=dodeca">dodecahedron</a> · <a href="/flower?shape=flower">flower</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
 </body></html>`
 }
