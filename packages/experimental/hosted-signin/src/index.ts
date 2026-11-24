@@ -141,10 +141,9 @@ function ownerMarker(token: string): string {
  *
  * A token header wins outright: scripts and the CLI use that.
  * @param req - the incoming request.
- * @param peer - the admitted peer, when the route required authentication.
  * @returns true when the caller is the operator.
  */
-function isOwnerRequest(req: IncomingMessage, peer?: unknown): boolean {
+function isOwnerRequest(req: IncomingMessage): boolean {
   const configured = process.env.DSH_WEB_TOKEN ?? ''
   if (configured === '' ) return false
   if (String(req.headers['x-one-turn-token'] ?? '') === configured) return true
@@ -162,8 +161,8 @@ function isOwnerRequest(req: IncomingMessage, peer?: unknown): boolean {
  * Refuse a route that only the operator may use.
  * @returns true when the caller was refused (the response is already written).
  */
-function refuseUnlessOwner(req: IncomingMessage, res: ServerResponse, peer?: unknown): boolean {
-  if (isOwnerRequest(req, peer)) return false
+function refuseUnlessOwner(req: IncomingMessage, res: ServerResponse): boolean {
+  if (isOwnerRequest(req)) return false
   respond(res, 403, { error: 'operator only' })
   return true
 }
@@ -300,7 +299,7 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/admin', auth: 'required',
     handler: async (req, res, peer) => {
       // A guest session is authenticated — that is not the same as being the operator.
-      if (refuseUnlessOwner(req, res, peer)) return
+      if (refuseUnlessOwner(req, res)) return
       const spend = await budgetReport().catch(() => undefined)
       const guests = await guestCounters().catch(() => [])
       const credits = await creditLedger().catch(() => [])
@@ -384,7 +383,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/memory', auth: 'required',
     handler: (req, res, peer) => {
-      if (refuseUnlessOwner(req, res, peer)) return
+      if (refuseUnlessOwner(req, res)) return
       const html = Buffer.from(memoryPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
@@ -490,7 +489,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/credits/grant', auth: 'required',
     handler: async (req, res, peer) => {
-      if (refuseUnlessOwner(req, res, peer)) return
+      if (refuseUnlessOwner(req, res)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
         const fields = await readFields(req)
@@ -516,7 +515,7 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/guest/freeze', auth: 'required',
     handler: async (req, res, peer) => {
-      if (refuseUnlessOwner(req, res, peer)) return
+      if (refuseUnlessOwner(req, res)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       const fields = await readFields(req)
       const on = (fields.get('on') ?? '1') !== '0'
@@ -1189,7 +1188,7 @@ and costs cents.</p>
   ctx.webServer.register({
     kind: 'exact', path: '/workers', auth: 'required',
     handler: (req, res, peer) => {
-      if (refuseUnlessOwner(req, res, peer)) return
+      if (refuseUnlessOwner(req, res)) return
       const html = Buffer.from(workersPageHtml(relayStatus()))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
