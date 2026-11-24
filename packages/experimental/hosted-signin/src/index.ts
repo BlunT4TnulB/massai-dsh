@@ -297,7 +297,7 @@ export function apply(ctx: Context): void {
   // Owner console: presence-only status, notes wall, session census, quick links.
   ctx.webServer.register({
     kind: 'exact', path: '/admin', auth: 'required',
-    handler: async (req, res, peer) => {
+    handler: async (req, res) => {
       // A guest session is authenticated — that is not the same as being the operator.
       if (refuseUnlessOwner(req, res)) return
       const spend = await budgetReport().catch(() => undefined)
@@ -382,7 +382,7 @@ export function apply(ctx: Context): void {
   // What the agent has learned, in the open.
   ctx.webServer.register({
     kind: 'exact', path: '/memory', auth: 'required',
-    handler: (req, res, peer) => {
+    handler: (req, res) => {
       if (refuseUnlessOwner(req, res)) return
       const html = Buffer.from(memoryPageHtml())
       res.writeHead(200, {
@@ -488,7 +488,7 @@ export function apply(ctx: Context): void {
   // is money. Positive to top up, negative to correct.
   ctx.webServer.register({
     kind: 'exact', path: '/api/credits/grant', auth: 'required',
-    handler: async (req, res, peer) => {
+    handler: async (req, res) => {
       if (refuseUnlessOwner(req, res)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
@@ -514,7 +514,7 @@ export function apply(ctx: Context): void {
   // than expected and the ledger needs a breath.
   ctx.webServer.register({
     kind: 'exact', path: '/api/guest/freeze', auth: 'required',
-    handler: async (req, res, peer) => {
+    handler: async (req, res) => {
       if (refuseUnlessOwner(req, res)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       const fields = await readFields(req)
@@ -1187,7 +1187,7 @@ and costs cents.</p>
   // The owner's view of every machine that has reported in.
   ctx.webServer.register({
     kind: 'exact', path: '/workers', auth: 'required',
-    handler: (req, res, peer) => {
+    handler: (req, res) => {
       if (refuseUnlessOwner(req, res)) return
       const html = Buffer.from(workersPageHtml(relayStatus()))
       res.writeHead(200, {
