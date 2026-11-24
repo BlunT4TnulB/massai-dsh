@@ -665,7 +665,8 @@ export function apply(ctx: Context): void {
         const base = typeof tierRaw === 'string' && (tierRaw === 'guided' || tierRaw === 'practised' || tierRaw === 'master')
           ? preset(tierRaw as ComfortTier)
           : current
-        const bool = (key: keyof typeof base): boolean =>
+        // Only the boolean switches can come from the client; the tier is handled above.
+        const bool = (key: 'disclaimers' | 'tips' | 'legal' | 'examples' | 'hints' | 'badges'): boolean =>
           typeof parsed[key] === 'boolean' ? parsed[key] as boolean : base[key]
         const comfort = {
           tier: base.tier,
