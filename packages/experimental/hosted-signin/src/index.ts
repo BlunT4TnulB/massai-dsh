@@ -817,6 +817,53 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // The install manifest and the tab icon must be reachable WITHOUT a session:
+  // a browser checking "can this be installed" fetches them before sign-in, and a
+  // 401 there silently removes the install option. They are just a name and two
+  // icons, so they are generated here rather than served from the authenticated
+  // static route.
+  ctx.webServer.register({
+    kind: 'exact', path: '/manifest.webmanifest', auth: 'anonymous',
+    handler: (req, res) => {
+      const origin = (process.env.PUBLIC_ORIGIN ?? '').trim().replace(/\/+$/, '')
+      const manifest = {
+        name: 'Massai',
+        short_name: 'Massai',
+        description: 'Say what should exist. It gets built.',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'any',
+        background_color: '#0e0e10',
+        theme_color: '#151517',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/massai-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/massai-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        ...(origin === '' ? {} : { id: origin + '/' }),
+      }
+      const body = Buffer.from(JSON.stringify(manifest))
+      res.writeHead(200, {
+        'content-type': 'application/manifest+json; charset=utf-8',
+        'content-length': String(body.byteLength),
+        'cache-control': 'public, max-age=3600',
+      })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
+
+  // A favicon request for a missing file is a browser habit; send it to a real one.
+  ctx.webServer.register({
+    kind: 'exact', path: '/favicon.ico', auth: 'anonymous',
+    handler: (req, res) => {
+      res.writeHead(302, { location: '/icon-192.png', 'cache-control': 'public, max-age=86400' })
+      res.end()
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',

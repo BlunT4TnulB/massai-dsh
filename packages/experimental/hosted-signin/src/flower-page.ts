@@ -188,7 +188,7 @@ const FLOWER_SKIN = flowerWrap(BODY.radius * 0.995, 6);
 
 // Centring: one fit against the body's own radius, and the exact middle of the
 // viewport. Every body occupies the same share of the smaller dimension.
-const FIT = 0.34;
+const FIT = 0.37;
 
 const DOOR_NAMES = ['Talk', 'Projects', 'Library', 'You', 'Limits', 'Tip jar', 'Help'];
 const doors = DOOR_NAMES.map(function (label, index) {
@@ -355,7 +355,7 @@ function drawFlowerSkin() {
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
     }
-    ctx.strokeStyle = 'rgba(247,205,140,' + (0.045 + 0.03 * breath).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(247,205,140,' + (0.07 + 0.04 * breath).toFixed(3) + ')';
     ctx.stroke();
   }
 }
@@ -367,8 +367,8 @@ function drawPanels(now) {
     const radius = DPR * 1.8 * p.k;
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.05 + 0.16 * near + 0.02 * breath).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.7;
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.10 + 0.24 * near + 0.03 * breath).toFixed(3) + ')';
+    ctx.lineWidth = DPR * 0.9;
     ctx.stroke();
   }
   void now;
@@ -383,12 +383,20 @@ function drawEdges(now) {
   for (const edge of drawn) {
     const heat = (heatAt(edge.a.x, edge.a.y, 0, now) + heatAt(edge.b.x, edge.b.y, 0, now)) / 2;
     const glow = Math.max(0, Math.min(1, (edge.near - 0.62) / 0.5));
+    const weight = (0.10 + self.wisdom * 0.06) + glow * 0.30 + heat * 0.40;
     ctx.beginPath();
     ctx.moveTo(edge.a.x, edge.a.y);
     ctx.lineTo(edge.b.x, edge.b.y);
-    ctx.strokeStyle = 'rgba(247,205,140,'
-      + ((0.035 + self.wisdom * 0.045) + glow * 0.20 + heat * 0.30).toFixed(3) + ')';
-    ctx.lineWidth = DPR * (0.6 + 1.0 * glow);
+    // outer pass first: a wide, faint stroke is the cheapest glow there is
+    ctx.strokeStyle = 'rgba(217,130,43,' + (weight * 0.45).toFixed(3) + ')';
+    ctx.lineWidth = DPR * (3.2 + 2.4 * glow);
+    ctx.stroke();
+    // inner pass: the filament itself
+    ctx.beginPath();
+    ctx.moveTo(edge.a.x, edge.a.y);
+    ctx.lineTo(edge.b.x, edge.b.y);
+    ctx.strokeStyle = 'rgba(247,205,140,' + weight.toFixed(3) + ')';
+    ctx.lineWidth = DPR * (0.9 + 1.2 * glow);
     ctx.stroke();
   }
 }
@@ -404,9 +412,11 @@ function drawVertices(now) {
       return Math.abs(d.x - entry.v[0]) < 1e-9 && Math.abs(d.y - entry.v[1]) < 1e-9 && Math.abs(d.z - entry.v[2]) < 1e-9;
     });
     const tint = heat > 0.06 ? GREEN : GOLD;
-    const base = Math.min(innerWidth, innerHeight) * 0.020 * (FIT / BODY.radius) * (isDoor ? 1.7 : 1);
-    const radius = base * entry.p.k * (1 + heat * 0.15);
-    const depthFade = 0.28 + 0.72 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
+    const base = Math.min(innerWidth, innerHeight) * 0.038 * (FIT / BODY.radius) * (isDoor ? 1.6 : 1);
+    const radius = base * entry.p.k * (1 + heat * 0.20);
+    const depthFade = 0.45 + 0.55 * Math.max(0, Math.min(1, (entry.p.k - 0.62) / 0.5));
+    // a soft halo behind every vertex: the omnipresence comes from overlap
+    drawSprite(tint, entry.p.x, entry.p.y, radius * 2.6, (depthFade * 0.22 + heat * 0.2) * life);
     drawSprite(tint, entry.p.x, entry.p.y, radius, (depthFade + heat * 0.4) * life);
   }
 }
@@ -419,7 +429,7 @@ function drawCentres(now) {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = 'rgba(158,203,255,' + (0.010 + 0.030 * Math.max(0, b.k - 0.62) + 0.010 * breath).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(158,203,255,' + (0.025 + 0.06 * Math.max(0, b.k - 0.62) + 0.02 * breath).toFixed(3) + ')';
     ctx.stroke();
   }
   void now;
