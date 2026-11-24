@@ -116,6 +116,37 @@ function apiKeyOf(text: string, contentType: string | undefined): string {
   return (new URLSearchParams(text).get('apiKey') ?? '').trim()
 }
 
+/**
+ * Whether this request is the operator.
+ *
+ * This layer mints every user-facing session itself, and each of those ids carries
+ * a prefix (`guest-`, `c-`, `k-`, `u-`). The only session it does not mint is the
+ * launch-token exchange in the core authentication layer, which uses a bare UUID.
+ * So a bare UUID means "the person holding the token", and a guest cannot forge one
+ * because the session cookie is signed.
+ *
+ * A token header wins outright: scripts and the CLI use that.
+ * @param req - the incoming request.
+ * @param peer - the admitted peer, when the route required authentication.
+ * @returns true when the caller is the operator.
+ */
+function isOwnerRequest(req: IncomingMessage, peer?: unknown): boolean {
+  const configured = process.env.DSH_WEB_TOKEN ?? ''
+  if (configured !== '' && String(req.headers['x-one-turn-token'] ?? '') === configured) return true
+  const id = String((peer as { id?: unknown } | undefined)?.id ?? '')
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+/**
+ * Refuse a route that only the operator may use.
+ * @returns true when the caller was refused (the response is already written).
+ */
+function refuseUnlessOwner(req: IncomingMessage, res: ServerResponse, peer?: unknown): boolean {
+  if (isOwnerRequest(req, peer)) return false
+  respond(res, 403, { error: 'operator only' })
+  return true
+}
+
 function respond(res: ServerResponse, status: number, payload: unknown): void {
   res.writeHead(status, JSON_HEADERS)
   res.end(JSON.stringify(payload))
@@ -246,7 +277,9 @@ export function apply(ctx: Context): void {
   // Owner console: presence-only status, notes wall, session census, quick links.
   ctx.webServer.register({
     kind: 'exact', path: '/admin', auth: 'required',
-    handler: async (req, res) => {
+    handler: async (req, res, peer) => {
+      // A guest session is authenticated — that is not the same as being the operator.
+      if (refuseUnlessOwner(req, res, peer)) return
       const spend = await budgetReport().catch(() => undefined)
       const guests = await guestCounters().catch(() => [])
       const credits = await creditLedger().catch(() => [])
@@ -329,7 +362,8 @@ export function apply(ctx: Context): void {
   // What the agent has learned, in the open.
   ctx.webServer.register({
     kind: 'exact', path: '/memory', auth: 'required',
-    handler: (req, res) => {
+    handler: (req, res, peer) => {
+      if (refuseUnlessOwner(req, res, peer)) return
       const html = Buffer.from(memoryPageHtml())
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
@@ -434,7 +468,8 @@ export function apply(ctx: Context): void {
   // is money. Positive to top up, negative to correct.
   ctx.webServer.register({
     kind: 'exact', path: '/api/credits/grant', auth: 'required',
-    handler: async (req, res) => {
+    handler: async (req, res, peer) => {
+      if (refuseUnlessOwner(req, res, peer)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {
         const fields = await readFields(req)
@@ -459,7 +494,8 @@ export function apply(ctx: Context): void {
   // than expected and the ledger needs a breath.
   ctx.webServer.register({
     kind: 'exact', path: '/api/guest/freeze', auth: 'required',
-    handler: async (req, res) => {
+    handler: async (req, res, peer) => {
+      if (refuseUnlessOwner(req, res, peer)) return
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       const fields = await readFields(req)
       const on = (fields.get('on') ?? '1') !== '0'
@@ -722,10 +758,7 @@ export function apply(ctx: Context): void {
         return
       }
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
-      const owner = process.env.DSH_WEB_TOKEN ?? ''
-      if (owner === '' || String(req.headers['x-one-turn-token'] ?? '') !== owner) {
-        respond(res, 401, { error: 'owner token required' }); return
-      }
+      if (!isOwnerRequest(req)) { respond(res, 403, { error: 'operator only' }); return }
       void (async () => {
         try {
           const parsed = JSON.parse(await readBody(req)) as Record<string, unknown>
@@ -1112,7 +1145,8 @@ and costs cents.</p>
   // The owner's view of every machine that has reported in.
   ctx.webServer.register({
     kind: 'exact', path: '/workers', auth: 'required',
-    handler: (req, res) => {
+    handler: (req, res, peer) => {
+      if (refuseUnlessOwner(req, res, peer)) return
       const html = Buffer.from(workersPageHtml(relayStatus()))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
