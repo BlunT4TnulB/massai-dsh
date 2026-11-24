@@ -11,6 +11,13 @@
   padding: 0 24px;
 }
 
+/* When the galaxy is the interface, the hero shell must not catch the pointer:
+   drags pass through it to the live frame beneath, and only the composer (which
+   sits outside this shell) takes clicks. */
+.root[data-immersion='true'] {
+  pointer-events: none;
+}
+
 /* Cap matches the InputBar card. Glow may paint past the sides. */
 .stack {
   display: flex;
@@ -253,7 +260,9 @@
   border: 0;
   background: #08080a;
   color-scheme: dark;
-  pointer-events: none;
+  /* Interactive: the mind is the interface — drag it, dive into its stars. The
+     composer still sits above at its own z-index, so typing is never blocked. */
+  pointer-events: auto;
 }
 
 .galaxyScrim {
@@ -261,6 +270,27 @@
   inset: 0;
   pointer-events: none;
   background: radial-gradient(ellipse at 50% 42%, rgba(8, 8, 10, 0) 34%, rgba(8, 8, 10, .62) 100%);
+}
+
+.immersion {
+  position: fixed;
+  inset: auto 0 8.5rem;
+  display: flex;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.immersionHint {
+  font-size: .68rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #6f6f78;
+  text-align: center;
+  padding: .4rem 1rem;
+  border-radius: 999px;
+  background: rgba(12, 12, 14, .45);
+  backdrop-filter: blur(4px);
 }
 
 .galaxyLabel {

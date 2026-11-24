@@ -243,30 +243,35 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
     return () => { window.removeEventListener('resize', measure) }
   }, [])
   return (
-    <div className={css.root}>
+    <div className={css.root} data-immersion={wide ? 'true' : 'false'}>
       <div className={css.stack}>
         {/* The sanctum sits above the words: the place, before anything is said.
             The small turnable mark is the fallback when the viewport cannot carry
             the full stage comfortably. */}
         {wide && <GalaxyBackground show={wide} />}
-        <div className={css.markRow} data-wide={wide ? 'true' : 'false'}>
-          {wide
-            ? <span className={css.galaxyLabel}>the galaxy, breathing</span>
-            : renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
-                fallback: <FlowerMark size={96} />,
-              })}
-          <LiveActivity />
-        </div>
-        <div className={css.headline}>
-          <span className={css.titleGroup}>
-            {/* Own element: keeps the headline text addressable apart from the badge. */}
-            <span>{t('hero.headline')}</span>
-            <span className={css.previewBadge}>{t('hero.preview')}</span>
-          </span>
-        </div>
-        <div className={css.body}>
-          {/* The composer remains mounted outside this component. */}
-        </div>
+        {wide
+          ? (
+            <div className={css.immersion}>
+              <span className={css.immersionHint}>{t('hero.diveToBegin')}</span>
+            </div>
+          )
+          : (
+            <div className={css.stack}>
+              <div className={css.markRow} data-wide="false">
+                {renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
+                  fallback: <FlowerMark size={96} />,
+                })}
+                <LiveActivity />
+              </div>
+              <div className={css.headline}>
+                <span className={css.titleGroup}>
+                  <span>{t('hero.headline')}</span>
+                  <span className={css.previewBadge}>{t('hero.preview')}</span>
+                </span>
+              </div>
+              <div className={css.body} />
+            </div>
+          )}
       </div>
       {children}
     </div>
