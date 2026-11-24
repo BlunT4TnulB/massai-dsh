@@ -645,3 +645,35 @@
 .embeddedBody[data-content-phase='settling'] .composerSeat {
   visibility: hidden;
 }
+
+
+/* The live pulse: a tiny flower that breathes while the workshop is working.
+   It renders nothing when idle, so it never competes with the interface. */
+.liveActivity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  color: #7ee2a8;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: lowercase;
+  opacity: .9;
+}
+
+.liveActivity svg {
+  animation: livePulse 2.4s ease-in-out infinite;
+}
+
+.liveWord {
+  color: #8a8a93;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: .55; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveActivity svg { animation: none; }
+}

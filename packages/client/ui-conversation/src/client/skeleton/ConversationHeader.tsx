@@ -2,6 +2,7 @@
 import clsx from 'clsx'
 import type { ConversationHeaderProps } from '../contract/slots.ts'
 import { conversationPhase } from '../contract/snapshot.ts'
+import { LiveActivity } from './LiveActivity.tsx'
 import css from './ConversationRoot.module.css'
 
 /**
@@ -18,6 +19,8 @@ export function ConversationHeader({ sessionId, useSession, useConversation, ren
     <header className={clsx(css.header, blank && css.headerBlank)} data-window-drag>
       <div className={css.headerLeading} data-conversation-header-leading="">
         {renderSlot('conversation.header.leading', {})}
+        {/* The live mark: what the workshop is doing right now. Silent when idle. */}
+        {blank ? null : <LiveActivity />}
       </div>
       {sessionId === undefined
         // The empty title row keeps the blank-Session header height, so the

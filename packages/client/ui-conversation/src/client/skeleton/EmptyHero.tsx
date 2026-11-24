@@ -8,6 +8,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { ConversationContentProps } from '../contract/slots.ts'
+import { LiveActivity } from './LiveActivity.tsx'
 import css from './HeroShell.module.css'
 
 /** The owner's locale seat type, passed to hero chrome as a plain prop. */
@@ -186,6 +187,7 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
           {renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
             fallback: <FlowerMark size={96} />,
           })}
+          <LiveActivity />
         </div>
         <div className={css.headline}>
           <span className={css.titleGroup}>
