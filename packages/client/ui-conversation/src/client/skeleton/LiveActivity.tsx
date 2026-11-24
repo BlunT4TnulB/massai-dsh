@@ -10,6 +10,11 @@ interface ActivityFocus {
   readonly label: string
 }
 
+/** The count of actions in the window, for the number beside the word. */
+interface ActivityCounts {
+  readonly total: number
+}
+
 /**
  * Poll the activity endpoint while the tab is visible.
  *
@@ -18,8 +23,9 @@ interface ActivityFocus {
  * care whether the flower knows what is happening.
  * @returns the current focus, or undefined when nothing is happening.
  */
-function useActivity(): ActivityFocus | undefined {
+function useActivity(): { focus: ActivityFocus | undefined; total: number } {
   const [focus, setFocus] = useState<ActivityFocus | undefined>(undefined)
+  const [total, setTotal] = useState(0)
   useEffect(() => {
     let cancelled = false
     let timer = 0
@@ -28,8 +34,14 @@ function useActivity(): ActivityFocus | undefined {
       try {
         const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } })
         if (!response.ok) return
-        const data = await response.json() as { focus?: ActivityFocus | null }
-        if (!cancelled) setFocus(data.focus ?? undefined)
+        const data = await response.json() as {
+          focus?: ActivityFocus | null
+          counts?: ActivityCounts
+        }
+        if (!cancelled) {
+          setFocus(data.focus ?? undefined)
+          setTotal(data.counts?.total ?? 0)
+        }
       } catch {
         /* silence is correct: this is decoration, not function */
       }
@@ -40,7 +52,7 @@ function useActivity(): ActivityFocus | undefined {
     void poll().then(loop)
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [])
-  return focus
+  return { focus, total }
 }
 
 /** The categories, as short words for a narrow header. */
@@ -62,7 +74,7 @@ const SHORT: Record<string, string> = {
  * @returns the pulse element, or null.
  */
 export function LiveActivity() {
-  const focus = useActivity()
+  const { focus, total } = useActivity()
   if (focus === undefined) return null
   const word = SHORT[focus.skill] ?? 'build'
   return (
@@ -76,7 +88,7 @@ export function LiveActivity() {
         <circle cx="19.5" cy="16.21" r="9" strokeWidth="2.4" />
         <circle cx="28.5" cy="16.21" r="9" strokeWidth="2.4" />
       </svg>
-      <span className={css.liveWord}>{word}</span>
+      <span className={css.liveWord}>{word}{total > 1 ? ` · ${total}` : ''}</span>
     </span>
   )
 }

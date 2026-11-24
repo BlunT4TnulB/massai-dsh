@@ -90,12 +90,53 @@ const skillPoints = centres
   .slice(0, 12);
 let focus = null;   // { x, y, label }
 let focusUntil = 0;
+let trail = [];     // recent actions, oldest first: [{ skill, at }]
+let trailTotal = 0;
+
+/** Colour per capability, so the work has a texture rather than one hue. */
+const SKILL_COLOR = {
+  geometry: '126,226,168', dashboard: '158,203,255', 'web-app': '239,220,164',
+  scripting: '217,130,43', testing: '200,160,255', docs: '180,190,200',
+  scanner: '150,220,220', service: '240,180,140', general: '217,130,43',
+};
+
+/**
+ * Draw the session's work as a ring of dots: one per action, oldest at the top,
+ * newest at the end. Brightness decays with age, colour is the capability, and
+ * the radius breathes so a long run reads as a spiral rather than a smear.
+ */
+function drawTrail(now) {
+  if (trail.length === 0) return;
+  const cx = innerWidth / 2;
+  const cy = innerHeight / 2;
+  const base = Math.min(innerWidth, innerHeight) * 0.47;
+  trail.forEach((event, index) => {
+    const age = Math.max(0, now - event.at);
+    const freshness = Math.max(0.08, 1 - age / 600000);
+    const angle = -Math.PI / 2 + (index / Math.max(1, trail.length)) * Math.PI * 2;
+    const radius = base * (0.82 + 0.18 * (index / Math.max(1, trail.length)));
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    const colour = SKILL_COLOR[event.skill] || SKILL_COLOR.general;
+    ctx.beginPath();
+    ctx.arc(x, y, DPR * (1.2 + 2.6 * freshness), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + colour + ',' + (0.15 + 0.75 * freshness).toFixed(3) + ')';
+    ctx.shadowColor = 'rgba(' + colour + ',0.8)';
+    ctx.shadowBlur = DPR * 8 * freshness;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+}
 
 async function poll() {
   try {
     const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
     const data = await response.json();
+    trail = Array.isArray(data.trail) ? data.trail : [];
+    trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
+    const counter = document.getElementById('counter');
+    if (counter) counter.textContent = trailTotal > 0 ? trailTotal + ' actions in this session' : '';
     const hot = data.focus;
     if (!hot) return;
     const index = SKILL_ORDER.indexOf(hot.skill);
@@ -190,6 +231,9 @@ function lines() {
     ctx.fillStyle = 'rgba(255,196,120,' + (0.10 + 0.32 * (p.k - 0.5)).toFixed(3) + ')';
     ctx.fill();
   }
+
+  // the session's shape: every action since the tab opened, colour-coded
+  drawTrail(performance.now());
 
   // the live point: a pulsing ring around whatever is being built right now
   if (focus !== null && performance.now() < focusUntil) {
@@ -322,6 +366,8 @@ export function flowerPageHtml(hideHelp = false): string {
   .hint b{color:#EFDCA4;font-weight:600}
   .caption{position:fixed;left:0;right:0;top:3.2rem;text-align:center;font-size:.82rem;
     color:#7ee2a8;opacity:0;transition:opacity .6s ease;letter-spacing:.02em}
+  .counter{position:fixed;left:0;right:0;bottom:3.2rem;text-align:center;font-size:.72rem;
+    color:#6f6f78;letter-spacing:.08em}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -333,6 +379,7 @@ export function flowerPageHtml(hideHelp = false): string {
   <a class="back" href="/">← the door</a>
 </div>
 <p class="caption" id="caption"></p>
+<p class="counter" id="counter"></p>
 <p class="hint" id="hint"><b>drag</b> to turn · <b>scroll</b> to zoom · <b>click</b> a point to move${hideHelp ? '' : ' · arrows work too'}</p>
 <a class="plain" href="/map">plain map for screen readers</a>
 <script>${FLOWER_SCRIPT}</script>

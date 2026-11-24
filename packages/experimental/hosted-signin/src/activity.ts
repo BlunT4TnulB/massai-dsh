@@ -26,13 +26,16 @@ export interface ActivityEvent {
 /** How long an event stays warm. */
 const WINDOW_MS = 10 * 60 * 1000
 
+/** How many events are kept: enough to draw a session's shape, not a history. */
+const CAPACITY = 120
+
 /** The buffer: a mood, not a log. */
 const events: ActivityEvent[] = []
 
 /** Record one piece of activity. */
 export function recordActivity(skill: string, label: string): void {
   events.push({ skill, label, at: Date.now() })
-  while (events.length > 12) events.shift()
+  while (events.length > CAPACITY) events.shift()
 }
 
 /** Drop stale entries and return the warm ones, freshest first. */
@@ -57,6 +60,28 @@ export function focusOf(now = Date.now()): { skill: string; label: string } | un
   }
   const top = [...scores.entries()].sort((a, b) => b[1].score - a[1].score)[0]
   return top === undefined ? undefined : { skill: top[0], label: top[1].label }
+}
+
+/**
+ * The trail: the recent work as a sequence, oldest first, so a client can draw
+ * the shape of a session rather than only its latest mood.
+ * @param now - current epoch ms.
+ * @returns the warm events in chronological order.
+ */
+export function trailOf(now = Date.now()): ActivityEvent[] {
+  return readActivity(now).reverse()
+}
+
+/**
+ * How many actions happened, per capability, over the window.
+ * @param now - current epoch ms.
+ * @returns counts keyed by skill id, plus a total.
+ */
+export function countsOf(now = Date.now()): { total: number; bySkill: Record<string, number> } {
+  const warm = readActivity(now)
+  const bySkill: Record<string, number> = {}
+  for (const event of warm) bySkill[event.skill] = (bySkill[event.skill] ?? 0) + 1
+  return { total: warm.length, bySkill }
 }
 
 /** Forget everything (restart, or between demos). */

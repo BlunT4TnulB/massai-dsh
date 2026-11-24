@@ -26,7 +26,7 @@ import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
-import { classifyToolCall, focusOf, readActivity, recordActivity } from './activity.ts'
+import { classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
@@ -701,7 +701,13 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       if (req.method === 'GET' || req.method === 'HEAD') {
         const now = Date.now()
-        respond(res, 200, { focus: focusOf(now) ?? null, events: readActivity(now), windowMinutes: 10 })
+        respond(res, 200, {
+          focus: focusOf(now) ?? null,
+          events: readActivity(now),
+          trail: trailOf(now),
+          counts: countsOf(now),
+          windowMinutes: 10,
+        })
         return
       }
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
