@@ -711,3 +711,29 @@
 @media (prefers-reduced-motion: reduce) {
   .liveActivity svg { animation: none; }
 }
+
+/* The quiet way in: appears only if the door has not been found, and only then.
+   It must never be the first thing seen — the mind is — but it must exist. */
+.wayIn {
+  position: fixed;
+  left: 50%;
+  bottom: 1.6rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: .45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 205, 140, .28);
+  background: rgba(14, 13, 12, .6);
+  backdrop-filter: blur(6px);
+  color: #c9b48c;
+  font-size: .68rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity .6s ease, border-color .2s ease;
+}
+
+.wayIn:hover {
+  border-color: rgba(247, 205, 140, .6);
+  color: #f0e2c8;
+}

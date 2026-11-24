@@ -269,6 +269,7 @@ export function welcomePage(line?: number, cookieHeader = ''): string {
       <span class="into-title">Into the Unknown</span>
       <span class="into-note">enter the mind — drag, roll, dive · find the one door</span>
     </a>
+    <p class="quiet" style="margin:.2rem 0 1rem"><a href="/access">or skip the mind and open the workshop</a></p>
 
     ${tankEmpty ? `
     <p class="paused"><b>The free preview is paused.</b> The workshop's model credit has run out, so

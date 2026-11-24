@@ -165,6 +165,9 @@ export function ConversationContent(props: ConversationContentProps) {
   // The galaxy hides one door among its stars. When it is found, the frame posts
   // one message and the composer appears — before that, the mind IS the screen.
   const [entered, setEntered] = useState(false)
+  // Nobody is ever trapped in the mind: after a while a quiet way in appears,
+  // and Enter always works. The door is an invitation, not a lock.
+  const [nudged, setNudged] = useState(false)
   useEffect(() => {
     const receive = (event: MessageEvent): void => {
       const data = event.data as { type?: unknown } | null
@@ -173,6 +176,21 @@ export function ConversationContent(props: ConversationContentProps) {
     window.addEventListener('message', receive)
     return () => { window.removeEventListener('message', receive) }
   }, [])
+  useEffect(() => {
+    if (!hero || entered) return undefined
+    const timer = window.setTimeout(() => { setNudged(true) }, 22000)
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) setEntered(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey) }
+  }, [hero, entered])
+
+  const wayIn = hero && !entered && nudged ? (
+    <button type="button" className={css.wayIn} onClick={() => { setEntered(true) }}>
+      the ring is the door — or open the workshop
+    </button>
+  ) : null
 
   const composerBar = (
     <div
@@ -212,6 +230,7 @@ export function ConversationContent(props: ConversationContentProps) {
       data-content-phase={phase}
     >
       {/* The frame wraps the scroll body in every phase, so leaving the home keeps the composer mounted. */}
+      {wayIn}
       {renderSlot('conversation.hero.frame', { hero: hero && props.variant !== 'embedded' }, {
         children: (
           <div className={css.scrollBody} data-conversation-scroll="">
