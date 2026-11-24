@@ -737,3 +737,90 @@
   border-color: rgba(247, 205, 140, .6);
   color: #f0e2c8;
 }
+
+/* The corner: always present, never loud. One dot; the menu it opens holds every
+   surface, so no immersive state can strand a person. */
+.corner {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 40;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(247, 205, 140, .22);
+  background: rgba(12, 12, 14, .5);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.corner:hover {
+  border-color: rgba(247, 205, 140, .55);
+}
+
+.cornerDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #E9C98E;
+  box-shadow: 0 0 12px rgba(233, 201, 142, .75);
+}
+
+.drawerWrap {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+}
+
+.drawerBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(6, 6, 8, .45);
+  cursor: default;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(19rem, 82vw);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 1.4rem 1rem;
+  background: rgba(14, 14, 17, .96);
+  border-right: 1px solid rgba(247, 205, 140, .18);
+  box-shadow: 24px 0 60px rgba(0, 0, 0, .5);
+  animation: drawerIn .18s ease-out;
+}
+
+@keyframes drawerIn {
+  from { transform: translateX(-12px); opacity: .4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.drawerTitle {
+  margin: 0 0 .8rem .55rem;
+  font-size: .68rem;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: #8a7c62;
+}
+
+.drawerLink {
+  display: block;
+  padding: .6rem .55rem;
+  border-radius: .5rem;
+  color: #E7E2D6;
+  font-size: .92rem;
+  text-decoration: none;
+}
+
+.drawerLink:hover {
+  background: rgba(247, 205, 140, .09);
+  color: #FFF3E2;
+}

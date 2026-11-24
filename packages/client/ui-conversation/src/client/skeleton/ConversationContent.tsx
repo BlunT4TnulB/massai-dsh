@@ -19,6 +19,61 @@ function NoConversationWidthControls() {
  * @param props - Factory input, standard Session sources, and Conversation seats.
  * @returns the Conversation view, Composer, and optional width controls.
  */
+
+/**
+ * The corner: one small mark in the top-left that opens everything.
+ *
+ * The immersion hides the chrome, which is right, but it must never hide the
+ * exits. This is the single guaranteed way in: a slide-out with every surface the
+ * deployment has, so no state of the mind can strand anybody.
+ * @returns the corner button and its drawer.
+ */
+function CornerMenu() {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return undefined
+    const close = (event: KeyboardEvent): void => { if (event.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', close)
+    return () => { window.removeEventListener('keydown', close) }
+  }, [open])
+  const links: ReadonlyArray<readonly [string, string]> = [
+    ['New conversation', '/'],
+    ['The mind', '/flower'],
+    ['Map', '/map'],
+    ['Projects', '/projects'],
+    ['Library', '/library'],
+    ['You', '/me'],
+    ['Limits', '/limits'],
+    ['Settings', '/settings'],
+    ['Support', '/support'],
+    ['Operator', '/admin'],
+  ]
+  return (
+    <>
+      <button
+        type="button"
+        className={css.corner}
+        aria-label="Open the menu"
+        aria-expanded={open}
+        onClick={() => { setOpen((value) => !value) }}
+      >
+        <span className={css.cornerDot} />
+      </button>
+      {open && (
+        <div className={css.drawerWrap}>
+          <button type="button" className={css.drawerBackdrop} aria-label="Close the menu" onClick={() => { setOpen(false) }} />
+          <nav className={css.drawer} aria-label="Everything">
+            <p className={css.drawerTitle}>Massai</p>
+            {links.map(([label, href]) => (
+              <a key={href} className={css.drawerLink} href={href}>{label}</a>
+            ))}
+          </nav>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function ConversationContent(props: ConversationContentProps) {
   const {
     sessionId, phase, hero, useSession, useSessions, useSessionStatus,
@@ -230,6 +285,7 @@ export function ConversationContent(props: ConversationContentProps) {
       data-content-phase={phase}
     >
       {/* The frame wraps the scroll body in every phase, so leaving the home keeps the composer mounted. */}
+      <CornerMenu />
       {wayIn}
       {renderSlot('conversation.hero.frame', { hero: hero && props.variant !== 'embedded' }, {
         children: (
