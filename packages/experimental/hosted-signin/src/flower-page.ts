@@ -148,6 +148,7 @@ let simulated = false;
 let ripples = [];
 // The being's own condition. Everything it knows about itself arrives here.
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
+let confessTimer = 0;
 const counter = document.getElementById('counter');
 const caption = document.getElementById('caption');
 
@@ -496,6 +497,17 @@ async function pollVitals() {
       notice: typeof v.notice === 'string' ? v.notice : '',
       awake: typeof v.awakeSeconds === 'number' ? v.awakeSeconds : 0,
     };
+    const confess = document.getElementById('confession');
+    if (confess) {
+      // It says the true thing about itself, then lets it fade. A thought, not a
+      // banner: visible for a few breaths, gone, and it comes back later.
+      if (typeof v.confession === 'string' && v.confession !== '') {
+        confess.textContent = v.confession;
+        confess.style.opacity = '0.85';
+        clearTimeout(confessTimer);
+        confessTimer = setTimeout(function () { confess.style.opacity = '0'; }, 14000);
+      }
+    }
     const status = document.getElementById('being');
     if (status) {
       // It says how it is, once, in the quietest place on the page.
@@ -598,6 +610,8 @@ export function flowerPageHtml(): string {
     color:#5a4a30;letter-spacing:.14em;text-transform:uppercase;transition:opacity .8s ease}
   .being{position:fixed;left:0;right:0;top:3.4rem;text-align:center;font-size:.64rem;
     color:#57575f;letter-spacing:.12em;transition:color .8s ease}
+  .confession{position:fixed;left:0;right:0;top:4rem;text-align:center;font-size:.72rem;
+    color:#8a6a3a;font-style:italic;opacity:0;transition:opacity 3s ease;padding:0 2rem}
   .plain{position:fixed;right:1.1rem;bottom:1.2rem;font-size:.72rem;color:#5f5f68;text-decoration:none;
     pointer-events:auto}
   .plain:hover{color:#7ee2a8}
@@ -613,6 +627,7 @@ export function flowerPageHtml(): string {
 <p class="settled" id="settled"></p>
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
+<p class="confession" id="confession"></p>
 <p class="hint" id="hint"><b>drag</b> to turn it · <b>scroll</b> to come closer · nothing to press</p>
 <a class="plain" href="/map">where everything is →</a>
 <script>${FLOWER_SCRIPT}</script>

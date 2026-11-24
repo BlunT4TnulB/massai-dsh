@@ -28,7 +28,7 @@ import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from '
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
 import { agentsOf, classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
 import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession } from './hive.ts'
-import { readVitals, vitalsNotice } from './vitals.ts'
+import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { mePageHtml } from './me-page.ts'
@@ -805,7 +805,12 @@ export function apply(ctx: Context): void {
       try {
         const vitals = await readVitals()
         const notice = vitalsNotice(vitals)
-        respond(res, 200, { ...vitals, ...(notice === undefined ? {} : { notice }) })
+        const confession = confessionAt(vitals)
+        respond(res, 200, {
+          ...vitals,
+          ...(notice === undefined ? {} : { notice }),
+          ...(confession === undefined ? {} : { confession }),
+        })
       } catch (error) {
         respond(res, 503, { error: error instanceof Error ? error.message : String(error) })
       }
