@@ -1,5 +1,9 @@
 /**
- * The immersive flower: the logo as a place you can turn, zoom and click.
+ * The immersive flower: the logo as a presence you can turn, and nothing more.
+ *
+ * It breathes on its own. Dragging turns it and scrolling comes closer, but
+ * nothing here takes you anywhere and nothing asks you for anything — the moment
+ * a presence has buttons it becomes an appliance. Navigation lives on `/map`.
  *
  * No framework, no WebGL, no dependencies — one canvas, a rotation matrix and a
  * perspective divide. That is enough for the effect, it ships in a single
@@ -128,6 +132,7 @@ let dragging = false;
 let hovered = -1;
 let last = performance.now();
 let bloom = 0;
+let breath = 0;
 let trail = [];
 let trailTotal = 0;
 let agents = [];
@@ -174,10 +179,14 @@ function drawHalo(now) {
   const cx = innerWidth / 2;
   const cy = innerHeight / 2;
   const reach = Math.max(innerWidth, innerHeight) * 0.8;
-  const breathe = reduce ? 1 : 1 + 0.05 * Math.sin(now * 0.0006 + bloom);
+  // The breath: a slow, even pulse that owes nothing to activity. This is what
+  // makes the object feel *present* rather than merely rendered — it would keep
+  // breathing if nobody ever built anything.
+  breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
+  const breathe = 1 + 0.04 * breath;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-  g.addColorStop(0, 'rgba(58,34,16,' + (0.65 + 0.25 * bloom).toFixed(3) + ')');
-  g.addColorStop(0.35 + 0.05 * breathe * 0.0, 'rgba(20,15,12,0.92)');
+  g.addColorStop(0, 'rgba(58,34,16,' + (0.55 + 0.12 * breath + 0.22 * bloom).toFixed(3) + ')');
+  g.addColorStop(0.35, 'rgba(20,15,12,' + (0.88 + 0.06 * breath).toFixed(3) + ')');
   g.addColorStop(0.75, 'rgba(11,11,13,0.98)');
   g.addColorStop(1, '#08080a');
   ctx.fillStyle = g;
@@ -223,7 +232,8 @@ function drawSpheres(now) {
       const tint = heat > 0.05 ? GREEN : GOLD;
       const base = Math.min(innerWidth, innerHeight) * 0.30 * 0.92 * layer.size;
       const radius = base * p.k * (isDoor ? 1.10 : 1);
-      const brightness = layer.alpha * (0.55 + 0.45 * (p.k - 0.55)) + heat * 0.5;
+      const brightness = layer.alpha * (0.55 + 0.45 * (p.k - 0.55))
+        + heat * 0.5 + breath * 0.06 * layer.alpha;
       drawSprite(tint, p.x, p.y, radius, brightness);
     }
   }
@@ -416,11 +426,12 @@ canvas.addEventListener('pointermove', function (event) {
     if (distance < bestDistance) { bestDistance = distance; best = index; }
   });
   hovered = best;
-  canvas.style.cursor = best >= 0 ? 'pointer' : 'grab';
+  canvas.style.cursor = dragging ? 'grabbing' : 'grab';
 });
 canvas.addEventListener('pointerup', function () {
+  // Nothing is clicked here on purpose. A presence that navigates is a menu;
+  // the map page is where leaving is meant to happen.
   dragging = false;
-  if (hovered >= 0) location.href = doors[hovered].href;
 });
 canvas.addEventListener('wheel', function (event) {
   event.preventDefault();
@@ -483,8 +494,8 @@ export function flowerPageHtml(hideHelp = false): string {
 <p class="counter" id="counter"></p>
 <p class="settled" id="settled"></p>
 <p class="sim" id="simulated">simulated — no live activity yet</p>
-<p class="hint" id="hint"><b>drag</b> to turn · <b>scroll</b> to zoom · <b>click</b> a point to move${hideHelp ? '' : ' · arrows work too'}</p>
-<a class="plain" href="/map">plain map for screen readers</a>
+<p class="hint" id="hint"><b>drag</b> to turn it · <b>scroll</b> to come closer · nothing to press</p>
+<a class="plain" href="/map">where everything is →</a>
 <script>${FLOWER_SCRIPT}</script>
 </body></html>`
 }
