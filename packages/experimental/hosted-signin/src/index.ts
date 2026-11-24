@@ -782,9 +782,12 @@ export function apply(ctx: Context): void {
         respond(res, 403, { error: 'operator token required: /owner?token=…' })
         return
       }
+      // Two cookies are needed: this marker, and a session (which the launch-token
+      // exchange mints). Sending the operator through `/?token=…` gets both in one
+      // click, and the exchange lands them back in the app.
       res.writeHead(303, {
         'cache-control': 'no-store',
-        location: '/admin',
+        location: `/?token=${encodeURIComponent(configured)}`,
         'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
       })
       res.end()
