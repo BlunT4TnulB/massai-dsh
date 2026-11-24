@@ -146,7 +146,8 @@ const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner',
 const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
-const FIT = EMBEDDED ? 0.50 : 0.40;
+const FIT = EMBEDDED ? 0.46 : 0.40;
+const ANCHOR = EMBEDDED ? 0.40 : 0.5;
 
 const spriteCache = new Map();
 function glowSprite(tint) {
@@ -239,7 +240,7 @@ function project(x, y, z) {
   const distance = 6.4;
   const scale = zoom * Math.min(innerWidth, innerHeight) * FIT;
   const k = distance / (distance + z3);
-  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight / 2 + y3 * scale * k, k: k, depth: z3, z: z3 };
+  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight * ANCHOR + y3 * scale * k, k: k, depth: z3, z: z3 };
 }
 
 function heat(now, x, y, z) {
@@ -258,7 +259,7 @@ function heat(now, x, y, z) {
 
 function drawHalo(now) {
   const cx = innerWidth / 2;
-  const cy = innerHeight / 2;
+  const cy = innerHeight * ANCHOR;
   const reach = Math.max(innerWidth, innerHeight) * 0.82;
   breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
   life = 0.45 + 0.55 * self.energy * self.memory;
@@ -379,7 +380,7 @@ function drawGalaxy(now) {
 function drawTrail(now) {
   if (trail.length === 0) return;
   const cx = innerWidth / 2;
-  const cy = innerHeight / 2;
+  const cy = innerHeight * ANCHOR;
   const base = Math.min(innerWidth, innerHeight) * FIT * 1.45;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);

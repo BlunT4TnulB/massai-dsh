@@ -49,7 +49,11 @@ const SHELL_CSS = `
     background:#0e0e10;color:#F2F2F4;font-family:system-ui,-apple-system,sans-serif;
     background-image:radial-gradient(60rem 40rem at 18% 8%,rgba(193,68,14,.16),transparent 70%),
       radial-gradient(50rem 30rem at 88% 92%,rgba(77,107,254,.10),transparent 70%)}
-  .win{width:100%;max-width:33rem;border-radius:1rem;overflow:hidden;background:#17171c;
+  .galaxy{position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:0;pointer-events:none;background:#08080a}
+  .scrim{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 40%,rgba(14,14,16,0) 26%,rgba(14,14,16,.78) 100%)}
+  .win{position:relative;z-index:2;width:100%;max-width:33rem;border-radius:1rem;overflow:hidden;
+    background:rgba(23,23,28,.82);backdrop-filter:blur(7px);
     border:1px solid #2c2c33;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.02) inset}
   .bar{display:flex;align-items:center;gap:.55rem;padding:.6rem .9rem;background:#1d1d24;
     border-bottom:1px solid #2a2a31;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
@@ -209,6 +213,8 @@ function shell(title: string, description: string, body: string): string {
 <meta name="twitter:image" content="${publicOrigin()}/og-image.png">
 <meta name="description" content="${description}">
 <style>${SHELL_CSS}</style></head><body>
+<iframe class="galaxy" src="/flower?embed=1" title="The Massai galaxy" loading="eager" tabindex="-1" aria-hidden="true"></iframe>
+<span class="scrim" aria-hidden="true"></span>
 <div class="win" role="dialog" aria-labelledby="door-title">
   <div class="bar">
     <span class="dot"></span><span class="dot"></span><span class="dot"></span>

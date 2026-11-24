@@ -2,6 +2,7 @@
 // phase does not remount its textarea.
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode, RefObject } from 'react'
 import {
   IconChevronDownOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
@@ -199,13 +200,40 @@ function SanctumStage({ size }: { size: number }) {
       <iframe
         className={css.sanctumFrame}
         src="/flower?embed=1"
-        title="The Massai flower"
+        title="The Massai galaxy"
         loading="eager"
         tabIndex={-1}
         scrolling="no"
       />
       <span className={css.sanctumVeil} />
     </div>
+  )
+}
+
+/**
+ * The galaxy as the whole room: a fixed, full-viewport frame behind everything.
+ *
+ * When the conversation is empty there is nothing more important than the living
+ * sphere, so it becomes the backdrop and the composer floats over it. It is
+ * mounted through a portal to the document body so no transformed ancestor can
+ * trap it, and it stays `pointer-events: none` — presence, never a control.
+ * @returns the fixed frame, or null when the viewport cannot carry it.
+ */
+function GalaxyBackground({ show }: { show: boolean }) {
+  if (!show || typeof document === 'undefined') return null
+  return createPortal(
+    <div className={css.galaxyBg} aria-hidden="true">
+      <iframe
+        className={css.galaxyFrame}
+        src="/flower?embed=1"
+        title="The Massai galaxy"
+        loading="eager"
+        tabIndex={-1}
+        scrolling="no"
+      />
+      <span className={css.galaxyScrim} />
+    </div>,
+    document.body,
   )
 }
 
@@ -257,9 +285,10 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
         {/* The sanctum sits above the words: the place, before anything is said.
             The small turnable mark is the fallback when the viewport cannot carry
             the full stage comfortably. */}
+        {wide && <GalaxyBackground show={wide} />}
         <div className={css.markRow} data-wide={wide ? 'true' : 'false'}>
           {wide
-            ? <SanctumStage size={stagePx} />
+            ? <span className={css.galaxyLabel}>the galaxy, breathing</span>
             : renderSlot('conversation.hero.brand.mark', { size: 96, className: css.mark }, {
                 fallback: <FlowerMark size={96} />,
               })}
