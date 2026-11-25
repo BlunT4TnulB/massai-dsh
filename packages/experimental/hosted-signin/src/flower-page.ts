@@ -1416,16 +1416,16 @@ export function flowerPageHtml(embed = false): string {
   .brand span{font-family:Georgia,serif;letter-spacing:.26em;font-size:.82rem;color:#EFDCA4}
   .back{pointer-events:auto;font-size:.78rem;color:#8a8a93;text-decoration:none}
   .back:hover{color:#7ee2a8}
-  .hint{position:fixed;left:0;right:0;bottom:1.4rem;text-align:center;font-size:.78rem;color:#8a8a93;
+  .hint{position:fixed;left:0;right:0;bottom:6.6rem;text-align:center;font-size:.74rem;color:#8a8a93;
     transition:opacity 1.2s ease}
   .hint b{color:#EFDCA4;font-weight:600}
   .caption{position:fixed;left:0;right:0;top:3.2rem;text-align:center;font-size:.82rem;
     color:#7ee2a8;opacity:0;transition:opacity .6s ease;letter-spacing:.02em}
-  .counter{position:fixed;left:0;right:0;bottom:3.2rem;text-align:center;font-size:.72rem;
+  .counter{position:fixed;left:0;right:0;bottom:4.6rem;text-align:center;font-size:.7rem;
     color:#6f6f78;letter-spacing:.08em}
-  .settled{position:fixed;left:0;right:0;bottom:2.1rem;text-align:center;font-size:.66rem;
+  .settled{position:fixed;left:0;right:0;bottom:3.6rem;text-align:center;font-size:.64rem;
     color:#4f4f58;letter-spacing:.12em;text-transform:uppercase}
-  .sim{position:fixed;left:0;right:0;bottom:.9rem;text-align:center;font-size:.62rem;
+  .sim{position:fixed;left:0;right:0;bottom:2.7rem;text-align:center;font-size:.6rem;
     color:#5a4a30;letter-spacing:.14em;text-transform:uppercase;transition:opacity .8s ease}
   .being{position:fixed;left:0;right:0;top:3.4rem;text-align:center;font-size:.64rem;
     color:#57575f;letter-spacing:.12em;transition:color .8s ease}
@@ -1443,7 +1443,14 @@ export function flowerPageHtml(embed = false): string {
     color:#5f5f68;letter-spacing:.06em;pointer-events:none}
   .shapes a{pointer-events:auto}
   .shapes a{color:#6f6f78;text-decoration:none}
-  @media (max-width: 640px){ .shapes{display:none} .sim-ui{left:50%;transform:translateX(-50%)} }
+  @media (max-width: 640px){
+    .shapes{display:none}
+    .sim-ui{left:50%;transform:translateX(-50%);bottom:.7rem}
+    .hint{display:none}
+    .counter{bottom:4.2rem}
+    .settled{bottom:3.2rem}
+    .sim{bottom:2.4rem}
+  }
   .shapes a:hover{color:#7ee2a8}
   @media (prefers-reduced-motion: reduce) { .hint{transition:none} }
   /* Embedded as a stage: the object is the whole frame. */
