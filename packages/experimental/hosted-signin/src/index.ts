@@ -1040,10 +1040,26 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       if (req.method === 'GET' || req.method === 'HEAD') {
         const now = Date.now()
+        const owner = process.env.DSH_WEB_TOKEN ?? ''
+        const isOwner = owner !== '' && String(req.headers['x-one-turn-token'] ?? '') === owner
+        const focus = focusOf(now)
+        const trail = trailOf(now)
+        if (!isOwner) {
+          // Shapes only: which capability, how recently, never the words or identities.
+          respond(res, 200, {
+            focus: focus === undefined ? null : { skill: focus.skill },
+            events: [],
+            trail: trail.map(function (step) { return { skill: step.skill, at: step.at }; }),
+            counts: countsOf(now),
+            agents: [],
+            windowMinutes: 10,
+          })
+          return
+        }
         respond(res, 200, {
-          focus: focusOf(now) ?? null,
+          focus: focus ?? null,
           events: readActivity(now),
-          trail: trailOf(now),
+          trail,
           counts: countsOf(now),
           agents: agentsOf(now),
           windowMinutes: 10,

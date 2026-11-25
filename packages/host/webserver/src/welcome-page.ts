@@ -360,6 +360,7 @@ export function intoTheUnknownPage(): string {
       and step inside the Massai mind.</p>
     <p class="slogan" id="slogan">Speak the future you want to live in, then build it together.</p>
     <a class="enter" href="/flower">or go straight in →</a>
+    <a class="enter" href="/mind">or leave it running as a visualiser ↗</a>
   </div>
 </div>
 <script>

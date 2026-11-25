@@ -1519,10 +1519,34 @@ if (counter) {
 async function poll() {
   if (QUIET) return;
   try {
-    const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
+    // The visualiser asks the public feed, which carries counts and capability only.
+    // The app's own page asks the richer endpoint, which it is entitled to.
+    const url = VISUALIZER ? '/api/mind/feed' : '/api/one-turn/activity';
+    const response = await fetch(url, { headers: { accept: 'application/json' } });
     if (!response.ok) return;
     const data = await response.json();
     if (simLevel > 0) return;
+    if (VISUALIZER) {
+      // Turn the coarse feed into a trail of shapes: one recent moment per capability.
+      const skills = (data.skills && data.skills.bySkill) || {};
+      const now = Date.now();
+      trail = Object.keys(skills).slice(0, 12).map(function (skill, index) {
+        return { skill: skill, at: now - index * 4000 };
+      });
+      simulated = trail.length === 0;
+      const badge = document.getElementById('simulated');
+      if (badge) badge.style.opacity = simulated ? '0.7' : '0';
+      const hot = data.focus;
+      if (hot === null || hot === undefined) return;
+      const index2 = SKILL_ORDER.indexOf(hot.skill);
+      const point = index2 >= 0 ? skillPoints[index2 % skillPoints.length] : null;
+      if (point !== null) {
+        focus = { x: point[0], y: point[1], z: point[2], label: hot.skill };
+        focusUntil = performance.now() + 25000;
+        ripples.push({ t0: performance.now(), strength: 1 });
+      }
+      return;
+    }
     trail = Array.isArray(data.trail) ? data.trail : [];
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
