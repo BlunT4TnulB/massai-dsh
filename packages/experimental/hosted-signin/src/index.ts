@@ -1006,6 +1006,31 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // Digital Asset Links: the proof Android needs before it will trust a wrapper app
+  // enough to hide its own address bar. It is one fingerprint, so it lives in an env
+  // var rather than in a deploy: set ANDROID_ASSETLINKS and the file appears.
+  ctx.webServer.register({
+    kind: 'exact', path: '/.well-known/assetlinks.json', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const configured = (process.env.ANDROID_ASSETLINKS ?? '').trim()
+      if (configured === '') {
+        // No wrapper published yet, and pretending otherwise would be a lie to Android.
+        res.writeHead(404, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+        res.end(JSON.stringify({ error: 'no android app is linked to this host' }))
+        return
+      }
+      const body = Buffer.from(configured)
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'content-length': String(body.byteLength),
+        'cache-control': 'public, max-age=300',
+      })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',
