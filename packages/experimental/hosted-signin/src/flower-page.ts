@@ -1007,7 +1007,9 @@ setInterval(pollVitals, 15000);
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 function nodeAt(clientX, clientY) {
   let best = -1;
-  let bestDistance = 22 * DPR;
+  // A thumb is not a mouse: on glass the door needs a generous target, and the
+  // nearest star to the finger wins so a near miss still finds it.
+  let bestDistance = 34 * DPR;
   for (let i = 0; i < nodes.length; i += 1) {
     const p = project(nodes[i].p[0], nodes[i].p[1], nodes[i].p[2]);
     if (p.z < -0.1) continue;
