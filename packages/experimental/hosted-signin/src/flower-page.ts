@@ -399,13 +399,19 @@ function project(x, y, z) {
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
   const scale = octaveScale * zoom * Math.min(VW, VH) * FIT;
-  const k = distance / (distance + z3);
+  const near = distance + z3;
+  // Beyond this the point is at (or behind) the camera plane and the projection blows
+  // up; those are exactly the full-screen bars. Clamp, and flag the point so a polyline
+  // can break its path instead of drawing an infinite streak.
+  const behind = near < 1.1;
+  const k = Math.min(4.5, distance / (near < 1.1 ? 1.1 : near));
   return {
     x: VW / 2 + panX + x2 * scale * k,
     y: VH * ANCHOR + panY + y3 * scale * k,
     k: k,
     depth: z3,
     z: z3,
+    behind: behind,
   };
 }
 
@@ -608,15 +614,26 @@ function circleWeight(index) {
 function strokeCircle(index, points, now, front) {
   ctx.beginPath();
   let started = false;
+  let lastX = 0;
+  let lastY = 0;
+  const jumpLimit = Math.max(VW, VH) * 1.5;
   for (const point of points) {
     const p = project(point[0], point[1], point[2]);
-    if ((p.z > 0) !== front) { started = false; continue; }
-    if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-    else ctx.lineTo(p.x, p.y);
+    if ((p.z > 0) !== front || p.behind === true) { started = false; continue; }
+    if (!started) {
+      ctx.moveTo(p.x, p.y);
+      started = true;
+    } else if (Math.hypot(p.x - lastX, p.y - lastY) > jumpLimit) {
+      ctx.moveTo(p.x, p.y);
+    } else {
+      ctx.lineTo(p.x, p.y);
+    }
+    lastX = p.x;
+    lastY = p.y;
   }
   const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
   const weight = chosen === null ? 1 : ((index === chosen.a || index === chosen.b) ? 2.6 : 0.55);
-  const base = front ? 0.30 : 0.10;
+  const base = front ? 0.20 : 0.07;
   // The further in you travel, the more the circles step back: up close the
   // individual great circles read as straight lines, which is the opposite of a
   // galaxy. The stars and the fog carry that depth instead.
@@ -677,7 +694,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
-      if (localZ(point) > 0) { started = false; continue; }
+      if (localZ(point) > 0 || p.behind === true) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
     }
@@ -713,11 +730,11 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
-      if (localZ(point) <= 0) { started = false; continue; }
+      if (localZ(point) <= 0 || p.behind === true) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
     }
-    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.30 * alpha).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha).toFixed(3) + ')';
     ctx.lineWidth = 0.9;
     ctx.stroke();
   }
@@ -851,6 +868,7 @@ function drawGalaxy(now) {
         let started = false;
         for (const point of points) {
           const p = project(point[0], point[1], point[2]);
+          if (p.behind === true) { started = false; continue; }
           if (!started) { ctx.moveTo(p.x, p.y); started = true; }
           else ctx.lineTo(p.x, p.y);
         }
@@ -1043,6 +1061,13 @@ function frame(now) {
     const dPitch = ((wantPitch * 0.75) - pitch) * 0.045;
     pitch += Math.max(-MAX_STEP, Math.min(MAX_STEP, dPitch));
     roll += (0 - roll) * 0.03;
+    // Arrived is not stopped: the body keeps turning slowly under the camera, so a
+    // node is a place you are moving through rather than a picture you reached.
+    if (!reduce && Math.abs(dx) < 0.06 && Math.abs(dPitch) < 0.06) {
+      yaw += dt * IDLE_SPEED * 0.9;
+      roll += dt * 0.0000032;
+      pitch += Math.sin(now * 0.000031) * dt * 0.0000052;
+    }
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
     // No automatic retreat: where you put the camera is yours to keep. Coming back
