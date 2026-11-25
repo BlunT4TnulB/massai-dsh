@@ -270,13 +270,17 @@ export function intoTheUnknownPage(): string {
   html,body{margin:0;height:100%;background:#000;color:#F2F2F4;overflow:hidden;
     font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
   .stage{height:100%;display:grid;place-items:center;padding:1.5rem}
-  a.orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
+  .orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
   .orb{position:relative;width:min(68vw,320px);aspect-ratio:1;border-radius:50%;overflow:hidden;
     background:#000;box-shadow:0 0 90px rgba(217,130,43,.20),inset 0 0 50px rgba(0,0,0,.5);
     border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
   .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
-  a.orb-link:hover .orb,a.orb-link:active .orb{
-    box-shadow:0 0 140px rgba(217,130,43,.34),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.5)}
+  .spin{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none}
+  .enter{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#5f5850;
+    text-decoration:none;border-bottom:1px solid #2b2620}
+  .enter:hover{color:#b98f5f;border-color:#5a4a2e}
+  .orb-link:hover .orb{
+    box-shadow:0 0 140px rgba(217,130,43,.30),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.42)}
   .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
     animation:breathe 5.5s ease-in-out infinite}
   .sub{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#6b6257;margin-top:-.6rem}
@@ -334,13 +338,65 @@ export function intoTheUnknownPage(): string {
   })();
 </script>
 <div class="stage">
-  <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
-    <span class="orb"><iframe src="/flower?embed=1&spin=1&fit=orb&quiet=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
+  <div class="orb-link">
+    <span class="orb">
+      <iframe id="orbFrame" src="/flower?embed=1&spin=1&fit=orb&quiet=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe>
+      <span class="spin" id="spinPad" role="button" tabindex="0"
+            aria-label="The mind. Turn it freely; knock twice to enter."></span>
+    </span>
     <span class="label">Into the Unknown</span>
-    <span class="sub">touch the sphere</span>
+    <span class="sub">it turns for anyone · it opens to a double knock</span>
     <span class="what">say what should exist — it gets built</span>
-  </a>
+    <a class="enter" href="/flower">or go straight in →</a>
+  </div>
 </div>
+<script>
+  (function () {
+    var pad = document.getElementById('spinPad');
+    var frame = document.getElementById('orbFrame');
+    var dragging = false;
+    var lx = 0;
+    var ly = 0;
+    var knocks = 0;
+    var knockTimer = 0;
+
+    /** Hand a movement to the mind inside the frame. */
+    function spin(dx, dy) {
+      try { frame.contentWindow.postMessage({ type: 'massai:spin', dx: dx, dy: dy }, '*'); } catch (e) { /* nothing */ }
+    }
+
+    pad.addEventListener('pointerdown', function (event) {
+      dragging = true;
+      lx = event.clientX;
+      ly = event.clientY;
+      pad.setPointerCapture(event.pointerId);
+      pad.style.cursor = 'grabbing';
+    });
+    pad.addEventListener('pointermove', function (event) {
+      if (!dragging) return;
+      spin(event.clientX - lx, event.clientY - ly);
+      lx = event.clientX;
+      ly = event.clientY;
+    });
+    pad.addEventListener('pointerup', function () { dragging = false; pad.style.cursor = 'grab'; });
+    pad.addEventListener('pointercancel', function () { dragging = false; });
+
+    /* two knocks, and only two: a spin can never open it by accident */
+    pad.addEventListener('pointerup', function () {
+      knocks += 1;
+      clearTimeout(knockTimer);
+      if (knocks >= 2) {
+        knocks = 0;
+        location.href = '/flower';
+        return;
+      }
+      knockTimer = setTimeout(function () { knocks = 0; }, 340);
+    });
+    pad.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') { location.href = '/flower'; }
+    });
+  })();
+</script>
 <a class="skip" href="/access">skip to the workshop</a>
 </body></html>`
 }

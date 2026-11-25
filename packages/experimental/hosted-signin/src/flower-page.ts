@@ -1393,6 +1393,21 @@ pollVitals();
 if (!QUIET) setInterval(pollVitals, 15000);
 
 // --- interaction ----------------------------------------------------------
+// The welcome page holds this frame like a coin and turns it by hand: it sends the
+// drag here, so the small version spins on every axis without ever being a link.
+addEventListener('message', function (event) {
+  const data = event.data;
+  if (data === null || typeof data !== 'object' || data.type !== 'massai:spin') return;
+  const dx = Number(data.dx) || 0;
+  const dy = Number(data.dy) || 0;
+  yaw += dx * 0.005;
+  pitch = Math.max(-1.5, Math.min(1.5, pitch + dy * 0.004));
+  roll += dx * 0.0012;
+  velYaw = dx * 0.0011;
+  velPitch = dy * 0.0008;
+  lastInput = performance.now();
+});
+
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 function nodeAt(clientX, clientY) {
   let best = -1;
