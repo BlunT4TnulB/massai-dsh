@@ -37,7 +37,7 @@ import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage,
+  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage, runSql,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
