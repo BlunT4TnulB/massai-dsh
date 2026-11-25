@@ -684,10 +684,15 @@ function drawGalaxy(now) {
     ctx.stroke();
   }
 
-  // the matter: every intersection, dimmed by depth, warmed by work
+  // the matter: every intersection, dimmed by depth, warmed by work. Under load a
+  // stride of the stars is drawn instead of all of them — the cloud is made of
+  // overlap, so a subset still reads as the same body, and the door is exempt.
+  const stride = quality < 0.45 ? 3 : quality < 0.7 ? 2 : 1;
   const ordered = nodes.map(function (node, index) {
     const p = project(node.p[0], node.p[1], node.p[2]);
     return { node: node, index: index, p: p };
+  }).filter(function (entry) {
+    return entry.index % stride === 0 || entry.index === PORTAL || entry.index === hoverNode;
   }).sort(function (a, b) { return a.p.depth - b.p.depth; });
   // Every star carries a wide, faint halo. Drawn additively, the haloes of a few
   // hundred stars accumulate into one cloud: no single star is bright, the sum of
