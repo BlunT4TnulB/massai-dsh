@@ -182,7 +182,13 @@ function insideOf(z) {
   return Math.max(0, Math.min(1, (z - 1.75) / 2.6));
 }
 // Zoom bands: each passed threshold reveals the next galaxy inside the last.
-const ZOOM_BANDS = [1.5, 2.4, 3.8, 5.6, 8.0, 11.0];
+// One octave of scale. Zoom is measured as a logarithm of this ratio, so the travel
+// is unbounded in both directions and the visible size always sits in [1, R).
+const OCTAVE = 3.6;
+const LOG_OCTAVE = Math.log(OCTAVE);
+let zoomLog = 0;
+let zoomLogTarget = 0;
+let octaveScale = 1;
 // Dead centre now: nothing is waiting at the foot of the screen to make room for.
 const ANCHOR = 0.5;
 
@@ -305,6 +311,7 @@ let pinchStart = 0;
 let pinchCentre = { x: 0, y: 0 };
 let panOrigin = { x: 0, y: 0 };
 let zoomAtPinch = 1;
+let zoomLogAtPinch = 0;
 const KIND = { vertex: 'vertex', edge: 'edge', face: 'face' };
 // What a star is, for the nine-tenths of them that are not the door.
 const ROLES = [
@@ -382,7 +389,7 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  const scale = zoom * Math.min(VW, VH) * FIT;
+  const scale = octaveScale * zoom * Math.min(VW, VH) * FIT;
   const k = distance / (distance + z3);
   return {
     x: VW / 2 + panX + x2 * scale * k,
@@ -859,19 +866,11 @@ function drawGalaxy(now) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  // Endless finding: every band of zoom grows another galaxy inside the last.
-  // The root never moves — it is always the fixed flower — but each child is
-  // anchored on a different star, so no two journeys repeat.
-  // Children only exist inside a star you entered. Without a dive there is one
-  // body and nothing else, so the view can never grow a second sphere beside the
-  // first (which read as a bug, because it was one).
-  if (diveNode >= 0) {
-    for (let band = 0; band < ZOOM_BANDS.length; band += 1) {
-      if (zoom <= ZOOM_BANDS[band]) break;
-      const anchorNode = nodes[diveNode].p;
-      drawGalaxyAt(now, anchorNode, 0.26 / Math.pow(1.9, band), yaw * (2 + band) + band, 0.75 - band * 0.1);
-    }
-  }
+  // Children only exist inside a star you entered: without a dive there is one
+  // body and nothing else beside the first.
+  // Endless finding is structural now: the octave pass in frame() draws the body at
+  // five scales at once and hands off between them, so travel is unbounded in both
+  // directions without any band table.
 }
 
 /**
@@ -1037,9 +1036,10 @@ function frame(now) {
     diveGlow += (0 - diveGlow) * 0.06;
   }
 
-  // Wheel, pinch and reset set both zoom and its target, so direct control is
-  // immediate; only the self-tour uses a distant target and eases into it.
-  if (Math.abs(zoomTarget - zoom) > 0.002) zoom += (zoomTarget - zoom) * 0.07;
+  // The log eases; the visible size is derived from it, so every step of travel is
+  // the same size of step — that is what makes the zoom feel unbounded.
+  zoomLog += (zoomLogTarget - zoomLog) * 0.11;
+  zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
 
   if (!dragging && spinning) {
     yaw += velYaw * dt;
@@ -1096,7 +1096,7 @@ function frame(now) {
         if (label) label.textContent = exploreNode === PORTAL ? 'the door' : roleOf(exploreNode);
       }
       // Aim, never jump: the tour eases into its distance over about a second.
-      zoomTarget = Math.random() < 0.45 ? 2.4 : 1.15;
+      zoomLogTarget = zoomLog + (Math.random() < 0.5 ? 0.55 : -0.55);
       rippleFrom(exploreNode);
     }
   } else {
@@ -1106,7 +1106,24 @@ function frame(now) {
   document.body.classList.toggle('deep', zoom > 2.2);
   drawHalo(now);
   drawTrail(now);
-  drawGalaxy(now);
+
+  // Five octaves at once. Each is the same body at scale zoom * OCTAVE^k; the
+  // envelope fades one out as the next fades in, so structure continuously enters
+  // from the periphery and resolves in the centre. This is the "never ending"
+  // quality: at 1x and at 3.5x the frame looks equally full, and the wrap is invisible.
+  const lifeBase = life;
+  for (let k = -2; k <= 2; k += 1) {
+    const rel = zoom * Math.pow(OCTAVE, k);
+    const near = Math.min(1, Math.max(0, (rel - 0.22) / 0.5));
+    const far = 1 - Math.min(1, Math.max(0, (rel - 2.0) / 2.4));
+    const envelope = near * far;
+    if (envelope <= 0.03) continue;
+    octaveScale = Math.pow(OCTAVE, k);
+    life = lifeBase * envelope;
+    drawGalaxy(now);
+  }
+  octaveScale = 1;
+  life = lifeBase;
   drawPathways(now);
   drawAgents();
   drawRipples(now);
@@ -1140,7 +1157,12 @@ function applyLevel(level) {
   }
 }
 const slider = document.getElementById('level');
-if (slider) {
+// The simulator is an instrument, not a feature: it is removed from the mind's own
+// screen unless it was explicitly asked for with ?sim=1 (it also lives in settings).
+if (slider !== null && params.get('sim') !== '1') {
+  const ui = slider.closest('.sim-ui');
+  if (ui !== null) ui.remove();
+} else if (slider !== null) {
   slider.addEventListener('input', function () { applyLevel(Number(slider.value)); });
   applyLevel(Number(slider.value));
 }
@@ -1268,6 +1290,7 @@ canvas.addEventListener('pointerdown', function (event) {
     const two = [...pointers.values()];
     pinchStart = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
     zoomAtPinch = zoom;
+    zoomLogAtPinch = zoomLogTarget;
     pinchCentre = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
     panOrigin = { x: panX, y: panY };
     dragging = false;
@@ -1287,8 +1310,7 @@ canvas.addEventListener('pointermove', function (event) {
     const two = [...pointers.values()];
     const spread = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
     const centre = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
-    zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (spread / pinchStart)));
-    zoomTarget = zoom;
+    zoomLogTarget = zoomLogAtPinch + Math.log(spread / pinchStart) / LOG_OCTAVE;
     // Slide the centre by however far the pair of fingers travelled together.
     panX = panOrigin.x + (centre.x - pinchCentre.x);
     panY = panOrigin.y + (centre.y - pinchCentre.y);
@@ -1366,8 +1388,7 @@ addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   wake();
   event.preventDefault();
-  zoom = Math.max(0.16, Math.min(20, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
-  zoomTarget = zoom;
+  zoomLogTarget += event.deltaY > 0 ? -0.11 : 0.11;
 }, { passive: false });
 addEventListener('keydown', function (event) {
   wake();
@@ -1377,7 +1398,7 @@ addEventListener('keydown', function (event) {
   if (event.key === 'ArrowDown') pitch = Math.min(1.5, pitch + 0.07);
   if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
-  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoom = 1; zoomTarget = 1; panX = 0; panY = 0; }
+  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoomLog = 0; zoomLogTarget = 0; panX = 0; panY = 0; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'f' || event.key === 'F') {
