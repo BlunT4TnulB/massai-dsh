@@ -279,7 +279,8 @@ export function intoTheUnknownPage(): string {
   .slogan{margin:.1rem 0 .2rem;font-size:.72rem;letter-spacing:.1em;color:#b98f5f;
     text-align:center;max-width:20rem;opacity:.9;transition:opacity .9s ease;min-height:1.2em}
   .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
-    letter-spacing:.06em;text-align:center;font-style:italic;max-width:19rem}
+    letter-spacing:.06em;text-align:center;font-style:italic;max-width:19rem;
+    opacity:1;transition:opacity 1.1s ease;min-height:9.8em}
   .enter{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#5f5850;
     text-decoration:none;border-bottom:1px solid #2b2620}
   .enter:hover{color:#b98f5f;border-color:#5a4a2e}
@@ -349,16 +350,14 @@ export function intoTheUnknownPage(): string {
             aria-label="The mind. Turn it freely. Knock twice, or open your hand, to enter."></span>
     </span>
     <span class="label">Into the Unknown</span>
-    <p class="poem">
-      Two quick taps upon the light,<br>
+    <p class="poem" id="poem">Two quick taps upon the light,<br>
       or spread your fingers wide in flight.<br>
       Knock upon the swirling glass<br>
       to wake the stars and let you pass.<br>
       Stretch the tunnel, deep and grand —<br>
       an endless, living, thinking land.<br>
       Follow where the bright threads wind,<br>
-      and step inside the Massai mind.
-    </p>
+      and step inside the Massai mind.</p>
     <p class="slogan" id="slogan">Speak the future you want to live in, then build it together.</p>
     <a class="enter" href="/flower">or go straight in →</a>
   </div>
@@ -466,6 +465,24 @@ export function intoTheUnknownPage(): string {
       sloganEl.textContent = SLOGANS[index];
       setInterval(nextSlogan, 8000);
       void order;
+    }
+
+    // Five riddles, changing places. The splash is the first thing anyone reads, so it
+    // should not be the same eight lines every time.
+    var POEMS = [['Two quick taps upon the light,', 'or spread your fingers wide in flight.', 'Knock upon the swirling glass', 'to wake the stars and let you pass.', 'Stretch the tunnel, deep and grand —', 'an endless, living, thinking land.', 'Follow where the bright threads wind,', 'and step inside the Massai mind.'], ['The dark is deep, the lattice wide,', 'with no clear wall and no far side.', 'Put two soft knocks upon the glow —', 'the stars will lean and let you go.', 'Or close your hand and open it:', 'the tunnel takes the shape of it.', 'Then follow down the brightening line,', 'and what was yours is also mine.'], ['A sphere of threads, a hush of light,', 'a door that keeps itself from sight.', 'Tap twice — the quiet answers back.', 'Spread your fingers — part the black.', 'No key, no word, no counted stair:', 'only the will to look in there.', 'The pattern turns; you turn it too,', 'and step into the waking view.'], ['Count the stars that cross the seam,', 'then knock twice on the turning gleam.', 'Stretch the weave with patient hands —', 'a door is only where it stands.', 'Beyond the glass the workshop hums,', 'and every thread to something comes.', 'Enter slow, and enter whole:', 'the mind is not a place, but a goal.'], ['What holds the centre holds the whole;', 'the light is bright, the dark is shoal.', 'Knock, and knock again, and wait —', 'the mind forgets to be a gate.', 'Push your palms through woven air,', 'and find the work already there.', 'One turn more and you are through:', 'the sphere was never closed to you.']];
+    var poemEl = document.getElementById('poem');
+    if (poemEl !== null) {
+      var poemIndex = Math.floor(Math.random() * POEMS.length);
+      function nextPoem() {
+        poemIndex = (poemIndex + 1) % POEMS.length;
+        poemEl.style.opacity = '0';
+        setTimeout(function () {
+          poemEl.innerHTML = POEMS[poemIndex].join('<br>');
+          poemEl.style.opacity = '1';
+        }, 1100);
+      }
+      poemEl.innerHTML = POEMS[poemIndex].join('<br>');
+      setInterval(nextPoem, 14000);
     }
   })();
 </script>
