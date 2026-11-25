@@ -878,20 +878,31 @@ export function apply(ctx: Context): void {
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <style>
-  html,body{margin:0;height:100%;background:#000;color:#F2F2F4;
+  html,body{margin:0;height:100%;background:#000;color:#F2F2F4;overflow:hidden;
     font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
-  .stage{height:100%;display:grid;place-items:center;padding:2rem}
-  a.go{display:block;padding:1.5rem 2.4rem;border-radius:999px;border:1px solid #6b4218;
-    background:radial-gradient(120% 200% at 50% 0%,#2a1506,#0a0908 70%);text-decoration:none;
-    color:#FFF3E2;font-size:1.05rem;letter-spacing:.22em;text-transform:uppercase;
-    box-shadow:0 0 80px rgba(217,130,43,.18), inset 0 0 40px rgba(217,130,43,.06);
+  .stage{height:100%;display:grid;place-items:center;padding:1.5rem}
+  /* The button is the mind itself: a live orb of the galaxy, labelled. */
+  a.orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
+  .orb{position:relative;width:min(68vw,320px);aspect-ratio:1;border-radius:50%;overflow:hidden;
+    background:#000;box-shadow:0 0 90px rgba(217,130,43,.20),inset 0 0 50px rgba(0,0,0,.5);
+    border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
+  .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
+  a.orb-link:hover .orb, a.orb-link:active .orb{
+    box-shadow:0 0 140px rgba(217,130,43,.34),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.5)}
+  .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
     animation:breathe 5.5s ease-in-out infinite}
-  a.go:hover{border-color:#C1440E;box-shadow:0 0 120px rgba(217,130,43,.3), inset 0 0 60px rgba(217,130,43,.1)}
-  @keyframes breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.03);opacity:1}}
-  @media (prefers-reduced-motion:reduce){a.go{animation:none}}
+  .sub{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#6b6257;margin-top:-.6rem}
+  @keyframes breathe{0%,100%{opacity:.86}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.label{animation:none}}
   .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 </style></head><body>
-<div class="stage"><a class="go" href="/flower">Into the Unknown</a></div>
+<div class="stage">
+  <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
+    <span class="orb"><iframe src="/flower?embed=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
+    <span class="label">Into the Unknown</span>
+    <span class="sub">touch the sphere</span>
+  </a>
+</div>
 <a class="skip" href="/access">skip to the workshop</a>
 </body></html>`)
       res.writeHead(200, {
