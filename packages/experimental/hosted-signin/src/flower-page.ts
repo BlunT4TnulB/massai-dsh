@@ -299,7 +299,7 @@ let driftPhase = 0;
 // The opening of the self-tour is travel only, for long enough to cross a few
 // spheres, because that first fall is the best part and a hop to a node cut it off.
 let voyageUntil = 0;
-const VOYAGE_MS = 85000;
+const VOYAGE_MS = 150000;
 let driftBase = 0;
 let driftHoldUntil = 0;
 // The screensaver: when nobody is driving, the mind drives. Any real input takes
@@ -1060,17 +1060,19 @@ function frame(now) {
     // Glide, do not flip: exponential easing with a ceiling on how far the camera
     // may turn in one frame, so a hop across the body reads as travel, not as a cut.
     const MAX_STEP = 0.011;
+    const arrived = Math.abs(dx) < 0.06 && Math.abs(pitch - wantPitch * 0.75) < 0.06;
     const step = Math.max(-MAX_STEP, Math.min(MAX_STEP, dx * 0.045));
     yaw += step;
     const dPitch = ((wantPitch * 0.75) - pitch) * 0.045;
     pitch += Math.max(-MAX_STEP, Math.min(MAX_STEP, dPitch));
     roll += (0 - roll) * 0.03;
-    // Arrived is not stopped: the body keeps turning slowly under the camera, so a
-    // node is a place you are moving through rather than a picture you reached.
-    if (!reduce && Math.abs(dx) < 0.06 && Math.abs(dPitch) < 0.06) {
-      yaw += dt * IDLE_SPEED * 0.9;
-      roll += dt * 0.0000032;
-      pitch += Math.sin(now * 0.000031) * dt * 0.0000052;
+    // Always turning, even mid-aim: the gaze settles on the star while the body keeps
+    // rolling underneath it. Without this the approach reads as flat — the zoom
+    // continues but nothing else does.
+    if (!reduce && auto) {
+      yaw += dt * IDLE_SPEED * (arrived ? 0.95 : 0.6);
+      roll += dt * (arrived ? 0.0000042 : 0.0000058);
+      pitch += Math.sin(now * 0.000031) * dt * 0.0000058;
     }
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
@@ -1085,7 +1087,7 @@ function frame(now) {
   // around wherever the hand last left the camera. A manual zoom holds it off for a
   // while, then the voyage resumes from the new place instead of snapping back.
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
-    driftPhase += dt * 0.00006;
+    driftPhase += dt * 0.000052;
     const sailing = screensaver && now < voyageUntil;
     const swing = sailing ? 1.75 : 0.85;
     // While it is sailing, the whole breath slides inward: one sphere every couple of
@@ -1142,7 +1144,10 @@ function frame(now) {
     exploreAt = voyageUntil;
   }
   if (screensaver) {
-    if (now > exploreAt && now > voyageUntil) {
+    // Only re-route when the breath is turning: switching stars mid-fall is what made
+    // the first zoom feel interrupted. At the extremes the zoom is pausing anyway.
+    const atTurn = Math.abs(Math.cos(driftPhase)) < 0.45;
+    if (now > exploreAt && now > voyageUntil && atTurn) {
       exploreAt = now + 11000 + Math.random() * 7000;
       const label = document.getElementById('nodeName');
       // When the mind has real work to remember, it walks through that: a recent
