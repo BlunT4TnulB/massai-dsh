@@ -1038,17 +1038,25 @@ function frame(now) {
   if (screensaver) {
     if (now > exploreAt) {
       exploreAt = now + 5200 + Math.random() * 3600;
-      exploreNode = (exploreNode + 37 + Math.floor(Math.random() * 40)) % nodes.length;
-      diveNode = exploreNode;
+      const label = document.getElementById('nodeName');
+      // When the mind has real work to remember, it walks through that: a recent
+      // moment is chosen, the camera goes to its star, and it says what it was.
+      // With nothing to remember, it wanders and names its own thoughts instead.
+      const live = trail.length > 0
+        ? trail[Math.floor(Math.random() * Math.min(trail.length, 8))]
+        : undefined;
+      if (live !== undefined) {
+        const seedIndex = (live.skill.length * 53 + Math.floor(Math.random() * 7)) % nodes.length;
+        exploreNode = seedIndex;
+        diveNode = seedIndex;
+        if (label) label.textContent = typeof live.label === 'string' ? live.label : live.skill;
+      } else {
+        exploreNode = (exploreNode + 37 + Math.floor(Math.random() * 40)) % nodes.length;
+        diveNode = exploreNode;
+        if (label) label.textContent = exploreNode === PORTAL ? 'the door' : roleOf(exploreNode);
+      }
       zoom = Math.random() < 0.45 ? 2.4 : 1.15;
       rippleFrom(exploreNode);
-      const label = document.getElementById('nodeName');
-      if (label) {
-        const event = trail[trail.length - 1];
-        label.textContent = event !== undefined && event.label !== undefined
-          ? String(event.label)
-          : (exploreNode === PORTAL ? 'the door' : roleOf(exploreNode));
-      }
     }
   } else {
     diveNode = diveNode >= 0 && now > focusUntil && zoom > 4 ? -1 : diveNode;
@@ -1286,10 +1294,11 @@ canvas.addEventListener('pointerup', function (event) {
   if (picked === PORTAL) {
     const label = document.getElementById('nodeName');
     if (label) label.textContent = 'entering…';
-    // Embedded in the app, the door asks the room to open. Standing alone on the
-    // web, the door is the way in: it walks you to the workshop.
+    // The door carries what you were near when you entered, so the workshop can
+    // open already knowing which thought you arrived through.
+    const thought = describe(hoverNode >= 0 ? hoverNode : picked);
     try {
-      if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter' }, '*');
+      if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter', thought: thought }, '*');
       else setTimeout(function () { location.href = '/access'; }, 420);
     } catch (error) { void error; }
   } else if (picked >= 0) {

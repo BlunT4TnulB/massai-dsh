@@ -280,6 +280,7 @@ export function intoTheUnknownPage(): string {
   .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
     animation:breathe 5.5s ease-in-out infinite}
   .sub{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#6b6257;margin-top:-.6rem}
+  .what{margin-top:.1rem;font-size:.72rem;color:#8a7c62;letter-spacing:.04em}
   @keyframes breathe{0%,100%{opacity:.86}50%{opacity:1}}
   @media (prefers-reduced-motion:reduce){.label{animation:none}}
   .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
@@ -337,6 +338,7 @@ export function intoTheUnknownPage(): string {
     <span class="orb"><iframe src="/flower?embed=1&spin=1&fit=orb&quiet=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
     <span class="label">Into the Unknown</span>
     <span class="sub">touch the sphere</span>
+    <span class="what">say what should exist — it gets built</span>
   </a>
 </div>
 <a class="skip" href="/access">skip to the workshop</a>

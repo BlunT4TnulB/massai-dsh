@@ -215,19 +215,31 @@ export function ConversationContent(props: ConversationContentProps) {
         // block keeps the model seat live because choosing a model is how the
         // user clears it.
         ? { blocked: composerBlock, placeholder: composerBlock.reason }
-        : hero ? { placeholder: t('placeholder.hero') } : {}),
+        : hero
+          ? enteredThought !== undefined
+            ? { placeholder: enteredThought }
+            : { placeholder: t('placeholder.hero') }
+          : {}),
   })
 
   // The galaxy hides one door among its stars. When it is found, the frame posts
   // one message and the composer appears — before that, the mind IS the screen.
   const [entered, setEntered] = useState(false)
+  // The door hands over the thought you were near when you entered: the workshop
+  // greets you with it, so the mind and the tool share one sentence.
+  const [enteredThought, setEnteredThought] = useState<string | undefined>(undefined)
   // Nobody is ever trapped in the mind: after a while a quiet way in appears,
   // and Enter always works. The door is an invitation, not a lock.
   const [nudged, setNudged] = useState(false)
   useEffect(() => {
     const receive = (event: MessageEvent): void => {
       const data = event.data as { type?: unknown } | null
-      if (data !== null && typeof data === 'object' && data.type === 'massai:enter') setEntered(true)
+      if (data !== null && typeof data === 'object' && data.type === 'massai:enter') {
+        setEntered(true)
+        if (typeof (data as { thought?: unknown }).thought === 'string') {
+          setEnteredThought((data as { thought: string }).thought)
+        }
+      }
     }
     window.addEventListener('message', receive)
     return () => { window.removeEventListener('message', receive) }
