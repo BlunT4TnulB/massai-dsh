@@ -214,11 +214,19 @@ function glowSprite(tint) {
 // A randomised pose for the welcome orb, so the first sight of the mind is never
 // the same twice. Inside the app the pose stays fixed, because the door lives at
 // a known place there.
+// The geometry is fixed — it is always the same flower — but the weather is not.
+// Each load draws its own palette weight, breath period, drift speed, fog paths
+// and starting pose, so two visits are the same being in a different mood.
 const SPIN = params.get('spin') === '1';
-const seedAngle = function (spread) { return (Math.random() - 0.5) * spread; };
-let yaw = 0.4 + (SPIN ? seedAngle(Math.PI * 1.4) : 0);
-let pitch = -0.35 + (SPIN ? seedAngle(0.9) : 0);
-let roll = SPIN ? seedAngle(0.8) : 0;
+const random = Math.random;
+const seedAngle = function (spread) { return (random() - 0.5) * spread; };
+const MOOD = random();
+const BREATH_SPEED = 0.00042 + random() * 0.00026;
+const DRIFT = 0.78 + random() * 0.5;
+const FOG_ENERGY = 0.75 + random() * 0.6;
+let yaw = 0.4 + seedAngle(SPIN ? Math.PI * 1.4 : 1.1);
+let pitch = -0.35 + seedAngle(0.9);
+let roll = seedAngle(0.8);
 let velYaw = 0;
 let velPitch = 0;
 let velRoll = 0;
@@ -346,7 +354,7 @@ function drawHalo(now) {
   const cx = innerWidth / 2;
   const cy = innerHeight * ANCHOR;
   const reach = Math.max(innerWidth, innerHeight) * 0.82;
-  breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * 0.00055);
+  breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * BREATH_SPEED);
   life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
   g.addColorStop(0, 'rgba(' + Math.round(58 * self.memory) + ',' + Math.round(34 * self.memory) + ','
@@ -362,8 +370,8 @@ function drawHalo(now) {
   const fogScale = Math.min(innerWidth, innerHeight) * FIT * 2.6;
   const inside = insideOf(zoom);
   for (const blob of FOG) {
-    const x = cx + Math.cos(now * blob.sx + blob.phase) * innerWidth * blob.ax;
-    const y = cy + Math.sin(now * blob.sy + blob.phase * 1.3) * innerHeight * blob.ay;
+    const x = cx + Math.cos(now * blob.sx * FOG_ENERGY + blob.phase + MOOD * 6.28) * innerWidth * blob.ax;
+    const y = cy + Math.sin(now * blob.sy * FOG_ENERGY + blob.phase * 1.3 + MOOD * 6.28) * innerHeight * blob.ay;
     const radius = fogScale * blob.radius * (0.94 + 0.06 * breath) * (1 + 0.55 * inside);
     ctx.globalAlpha = ((0.030 + 0.012 * breath) * life) * (1 + 2.4 * inside);
     ctx.drawImage(fogSprite(blob.tint), x - radius, y - radius, radius * 2, radius * 2);
@@ -980,7 +988,7 @@ function frame(now) {
       pitch += (-0.30 - pitch) * 0.03;
       roll += (0 - roll) * 0.03;
     } else if (!reduce && auto) {
-      yaw += dt * IDLE_SPEED;
+      yaw += dt * IDLE_SPEED * DRIFT;
       // It tilts as well as turns, on periods that do not divide into each other,
       // so the pose never repeats exactly.
       pitch += Math.sin(now * 0.000034) * dt * 0.0000042;

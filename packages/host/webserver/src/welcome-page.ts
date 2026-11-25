@@ -296,6 +296,9 @@ export function intoTheUnknownPage(): string {
   .drawer a{display:block;padding:.62rem .6rem;border-radius:.5rem;color:#E7E2D6;
     text-decoration:none;font-size:.94rem}
   .drawer a:hover{background:rgba(247,205,140,.09);color:#FFF3E2}
+  .drawer .group{margin:.7rem 0 .2rem .6rem;font-size:.56rem;letter-spacing:.26em;
+    text-transform:uppercase;color:#6f6555}
+  .drawer .group:first-of-type{margin-top:.2rem}
   .drawer-close{position:absolute;top:12px;right:12px;background:none;border:0;color:#8a7c62;
     font-size:18px;cursor:pointer}
 </style></head><body>
@@ -303,11 +306,14 @@ export function intoTheUnknownPage(): string {
 <nav class="drawer" id="drawer" aria-label="Everything">
   <button class="drawer-close" id="drawerClose" aria-label="Close the menu">×</button>
   <h2>Massai</h2>
+  <p class="group">Wander</p>
   <a href="/flower">The mind</a>
+  <a href="/map">Map</a>
+  <a href="/library">Library</a>
+  <p class="group">Make</p>
   <a href="/access">The workshop</a>
   <a href="/projects">Projects</a>
-  <a href="/library">Library</a>
-  <a href="/map">Map</a>
+  <p class="group">Understand</p>
   <a href="/guide">Guide</a>
   <a href="/limits">Limits</a>
   <a href="/support">Support</a>

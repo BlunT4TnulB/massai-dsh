@@ -36,17 +36,13 @@ function CornerMenu() {
     window.addEventListener('keydown', close)
     return () => { window.removeEventListener('keydown', close) }
   }, [open])
-  const links: ReadonlyArray<readonly [string, string]> = [
-    ['New conversation', '/'],
-    ['The mind', '/flower'],
-    ['Map', '/map'],
-    ['Projects', '/projects'],
-    ['Library', '/library'],
-    ['You', '/me'],
-    ['Limits', '/limits'],
-    ['Settings', '/settings'],
-    ['Support', '/support'],
-    ['Operator', '/admin'],
+  // Categorised, because a drawer is only useful if a person can find the door
+  // they meant without reading all of them.
+  const groups: ReadonlyArray<readonly [string, ReadonlyArray<readonly [string, string]>]> = [
+    ['Make', [['New conversation', '/'], ['The workshop', '/access'], ['Projects', '/projects']]],
+    ['Wander', [['The mind', '/flower'], ['Map', '/map'], ['Library', '/library']]],
+    ['Understand', [['Limits', '/limits'], ['Guide', '/guide'], ['Support', '/support']]],
+    ['Yours', [['You', '/me'], ['Settings', '/settings'], ['Operator', '/admin']]],
   ]
   return (
     <>
@@ -64,8 +60,13 @@ function CornerMenu() {
           <button type="button" className={css.drawerBackdrop} aria-label="Close the menu" onClick={() => { setOpen(false) }} />
           <nav className={css.drawer} aria-label="Everything">
             <p className={css.drawerTitle}>Massai</p>
-            {links.map(([label, href]) => (
-              <a key={href} className={css.drawerLink} href={href}>{label}</a>
+            {groups.map(([group, items]) => (
+              <div key={group} className={css.drawerGroup}>
+                <p className={css.drawerGroupTitle}>{group}</p>
+                {items.map(([label, href]) => (
+                  <a key={href} className={css.drawerLink} href={href}>{label}</a>
+                ))}
+              </div>
             ))}
           </nav>
         </div>

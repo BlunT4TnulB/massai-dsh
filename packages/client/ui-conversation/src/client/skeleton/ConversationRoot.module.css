@@ -824,3 +824,18 @@
   background: rgba(247, 205, 140, .09);
   color: #FFF3E2;
 }
+
+.drawerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: .7rem;
+}
+
+.drawerGroupTitle {
+  margin: 0 0 .28rem .55rem;
+  font-size: .58rem;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: #6f6555;
+}
