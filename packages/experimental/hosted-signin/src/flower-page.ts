@@ -314,6 +314,18 @@ let pathsOn = params.get('paths') !== '0';
 // are the mind appearing to notice itself. Visual only — nothing is transmitted — but
 // they are driven by real activity when there is any, and by a slow restlessness when
 // there is not.
+// The mark real work leaves: a star, lit and kept lit, joined to the last few of its
+// kind. Random sparks are weather; these are evidence, and they outlive the weather.
+const LIT_MS = 600000;
+const lit = new Map();
+let litTotal = -1;
+let litSkill = '';
+
+// The brief fall on arrival: when the door opens, the camera is already inside and
+// settles outward, so entering feels like arriving rather than like a cut.
+const ARRIVING = params.get('arrive') === '1' || ORB;
+let arriveUntil = 0;
+
 const SPARK_RATE = [0, 9000, 4500, 2200];
 let sparkLevel = (function () {
   try {
@@ -1226,6 +1238,32 @@ function spawnSpark(now) {
 }
 
 /**
+ * Light a link from a specific star — used when real work lights one.
+ * @param index - the star that just received work.
+ * @returns nothing.
+ */
+function spawnSparkAt(index) {
+  const from = nodes[index].p;
+  let best = -1;
+  let bestScore = -1;
+  for (let tries = 0; tries < 24; tries += 1) {
+    const candidate = Math.floor(Math.random() * nodes.length);
+    if (candidate === index) continue;
+    const d = Math.hypot(
+      nodes[candidate].p[0] - from[0],
+      nodes[candidate].p[1] - from[1],
+      nodes[candidate].p[2] - from[2],
+    );
+    if (d < 0.2 || d > 0.9) continue;
+    const score = 1 - Math.abs(d - 0.55) / 0.35;
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  }
+  if (best < 0) return;
+  sparks.push({ a: index, b: best, t0: performance.now() });
+  if (sparks.length > 14) sparks.shift();
+}
+
+/**
  * Draw the live sparks: a bright arc that fades, with both ends glowing.
  * @param now - current epoch ms.
  * @returns nothing.
@@ -1271,6 +1309,58 @@ function drawSparks(now) {
     }
   }
   ctx.globalCompositeOperation = 'source-over';
+}
+
+/**
+ * Draw the marks real work left: the lit stars and the figures joining them.
+ * @param now - current epoch ms.
+ * @returns nothing.
+ */
+function drawLit(now) {
+  if (lit.size === 0) return;
+  const monotonic = performance.now();
+  const entries = [];
+  for (const [index, entry] of lit) {
+    const age = monotonic - entry.t0;
+    if (age > LIT_MS) { lit.delete(index); continue; }
+    const life01 = 1 - age / LIT_MS;
+    entries.push({ index: index, life: life01, skill: entry.skill });
+  }
+  if (entries.length === 0) return;
+  entries.sort(function (a, b) { return a.life - b.life; });
+  ctx.globalCompositeOperation = 'lighter';
+  // the figure: join consecutive marks, brighter where they are fresh
+  ctx.beginPath();
+  let started = false;
+  let lx = 0;
+  let ly = 0;
+  const jump = Math.max(VW, VH) * 1.5;
+  for (const entry of entries) {
+    const point = nodes[entry.index].p;
+    const p = project(point[0], point[1], point[2]);
+    if (p.z <= -0.15 || p.behind === true) { started = false; continue; }
+    if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+    else if (Math.hypot(p.x - lx, p.y - ly) > jump) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+    lx = p.x;
+    ly = p.y;
+  }
+  ctx.strokeStyle = 'rgba(255,214,150,0.20)';
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // and the stars themselves
+  const sprite = glowSprite('255,236,200');
+  for (const entry of entries) {
+    const point = nodes[entry.index].p;
+    const p = project(point[0], point[1], point[2]);
+    if (p.z <= -0.2 || p.behind === true) continue;
+    const radius = (2.4 + 3.2 * entry.life) * (0.7 + p.k);
+    ctx.globalAlpha = Math.min(1, 0.25 + 0.6 * entry.life);
+    ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+    ctx.globalAlpha = 1;
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  void now;
 }
 
 function drawRipples(now) {
@@ -1369,6 +1459,16 @@ function frame(now) {
     // minutes, so a long watch keeps arriving somewhere new rather than circling one.
     if (sailing) driftBase -= dt * 0.0000075;
     zoomLogTarget = driftBase + Math.sin(driftPhase) * swing;
+  }
+  // Arrival: on a door-opened page the camera begins inside the body and settles out,
+  // so the first second is motion already in progress rather than a static cut.
+  if (ARRIVING && arriveUntil === 0) {
+    arriveUntil = now + 2600;
+    zoomLog = 1.35;
+    zoomLogTarget = 1.35;
+  }
+  if (arriveUntil !== 0 && now < arriveUntil && !dragging) {
+    zoomLogTarget += (0 - zoomLogTarget) * 0.05;
   }
   zoomLog += (zoomLogTarget - zoomLog) * 0.055;
   zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
@@ -1516,6 +1616,35 @@ if (counter) {
       + (axes.length * FAMILIES) + ' circles · one door';
   }
 
+/**
+ * Turn fresh real activity into lit stars, and remember the running total.
+ * @param bySkill - counts per capability.
+ * @param total - the running total of counted work.
+ * @returns nothing.
+ */
+function noteActivity(bySkill, total) {
+  if (!Number.isFinite(total)) return;
+  if (litTotal < 0) { litTotal = total; return; }
+  const delta = total - litTotal;
+  litTotal = total;
+  if (delta <= 0) return;
+  // one star per unit of work, capped so a burst cannot flood the body
+  const marks = Math.min(6, delta);
+  const names = Object.keys(bySkill);
+  for (let i = 0; i < marks; i += 1) {
+    const skill = names.length > 0 ? names[(i + litSkill.length) % names.length] : 'general';
+    litSkill = skill;
+    const base = Math.abs(SKILL_ORDER.indexOf(skill));
+    const index = (base * 37 + Math.floor(Math.random() * nodes.length)) % nodes.length;
+    lit.set(index, { t0: performance.now(), skill: skill });
+    spawnSparkAt(index);
+  }
+  const now = performance.now();
+  for (const [key, entry] of lit) {
+    if (now - entry.t0 > LIT_MS) lit.delete(key);
+  }
+}
+
 async function poll() {
   if (QUIET) return;
   try {
@@ -1534,6 +1663,7 @@ async function poll() {
         return { skill: skill, at: now - index * 4000 };
       });
       simulated = trail.length === 0;
+      noteActivity(skills, data.skills && typeof data.skills.total === 'number' ? data.skills.total : -1);
       const badge = document.getElementById('simulated');
       if (badge) badge.style.opacity = simulated ? '0.7' : '0';
       const hot = data.focus;
@@ -1551,6 +1681,10 @@ async function poll() {
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
+    noteActivity(
+      (data.counts && data.counts.bySkill) || {},
+      data.counts && typeof data.counts.total === 'number' ? data.counts.total : -1,
+    );
     const badge = document.getElementById('simulated');
     if (badge) badge.style.opacity = simulated ? '0.7' : '0';
     const hot = data.focus;
