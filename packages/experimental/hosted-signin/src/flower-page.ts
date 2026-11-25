@@ -275,6 +275,9 @@ let ripples = [];
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
 let thoughtTimer = 0;
+// Pathways are a reading of the work, not a feature of the body: let them be turned
+// off (P, or ?paths=0) for anyone who finds them too much.
+let pathsOn = params.get('paths') !== '0';
 // The screensaver: when nobody is driving, the mind drives. Any real input takes
 // the wheel straight back, without moving the camera the user left.
 let lastInput = performance.now();
@@ -883,16 +886,19 @@ function arcBetween(a, b, steps) {
  * while it is being used, rather than as a still object with a counter.
  */
 function drawPathways(now) {
-  if (trail.length < 2) return;
-  const recent = trail.slice(-10);
+  if (trail.length < 2 || !pathsOn) return;
+  // Only while the whole body is in view: up close these chords become long bright
+  // bars across the screen, which is not what a trace of work should look like.
+  if (zoom > 1.5) return;
+  const recent = trail.slice(-6);
   ctx.globalCompositeOperation = 'lighter';
-  ctx.lineWidth = DPR * 1.1;
+  ctx.lineWidth = DPR * 0.8;
   for (let i = 1; i < recent.length; i += 1) {
     const from = nodes[(recent[i - 1].skill.length * 37 + i) % nodes.length].p;
     const to = nodes[(recent[i].skill.length * 53 + i * 7) % nodes.length].p;
-    const arc = arcBetween(from, to, 18);
+    const arc = arcBetween(from, to, 22);
     if (arc.length === 0) continue;
-    const fresh = Math.max(0.15, 1 - (now - (recent[i].at || now)) / 90000);
+    const fresh = Math.max(0.1, 1 - (now - (recent[i].at || now)) / 75000);
     ctx.beginPath();
     let started = false;
     for (const point of arc) {
@@ -902,9 +908,9 @@ function drawPathways(now) {
       else ctx.lineTo(p.x, p.y);
     }
     // the dash walks along the arc: light running down a pathway
-    ctx.setLineDash([DPR * 3, DPR * 9]);
-    ctx.lineDashOffset = -((now * 0.06) % (DPR * 12));
-    ctx.strokeStyle = 'rgba(126,226,168,' + (0.10 + 0.34 * fresh).toFixed(3) + ')';
+    ctx.setLineDash([DPR * 2, DPR * 12]);
+    ctx.lineDashOffset = -((now * 0.05) % (DPR * 14));
+    ctx.strokeStyle = 'rgba(126,226,168,' + (0.05 + 0.17 * fresh).toFixed(3) + ')';
     ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -1350,6 +1356,7 @@ addEventListener('keydown', function (event) {
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
   if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoom = 1; zoomTarget = 1; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
+  if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'f' || event.key === 'F') {
     if (document.fullscreenElement) { void document.exitFullscreen() } else { goFullscreen() }
   }
