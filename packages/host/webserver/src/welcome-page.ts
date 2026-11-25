@@ -276,6 +276,8 @@ export function intoTheUnknownPage(): string {
     border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
   .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
   .spin{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none}
+  .slogan{margin:.1rem 0 .2rem;font-size:.72rem;letter-spacing:.1em;color:#b98f5f;
+    text-align:center;max-width:20rem;opacity:.9;transition:opacity .9s ease;min-height:1.2em}
   .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
     letter-spacing:.06em;text-align:center;font-style:italic;max-width:19rem}
   .enter{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#5f5850;
@@ -357,6 +359,7 @@ export function intoTheUnknownPage(): string {
       Follow where the bright threads wind,<br>
       and step inside the Massai mind.
     </p>
+    <p class="slogan" id="slogan">Speak the future you want to live in, then build it together.</p>
     <a class="enter" href="/flower">or go straight in →</a>
   </div>
 </div>
@@ -444,6 +447,26 @@ export function intoTheUnknownPage(): string {
     pad.addEventListener('keydown', function (event) {
       if (event.key === 'Enter' || event.key === ' ') open();
     });
+
+    // The doorway says a different true thing each visit, and changes its mind every
+    // few seconds, so the page never settles into a slogan.
+    var SLOGANS = ['Speak the future you want to live in, then build it together.', 'Name what must stand, and let the community raise it.', 'A true word lays the foundation; shared hands raise the wall.', 'Say it plainly, as though it already stands.', 'What is spoken here is made here.', 'Name the thing, and the workshop begins.', 'Say what should exist — it gets built.', 'The door is the word; the walls follow.', 'An empty yard becomes a home the moment it is named.', 'Words are the first material. Everything else arrives after.'];
+    var sloganEl = document.getElementById('slogan');
+    if (sloganEl !== null) {
+      var order = [];
+      var index = Math.floor(Math.random() * SLOGANS.length);
+      function nextSlogan() {
+        index = (index + 1 + Math.floor(Math.random() * (SLOGANS.length - 1))) % SLOGANS.length;
+        sloganEl.style.opacity = '0';
+        setTimeout(function () {
+          sloganEl.textContent = SLOGANS[index];
+          sloganEl.style.opacity = '.9';
+        }, 900);
+      }
+      sloganEl.textContent = SLOGANS[index];
+      setInterval(nextSlogan, 8000);
+      void order;
+    }
   })();
 </script>
 <a class="skip" href="/access">skip to the workshop</a>
