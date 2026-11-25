@@ -158,6 +158,19 @@ const GREEN = '126,226,168';
 const BLUE = '158,203,255';
 const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner', 'docs', 'testing', 'service'];
 const IDLE_SPEED = 0.00006 * 1.3;
+
+// The motion budget. Several things move at once; what keeps it from reading as chaos
+// is that each is smaller and slower than the one above, and their periods never line
+// up. Amplitude is in radians per millisecond of drift.
+const MOTION = {
+  yaw: { rate: 1.0 },                       // the dominant turn
+  yawSecond: { rate: 0.000019, amp: 0.48 }, // a slow sway on top of it
+  roll: { rate: 0.0000078 },                // 0.6x the turn's feel, opposite axis
+  pitchA: { rate: 0.000029, amp: 0.0000068 },
+  pitchB: { rate: 0.000041, amp: 0.0000032 },
+  // while aiming at a star the body keeps all of this at 60% — attention, not freeze
+  aiming: { scale: 0.6 },
+};
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
 // Framing by intent. The app wants the mind filling the screen, because there is
@@ -751,12 +764,19 @@ function drawGalaxy(now) {
   for (const line of FLOWER) {
     ctx.beginPath();
     let started = false;
+    let fx = 0;
+    let fy = 0;
+    const fjump = Math.max(VW, VH) * 1.5;
     for (const point of line) {
       if (point === null) { started = false; continue; }
       const p = project(point[0], point[1], point[2]);
+      if (p.behind === true) { started = false; continue; }
       if (p.z > 0) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else if (Math.hypot(p.x - fx, p.y - fy) > fjump) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
+      fx = p.x;
+      fy = p.y;
     }
     ctx.strokeStyle = 'rgba(255,236,205,' + (0.05 * life + 0.02 * breath).toFixed(3) + ')';
     ctx.lineWidth = 0.7;
@@ -837,12 +857,19 @@ function drawGalaxy(now) {
   for (const line of FLOWER) {
     ctx.beginPath();
     let started = false;
+    let fx = 0;
+    let fy = 0;
+    const fjump = Math.max(VW, VH) * 1.5;
     for (const point of line) {
       if (point === null) { started = false; continue; }
       const p = project(point[0], point[1], point[2]);
+      if (p.behind === true) { started = false; continue; }
       if (p.z <= 0) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else if (Math.hypot(p.x - fx, p.y - fy) > fjump) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
+      fx = p.x;
+      fy = p.y;
     }
     ctx.strokeStyle = 'rgba(255,240,215,' + (0.16 * life + 0.03 * breath).toFixed(3) + ')';
     ctx.lineWidth = 0.8;
@@ -947,11 +974,17 @@ function drawPathways(now) {
     const fresh = Math.max(0.1, 1 - (now - (recent[i].at || now)) / 75000);
     ctx.beginPath();
     let started = false;
+    let lx = 0;
+    let ly = 0;
+    const jump = Math.max(VW, VH) * 1.5;
     for (const point of arc) {
       const p = project(point[0], point[1], point[2]);
-      if (p.z <= -0.15) { started = false; continue; }
+      if (p.z <= -0.15 || p.behind === true) { started = false; continue; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else if (Math.hypot(p.x - lx, p.y - ly) > jump) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
+      lx = p.x;
+      ly = p.y;
     }
     // the dash walks along the arc: light running down a pathway
     ctx.setLineDash([2, 12]);
@@ -1070,9 +1103,12 @@ function frame(now) {
     // rolling underneath it. Without this the approach reads as flat — the zoom
     // continues but nothing else does.
     if (!reduce && auto) {
-      yaw += dt * IDLE_SPEED * (arrived ? 0.95 : 0.6);
-      roll += dt * (arrived ? 0.0000042 : 0.0000058);
-      pitch += Math.sin(now * 0.000031) * dt * 0.0000058;
+      // Arrived or still travelling, the body keeps turning: full weight once it is
+      // there, less while the gaze is still settling.
+      const k = arrived ? 1 : MOTION.aiming.scale;
+      yaw += dt * IDLE_SPEED * MOTION.yaw.rate * k;
+      roll += dt * MOTION.roll.rate * k;
+      pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
     }
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
@@ -1118,19 +1154,19 @@ function frame(now) {
       pitch += (-0.30 - pitch) * 0.03;
       roll += (0 - roll) * 0.03;
       if (!reduce && auto) {
-        yaw += dt * IDLE_SPEED * DRIFT * 0.7;
-        roll += dt * 0.0000052;
-        pitch += Math.sin(now * 0.000027) * dt * 0.0000062;
+        const k = MOTION.aiming.scale;
+        yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate * k;
+        roll += dt * MOTION.roll.rate * k;
+        pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
       }
     } else if (!reduce && auto) {
       // A spiral, not a spin: one slow turn, one slow roll, and a tilt on a period
       // that shares no factor with either. The pose never repeats exactly.
-      yaw += dt * IDLE_SPEED * DRIFT;
-      // Multi-axial, on rates that never line up: a turn, a roll, two tilts.
-      roll += dt * 0.0000068;
-      pitch += Math.sin(now * 0.000029) * dt * 0.0000075;
-      pitch += Math.sin(now * 0.000041 + 2.1) * dt * 0.0000042;
-      yaw += Math.sin(now * 0.000019 + 0.7) * dt * IDLE_SPEED * 0.6;
+      yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate;
+      yaw += Math.sin(now * MOTION.yawSecond.rate + 0.7) * dt * IDLE_SPEED * MOTION.yawSecond.amp;
+      roll += dt * MOTION.roll.rate;
+      pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp;
+      pitch += Math.sin(now * MOTION.pitchB.rate + 2.1) * dt * MOTION.pitchB.amp;
       pitch = Math.max(-0.55, Math.min(0.55, pitch));
     }
   }
