@@ -153,7 +153,7 @@ const ORB = params.get('fit') === 'orb';
 // A decorative orb (the welcome page) must not chat: no activity polls, no vitals,
 // no counters. It is the mind as an object, not as a dashboard.
 const QUIET = params.get('quiet') === '1' || ORB;
-const FIT = ORB ? 0.40 : EMBEDDED ? 0.58 : 0.40;
+const FIT = ORB ? 0.40 : EMBEDDED ? 0.52 : 0.40;
 
 /**
  * How far inside the body you are, 0 at rest and 1 deep in.
@@ -401,39 +401,30 @@ function drawHalo(now) {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
 
-  // Going out is not an ending either: past the sphere sit larger, dimmer copies
-  // of the same body, one beyond the next. Retreat far enough and the whole thing
-  // is a star inside something bigger.
-  const outward = Math.max(0, Math.min(1, (1.0 - zoom) / 0.7));
-  if (outward > 0.02 && quality > 0.55) {
+  // Zooming out reveals siblings: smaller bodies arranged around this one, fading
+  // in at the edges. They sit at fixed angles on the screen, so they are visible
+  // in the peripheral exactly when the body has shrunk enough to make room.
+  const outward = Math.max(0, Math.min(1, (1.0 - zoom) / 0.55));
+  if (outward > 0.02 && quality > 0.5) {
     ctx.globalCompositeOperation = 'lighter';
-    for (const step of [1, 2, 3]) {
-      const scale = 1 + step * (1.15 * outward + 0.25);
-      const alpha = outward * (0.14 / step) * life;
-      for (let i = 0; i < GREAT.length; i += 1) {
-        const points = GREAT[i];
-        ctx.beginPath();
-        let started = false;
-        for (const point of points) {
-          const p = project(point[0] * scale, point[1] * scale, point[2] * scale);
-          if (p.z <= -0.2) { started = false; continue; }
-          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.strokeStyle = 'rgba(206,168,120,' + alpha.toFixed(3) + ')';
-        ctx.lineWidth = DPR * 0.45;
-        ctx.stroke();
-      }
-      const sky = glowSprite('226,190,150');
-      for (let i = 0; i < nodes.length; i += 3) {
-        const n = nodes[i].p;
-        const p = project(n[0] * scale, n[1] * scale, n[2] * scale);
-        if (p.z <= -0.1) continue;
-        const radius = DPR * (0.8 + 0.6 * scale * 0.2);
-        ctx.globalAlpha = Math.min(1, alpha * 2.2);
-        ctx.drawImage(sky, p.x - radius, p.y - radius, radius * 2, radius * 2);
-      }
+    const ring = Math.min(innerWidth, innerHeight) * (0.62 + 0.1 * (1 - outward));
+    const siblingCount = 6;
+    for (let i = 0; i < siblingCount; i += 1) {
+      const angle = (i / siblingCount) * Math.PI * 2 + yaw * 0.2;
+      const cx2 = innerWidth / 2 + Math.cos(angle) * ring * (innerWidth / Math.min(innerWidth, innerHeight));
+      const cy2 = innerHeight * ANCHOR + Math.sin(angle) * ring * 0.55;
+      const alpha = outward * (0.10 + 0.05 * Math.sin(i * 2.4)) * life;
+      const radius = Math.min(innerWidth, innerHeight) * FIT * 0.34 * (0.6 + 0.3 * Math.sin(i * 1.7));
+      const sprite = glowSprite('224,186,138');
+      ctx.globalAlpha = alpha * 2.6;
+      ctx.drawImage(sprite, cx2 - radius, cy2 - radius, radius * 2, radius * 2);
       ctx.globalAlpha = 1;
+      // a few faint circle lines inside each sibling, so they read as bodies
+      ctx.strokeStyle = 'rgba(206,168,120,' + (alpha * 0.8).toFixed(3) + ')';
+      ctx.lineWidth = DPR * 0.5;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, radius * 0.82, 0, Math.PI * 2);
+      ctx.stroke();
     }
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -984,8 +975,8 @@ function frame(now) {
   const live = focus !== null && now < focusUntil;
   bloom += ((live ? 1 : 0) - bloom) * 0.035;
   const spinning = Math.abs(velYaw) + Math.abs(velPitch) + Math.abs(velRoll) > 0.00008;
-  // The dive: aim the chosen star at the viewer and come close enough to see the
-  // two circles that cross there. Returning is the same motion, unwound.
+  // The dive aims the camera at a chosen star; the hand decides the depth. Zoom
+  // in yourself and the child galaxies inside it surface — never a forced zoom.
   if (diveNode >= 0 && !dragging && !spinning) {
     const node = nodes[diveNode].p;
     const wantYaw = Math.atan2(-node[0], node[2]);
@@ -993,10 +984,9 @@ function frame(now) {
     let dx = (wantYaw - yaw) % (Math.PI * 2);
     if (dx > Math.PI) dx -= Math.PI * 2;
     if (dx < -Math.PI) dx += Math.PI * 2;
-    yaw += dx * 0.055;
-    pitch += ((wantPitch * 0.75) - pitch) * 0.055;
-    roll += (0 - roll) * 0.055;
-    zoom += (2.0 - zoom) * 0.05;
+    yaw += dx * 0.06;
+    pitch += ((wantPitch * 0.75) - pitch) * 0.06;
+    roll += (0 - roll) * 0.06;
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
     // No automatic retreat: where you put the camera is yours to keep. Coming back
@@ -1284,15 +1274,13 @@ canvas.addEventListener('pointerup', function (event) {
   canvas.style.cursor = 'grab';
   // A tap enters the star under it; a tap on empty space comes back out.
   const picked = nodeAt(event.clientX, event.clientY);
-  if (picked >= 0 && picked !== PORTAL) {
-    // A thought, not a door: name it, then let it be.
+  if (picked >= 0) {
+    // Entering any star is exploration: the camera aims at it and, as you zoom in,
+    // its inner galaxy surfaces. The door is the one star that also opens the
+    // workshop — everything else just lets you travel through it.
+    diveNode = picked;
     const label = document.getElementById('nodeName');
-    if (label) {
-      label.textContent = describe(picked);
-      clearTimeout(thoughtTimer);
-      thoughtTimer = setTimeout(function () { if (label) label.textContent = ''; }, 2600);
-    }
-    return;
+    if (label) label.textContent = describe(picked);
   }
   if (picked === PORTAL) {
     const label = document.getElementById('nodeName');
