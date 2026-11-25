@@ -1105,10 +1105,17 @@ function frame(now) {
     velPitch = 0;
     velRoll = 0;
     if (live) {
+      // Attention steers the gaze, it never freezes the body: a slow turn and roll
+      // continue underneath whatever it is looking at.
       const targetYaw = -Math.atan2(focus.y, focus.x);
       yaw += (targetYaw - yaw) * 0.03;
       pitch += (-0.30 - pitch) * 0.03;
       roll += (0 - roll) * 0.03;
+      if (!reduce && auto) {
+        yaw += dt * IDLE_SPEED * DRIFT * 0.7;
+        roll += dt * 0.0000022;
+        pitch += Math.sin(now * 0.000027) * dt * 0.0000045;
+      }
     } else if (!reduce && auto) {
       // A spiral, not a spin: one slow turn, one slow roll, and a tilt on a period
       // that shares no factor with either. The pose never repeats exactly.
@@ -1202,7 +1209,9 @@ function applyLevel(level) {
   for (let a = 0; a < Math.min(6, level); a += 1) agents.push({ id: 'sim-' + a, steps: 2 + a * 2 });
   const target = nodes[(level * 97) % nodes.length].p;
   focus = { x: target[0], y: target[1], z: target[2] };
-  focusUntil = performance.now() + 600000;
+  // A simulated moment is a moment, not a lock: twelve seconds of attention and then
+  // the body returns to turning on its own.
+  focusUntil = performance.now() + 12000;
   ripples.push({ t0: performance.now(), strength: 1 });
   simulated = true;
   if (counter) {
