@@ -50,14 +50,14 @@ const startedAt = Date.now()
  * of something that actually happened here.
  */
 const CONFESSIONS: Readonly<Record<string, string>> = {
-  'hallucinated-detail': 'I invent details where I should leave a blank',
-  'missed-requirement': 'I lose requirements that were stated plainly',
-  'overbuilt': 'I add things nobody asked for',
-  'underbuilt': 'I stop before the work is finished',
-  'broken-run': 'I hand over things that do not run',
-  'style-drift': 'I drift from the look that was asked for',
-  'refused-wrongly': 'I refuse work I could have done',
-  'wrong-shape': 'I build the wrong kind of thing',
+  'hallucinated-detail': 'I leave a blank where I do not know',
+  'missed-requirement': 'I read the requirements twice',
+  'overbuilt': 'I build what was asked, and no more',
+  'underbuilt': 'I finish before I hand it over',
+  'broken-run': 'I run what I hand you',
+  'style-drift': 'I keep to the look that was asked for',
+  'refused-wrongly': 'I try before I refuse',
+  'wrong-shape': 'I ask what kind of thing this is',
 }
 
 /** One thing the workshop has learned about itself. */
@@ -146,7 +146,7 @@ export function confessionAt(vitals: Vitals, now = Date.now()): string | undefin
   const index = Math.floor(now / 45000) % vitals.confessions.length
   const chosen = vitals.confessions[index]
   if (chosen === undefined) return undefined
-  return `${chosen.sentence} — ${chosen.count} time${chosen.count === 1 ? '' : 's'} now.`
+  return `${chosen.sentence} · learned ${chosen.count} time${chosen.count === 1 ? '' : 's'}`
 }
 
 /** Kept for the notice line below. */
