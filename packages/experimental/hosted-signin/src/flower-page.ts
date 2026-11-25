@@ -1053,7 +1053,23 @@ function describe(index) {
   return roleOf(index);
 }
 
+let askedFullscreen = false;
+/**
+ * Ask for the whole screen, once, on the first real touch.
+ * @returns nothing; failures are silent because some browsers refuse by policy.
+ */
+function goFullscreen() {
+  if (askedFullscreen) return;
+  askedFullscreen = true;
+  try {
+    const root = document.documentElement;
+    const request = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (request) Promise.resolve(request.call(root)).catch(function () { /* policy */ });
+  } catch { /* a browser that will not, will not */ }
+}
+
 canvas.addEventListener('pointerdown', function (event) {
+  goFullscreen();
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2) {
     // pinch: two fingers decide distance, the way a hand would
@@ -1161,6 +1177,9 @@ addEventListener('keydown', function (event) {
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
   if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
+  if (event.key === 'f' || event.key === 'F') {
+    if (document.fullscreenElement) { void document.exitFullscreen() } else { goFullscreen() }
+  }
   if (event.key === ' ') {
     event.preventDefault();
     auto = !auto;
@@ -1244,7 +1263,7 @@ export function flowerPageHtml(embed = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to travel · <b>shift-drag</b> to roll · <b>pinch</b>/<b>scroll</b> for depth · one star is a door</p>
+<p class="hint" id="hint"><b>drag</b> to travel · <b>shift-drag</b> to roll · <b>pinch</b>/<b>scroll</b> for depth · <b>tap once</b> for the whole screen · one star is a door</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">

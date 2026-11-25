@@ -265,7 +265,7 @@ export function welcomePage(line?: number, cookieHeader = ''): string {
 
     <!-- The immersion comes before the explanation: the mind is the first thing
          you meet, and the one button that opens it says what the tagline says. -->
-    <a class="into" href="/flower">
+    <a class="into" href="/unknown">
       <span class="into-title">Into the Unknown</span>
       <span class="into-note">enter the mind — drag, roll, dive · find the one door</span>
     </a>

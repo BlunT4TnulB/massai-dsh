@@ -865,6 +865,44 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // The black page: nothing but a button. This is the first thing somebody meets
+  // if they follow the door's own promise, and it asks for exactly one decision.
+  ctx.webServer.register({
+    kind: 'exact', path: '/unknown', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Into the Unknown — Massai</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#F2F2F4;
+    font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  .stage{height:100%;display:grid;place-items:center;padding:2rem}
+  a.go{display:block;padding:1.5rem 2.4rem;border-radius:999px;border:1px solid #6b4218;
+    background:radial-gradient(120% 200% at 50% 0%,#2a1506,#0a0908 70%);text-decoration:none;
+    color:#FFF3E2;font-size:1.05rem;letter-spacing:.22em;text-transform:uppercase;
+    box-shadow:0 0 80px rgba(217,130,43,.18), inset 0 0 40px rgba(217,130,43,.06);
+    animation:breathe 5.5s ease-in-out infinite}
+  a.go:hover{border-color:#C1440E;box-shadow:0 0 120px rgba(217,130,43,.3), inset 0 0 60px rgba(217,130,43,.1)}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.03);opacity:1}}
+  @media (prefers-reduced-motion:reduce){a.go{animation:none}}
+  .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+</style></head><body>
+<div class="stage"><a class="go" href="/flower">Into the Unknown</a></div>
+<a class="skip" href="/access">skip to the workshop</a>
+</body></html>`)
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',
