@@ -1573,6 +1573,13 @@ function frame(now) {
   }
   octaveScale = 1;
   life = lifeBase;
+  if (now > sparkNext) {
+    spawnSpark(now);
+    const base = SPARK_RATE[Math.max(0, Math.min(3, sparkLevel))] || 6000;
+    sparkNext = now + base * (0.6 + Math.random() * 0.9);
+  }
+  drawSparks(now);
+  drawLit(now);
   drawPathways(now);
   drawAgents();
   drawRipples(now);
