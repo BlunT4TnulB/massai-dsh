@@ -186,8 +186,11 @@ function insideOf(z) {
 // is unbounded in both directions and the visible size always sits in [1, R).
 const OCTAVE = 3.6;
 const LOG_OCTAVE = Math.log(OCTAVE);
-let zoomLog = 0;
-let zoomLogTarget = 0;
+// ?z=<log> starts the camera at a given depth, which is how a screenshot can show
+// any octave without a hand on the glass.
+const START_Z = Number(params.get('z') ?? '0');
+let zoomLog = Number.isFinite(START_Z) ? START_Z : 0;
+let zoomLogTarget = zoomLog;
 let octaveScale = 1;
 // Dead centre now: nothing is waiting at the foot of the screen to make room for.
 const ANCHOR = 0.5;
