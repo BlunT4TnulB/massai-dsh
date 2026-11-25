@@ -236,6 +236,12 @@ let ripples = [];
 let self = { energy: 1, memory: 1, wisdom: 0, works: 0, notice: '', awake: 0 };
 let confessTimer = 0;
 let thoughtTimer = 0;
+// The screensaver: when nobody is driving, the mind drives. Any real input takes
+// the wheel straight back, without moving the camera the user left.
+let lastInput = performance.now();
+let screensaver = false;
+let exploreAt = 0;
+let exploreNode = -1;
 let simLevel = 0;
 let hoverNode = -1;
 let diveNode = -1;
@@ -363,6 +369,43 @@ function drawHalo(now) {
   ctx.drawImage(fogSprite('255,214,160'), cx - vein, cy - vein, vein * 2, vein * 2);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+
+  // Going out is not an ending either: past the sphere sit larger, dimmer copies
+  // of the same body, one beyond the next. Retreat far enough and the whole thing
+  // is a star inside something bigger.
+  const outward = Math.max(0, Math.min(1, (1.0 - zoom) / 0.7));
+  if (outward > 0.02) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const step of [1, 2, 3]) {
+      const scale = 1 + step * (1.15 * outward + 0.25);
+      const alpha = outward * (0.14 / step) * life;
+      for (let i = 0; i < GREAT.length; i += 1) {
+        const points = GREAT[i];
+        ctx.beginPath();
+        let started = false;
+        for (const point of points) {
+          const p = project(point[0] * scale, point[1] * scale, point[2] * scale);
+          if (p.z <= -0.2) { started = false; continue; }
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.strokeStyle = 'rgba(206,168,120,' + alpha.toFixed(3) + ')';
+        ctx.lineWidth = DPR * 0.45;
+        ctx.stroke();
+      }
+      const sky = glowSprite('226,190,150');
+      for (let i = 0; i < nodes.length; i += 3) {
+        const n = nodes[i].p;
+        const p = project(n[0] * scale, n[1] * scale, n[2] * scale);
+        if (p.z <= -0.1) continue;
+        const radius = DPR * (0.8 + 0.6 * scale * 0.2);
+        ctx.globalAlpha = Math.min(1, alpha * 2.2);
+        ctx.drawImage(sky, p.x - radius, p.y - radius, radius * 2, radius * 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
 
   // The shape, stated: at full retreat the whole thing is one sphere, so it gets
   // a limb — faint, and gone as soon as you travel in.
@@ -648,12 +691,13 @@ function drawGalaxy(now) {
     ctx.globalAlpha = strength * (isDoor ? 1 : 0.85);
     ctx.drawImage(sprite, p.x - core, p.y - core, core * 2, core * 2);
     ctx.globalAlpha = 1;
-    // The door is the only star with a ring: findable at rest, still not a sign.
-    if (entry.index === PORTAL) {
+    // The door is an Easter egg, not a signpost: the ring appears only when you are
+    // close enough to be looking, or when the pointer is already on it.
+    if (entry.index === PORTAL && (zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + DPR * 3) * DPR * p.k, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,242,214,' + (0.20 + 0.16 * breath).toFixed(3) + ')';
+      ctx.strokeStyle = 'rgba(255,242,214,' + (0.18 + 0.14 * breath).toFixed(3) + ')';
       ctx.lineWidth = DPR * 1.2;
       ctx.stroke();
     }
@@ -847,6 +891,14 @@ function drawAgents() {
   });
 }
 
+/** Send a ripple outward from one star, the way work does. */
+function rippleFrom(index) {
+  const node = nodes[index];
+  ripples.push({ t0: performance.now(), strength: 0.8 });
+  const label = nodes[index] === undefined ? null : node;
+  void label;
+}
+
 function drawRipples(now) {
   for (const ripple of ripples) {
     const radius = ((now - ripple.t0) / 1000) * 1.1;
@@ -924,9 +976,40 @@ function frame(now) {
       roll += (0 - roll) * 0.03;
     } else if (!reduce && auto) {
       yaw += dt * IDLE_SPEED;
-      roll += (0 - roll) * 0.01;
+      // It tilts as well as turns, on periods that do not divide into each other,
+      // so the pose never repeats exactly.
+      pitch += Math.sin(now * 0.000034) * dt * 0.0000042;
+      roll += Math.sin(now * 0.000021 + 1.7) * dt * 0.0000056;
+      pitch = Math.max(-0.6, Math.min(0.6, pitch));
     }
   }
+  // The screensaver: forty-five seconds of stillness and the mind takes itself for
+  // a walk. It picks stars, names them, dives and withdraws — the same voyage a
+  // hand would make, on its own schedule.
+  if (!screensaver && now - lastInput > 45000) {
+    screensaver = true;
+    document.body.classList.add('screensaver');
+    exploreAt = now;
+  }
+  if (screensaver) {
+    if (now > exploreAt) {
+      exploreAt = now + 5200 + Math.random() * 3600;
+      exploreNode = (exploreNode + 37 + Math.floor(Math.random() * 40)) % nodes.length;
+      diveNode = exploreNode;
+      zoom = Math.random() < 0.45 ? 2.4 : 1.15;
+      rippleFrom(exploreNode);
+      const label = document.getElementById('nodeName');
+      if (label) {
+        const event = trail[trail.length - 1];
+        label.textContent = event !== undefined && event.label !== undefined
+          ? String(event.label)
+          : (exploreNode === PORTAL ? 'the door' : roleOf(exploreNode));
+      }
+    }
+  } else {
+    diveNode = diveNode >= 0 && now > focusUntil && zoom > 4 ? -1 : diveNode;
+  }
+
   document.body.classList.toggle('deep', zoom > 2.2);
   drawHalo(now);
   drawTrail(now);
@@ -1068,7 +1151,20 @@ function goFullscreen() {
   } catch { /* a browser that will not, will not */ }
 }
 
+/**
+ * Note that a person is here: stops the screensaver and resets the idle clock.
+ * @returns nothing.
+ */
+function wake() {
+  lastInput = performance.now();
+  if (screensaver) {
+    screensaver = false;
+    document.body.classList.remove('screensaver');
+  }
+}
+
 canvas.addEventListener('pointerdown', function (event) {
+  wake();
   goFullscreen();
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2) {
@@ -1087,11 +1183,12 @@ canvas.addEventListener('pointerdown', function (event) {
   canvas.style.cursor = 'grabbing';
 });
 canvas.addEventListener('pointermove', function (event) {
+  wake();
   if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
     const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-    zoom = Math.max(0.42, Math.min(16, zoomAtPinch * (now / pinchStart)));
+    zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (now / pinchStart)));
     return;
   }
   if (!reduce) {
@@ -1165,10 +1262,12 @@ canvas.addEventListener('pointercancel', function (event) {
 });
 addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
+  wake();
   event.preventDefault();
-  zoom = Math.max(0.42, Math.min(16, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoom = Math.max(0.16, Math.min(20, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
 }, { passive: false });
 addEventListener('keydown', function (event) {
+  wake();
   if (event.key === 'ArrowLeft') yaw -= 0.1;
   if (event.key === 'ArrowRight') yaw += 0.1;
   if (event.key === 'ArrowUp') pitch = Math.max(-1.5, pitch - 0.07);
@@ -1245,6 +1344,11 @@ export function flowerPageHtml(embed = false): string {
      interface says. Lost is a feature here, not a failure. */
   .deep .overlay, .deep .hint, .deep .shapes, .deep .sim-ui, .deep .counter,
   .deep .settled, .deep .sim, .deep .node-name { opacity: .12; transition: opacity 1.2s ease }
+  /* Screensaver: the mind is the whole screen and it narrates itself quietly. */
+  body.screensaver .overlay, body.screensaver .hint, body.screensaver .shapes,
+  body.screensaver .sim-ui, body.screensaver .counter, body.screensaver .settled,
+  body.screensaver .sim, body.screensaver .toward, body.screensaver .back { opacity: 0; transition: opacity 2s ease }
+  body.screensaver .node-name { opacity: .55; transition: opacity 2s ease }
   body.embed .overlay, body.embed .hint, body.embed .shapes, body.embed .sim-ui,
   body.embed .being, body.embed .confession, body.embed .counter, body.embed .settled,
   body.embed .sim { display: none !important }
