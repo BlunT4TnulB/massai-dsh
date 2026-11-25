@@ -276,7 +276,10 @@ export function apply(ctx: Context): void {
       ]
       return () => { for (const dispose of disposers) dispose() }
     }, 'account: desktop credential readiness')
-    ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    // Massai: the first thing a person meets is the mind, never a "welcome to
+    // DeepSeek Harness" modal with a disclaimer. The onboarding overlay only
+    // exists on the desktop shell, where there is no front door to protect.
+    if (desktop) ctx.slots.inject('shell.overlay', () => ctx.slots.register({
       name: 'shell.overlay', id: 'desktop-onboarding', locale: 'settings.account',
       inject: (): DesktopOnboardingInjected => ({
         hooks: { account: operations.hooks.account, onboarding: controller.state },
