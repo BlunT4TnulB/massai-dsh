@@ -1159,16 +1159,10 @@ function applyLevel(level) {
       + (axes.length * FAMILIES) + ' circles · one door';
   }
 }
-const slider = document.getElementById('level');
-// The simulator is an instrument, not a feature: it is removed from the mind's own
-// screen unless it was explicitly asked for with ?sim=1 (it also lives in settings).
-if (slider !== null && params.get('sim') !== '1') {
-  const ui = slider.closest('.sim-ui');
-  if (ui !== null) ui.remove();
-} else if (slider !== null) {
-  slider.addEventListener('input', function () { applyLevel(Number(slider.value)); });
-  applyLevel(Number(slider.value));
-}
+// The simulator has no element: double tap steps it up, triple tap steps it down,
+// and ?sim=<n> can start it for a photograph or a test.
+const START_LEVEL = Number(params.get('sim') ?? '0');
+if (Number.isFinite(START_LEVEL) && START_LEVEL > 0) applyLevel(Math.min(LEVELS.length - 1, Math.floor(START_LEVEL)));
 if (counter) {
     counter.textContent = 'Massai · ' + (nodes.length + EXTRA_NODES.length) + ' thoughts · '
       + (axes.length * FAMILIES) + ' circles · one door';
@@ -1286,6 +1280,7 @@ function wake() {
 canvas.addEventListener('pointerdown', function (event) {
   wake();
   goFullscreen();
+  tapStart = { x: event.clientX, y: event.clientY };
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2) {
     // Two fingers own the camera: their spread sets the depth, their shared motion
@@ -1347,41 +1342,87 @@ canvas.addEventListener('pointermove', function (event) {
   canvas.dataset.drag = event.clientX + ',' + event.clientY;
   if (hint) hint.style.opacity = '0';
 });
+// The simulator has no slider any more: it lives on the glass. One tap explores,
+// two taps step the simulated activity up (rolling over to none at the top), three
+// taps step it down. A short buffer resolves the count, so a double tap is never
+// mistaken for two separate taps.
+let tapCount = 0;
+let tapTimer = 0;
+let tapStart = { x: 0, y: 0 };
+
+function flashNote(text) {
+  const label = document.getElementById('nodeName');
+  if (label === null) return;
+  label.textContent = text;
+  clearTimeout(thoughtTimer);
+  thoughtTimer = setTimeout(function () { label.textContent = ''; }, 1800);
+}
+
+/**
+ * Resolve a run of taps into one action.
+ * @returns nothing; the pending tap run is consumed.
+ */
+function resolveTaps() {
+  const n = tapCount;
+  tapCount = 0;
+  if (n >= 3) {
+    applyLevel(Math.max(0, simLevel - 1));
+    flashNote('simulate · ' + (LEVELS[simLevel] || 'none'));
+    return;
+  }
+  if (n === 2) {
+    applyLevel(simLevel >= LEVELS.length - 1 ? 0 : simLevel + 1);
+    flashNote(simLevel === 0 ? 'simulate · none' : 'simulate · ' + LEVELS[simLevel]);
+    return;
+  }
+  // a single tap: the old behaviour, explore what is under it
+  const picked = lastTapPick;
+  if (picked === PORTAL) {
+    const thought = describe(hoverNode >= 0 ? hoverNode : picked);
+    flashNote('entering…');
+    try {
+      if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter', thought: thought }, '*');
+      else setTimeout(function () { location.href = '/access'; }, 420);
+    } catch (error) { void error; }
+    return;
+  }
+  if (picked >= 0) {
+    diveNode = picked;
+    flashNote(describe(picked));
+    return;
+  }
+  if (diveNode >= 0) {
+    diveNode = -1;
+    flashNote('');
+  }
+}
+
+let lastTapPick = -1;
+
+/**
+ * Record one tap and restart the buffer that resolves it.
+ * @param x - pointer x in CSS pixels.
+ * @param y - pointer y in CSS pixels.
+ * @returns nothing.
+ */
+function noteTap(x, y) {
+  tapCount += 1;
+  if (tapCount === 1) lastTapPick = nodeAt(x, y);
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(resolveTaps, 300);
+}
+
 canvas.addEventListener('pointerup', function (event) {
   pointers.delete(event.pointerId);
   if (pointers.size < 2) pinchStart = 0;
   if (!dragging) return;
   dragging = false;
   canvas.style.cursor = 'grab';
-  // A tap enters the star under it; a tap on empty space comes back out.
-  const picked = nodeAt(event.clientX, event.clientY);
-  if (picked >= 0) {
-    // Entering any star is exploration: the camera aims at it and, as you zoom in,
-    // its inner galaxy surfaces. The door is the one star that also opens the
-    // workshop — everything else just lets you travel through it.
-    diveNode = picked;
-    const label = document.getElementById('nodeName');
-    if (label) label.textContent = describe(picked);
-  }
-  if (picked === PORTAL) {
-    const label = document.getElementById('nodeName');
-    if (label) label.textContent = 'entering…';
-    // The door carries what you were near when you entered, so the workshop can
-    // open already knowing which thought you arrived through.
-    const thought = describe(hoverNode >= 0 ? hoverNode : picked);
-    try {
-      if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter', thought: thought }, '*');
-      else setTimeout(function () { location.href = '/access'; }, 420);
-    } catch (error) { void error; }
-  } else if (picked >= 0) {
-    diveNode = picked;
-    const label = document.getElementById('nodeName');
-    if (label) label.textContent = describe(picked);
-  } else if (diveNode >= 0) {
-    diveNode = -1;
-    const label = document.getElementById('nodeName');
-    if (label) label.textContent = '';
-  }
+  // A tap is only a tap: a drag is a drag. Everything below assumes the pointer
+  // barely moved, so a flick never counts as a double tap.
+  const moved = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
+  if (moved > 12) return;
+  noteTap(event.clientX, event.clientY);
 });
 canvas.addEventListener('pointercancel', function (event) {
   pointers.delete(event.pointerId);
@@ -1505,7 +1546,7 @@ export function flowerPageHtml(embed = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> to move the centre and the depth · <b>scroll</b> for depth · one star is a door</p>
+<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>double tap</b> stirs it · one star is a door</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">
