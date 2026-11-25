@@ -1266,46 +1266,114 @@ function spawnSparkAt(index) {
 }
 
 /**
- * Draw the live sparks: a bright arc that fades, with both ends glowing.
+ * Draw the live sparks as plasma: a wandering filament with a bright core, a halo, a
+ * flicker, and an occasional branch — not a straight streak. The path is the same pair
+ * of stars every frame, but its shape moves, so it reads as discharge rather than line.
  * @param now - current epoch ms.
  * @returns nothing.
  */
 function drawSparks(now) {
   if (sparks.length === 0) return;
+  const jump = Math.max(VW, VH) * 1.5;
   ctx.globalCompositeOperation = 'lighter';
   for (let i = sparks.length - 1; i >= 0; i -= 1) {
     const spark = sparks[i];
     const age = now - spark.t0;
-    const life01 = 1 - age / 1300;
+    const life01 = 1 - age / 2200;
     if (life01 <= 0) { sparks.splice(i, 1); continue; }
     const a = nodes[spark.a].p;
     const b = nodes[spark.b].p;
-    const arc = arcBetween(a, b, 22);
-    ctx.beginPath();
-    let started = false;
-    let lx = 0;
-    let ly = 0;
-    const jump = Math.max(VW, VH) * 1.5;
-    for (const point of arc) {
+    const arc = arcBetween(a, b, 26);
+    const seed = (spark.a * 37 + spark.b * 11) % 100;
+
+    // project the geodesic, then push each sample sideways. The displacement is a
+    // travelling wave with a little per-sample jitter, strongest in the middle.
+    const path = [];
+    let total = 0;
+    for (let n = 0; n < arc.length; n += 1) {
+      const point = arc[n];
       const p = project(point[0], point[1], point[2]);
-      if (p.z <= -0.15 || p.behind === true) { started = false; continue; }
-      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-      else if (Math.hypot(p.x - lx, p.y - ly) > jump) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-      lx = p.x;
-      ly = p.y;
+      if (p.z <= -0.15 || p.behind === true) { path.push(null); continue; }
+      path.push({ x: p.x, y: p.y });
     }
-    const fade = life01 * life01;
-    ctx.strokeStyle = 'rgba(255,246,222,' + (0.75 * fade).toFixed(3) + ')';
-    ctx.lineWidth = 1.6 + 2.4 * life01;
-    ctx.stroke();
+    const live = [];
+    for (let n = 0; n < path.length; n += 1) {
+      const here = path[n];
+      if (here === null) { live.push(null); continue; }
+      const u = n / (path.length - 1);
+      const belly = Math.sin(u * Math.PI);
+      const previous = path[n - 1] ?? path[n + 1];
+      if (previous === null || previous === undefined) { live.push(here); continue; }
+      const dx = here.x - previous.x;
+      const dy = here.y - previous.y;
+      const length = Math.hypot(dx, dy) || 1;
+      total += length;
+      // wave along the arc, plus fine crackle that changes every frame
+      const wave = Math.sin(u * 9 + now * 0.004 + seed) * 0.65
+        + Math.sin(u * 21 - now * 0.011 + seed * 1.7) * 0.35
+        + Math.sin(now * 0.02 + n * 1.9 + seed) * 0.18;
+      const amplitude = Math.min(24, 6 + total * 0.04) * belly;
+      live.push({
+        x: here.x + (-dy / length) * wave * amplitude,
+        y: here.y + (dx / length) * wave * amplitude,
+      });
+    }
+
+    const fade = Math.pow(life01, 1.6);
+    const flicker = 0.78 + 0.22 * Math.sin(now * 0.04 + seed * 2.3);
+    const glow = fade * flicker;
+
+    /** One pass of the filament at a given width and strength. */
+    const stroke = function (width, alpha) {
+      ctx.beginPath();
+      let started = false;
+      let lx = 0;
+      let ly = 0;
+      for (const point of live) {
+        if (point === null) { started = false; continue; }
+        if (!started) { ctx.moveTo(point.x, point.y); started = true; }
+        else if (Math.hypot(point.x - lx, point.y - ly) > jump) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+        lx = point.x;
+        ly = point.y;
+      }
+      ctx.strokeStyle = 'rgba(255,246,226,' + Math.max(0, Math.min(1, alpha * glow)).toFixed(3) + ')';
+      ctx.lineWidth = width;
+      ctx.stroke();
+    };
+
+    // halo, body, core — the layers are what make it read as plasma rather than a pen
+    stroke(9 + 5 * life01, 0.10);
+    stroke(3.6 + 2.2 * life01, 0.26);
+    stroke(1.1 + 0.5 * life01, 0.9);
+
+    // a branch, now and then: plasma forks
+    if (seed % 3 === 0 && live.length > 8) {
+      const forkAt = 6 + (seed % 5);
+      const origin = live[forkAt];
+      if (origin !== null && origin !== undefined) {
+        ctx.beginPath();
+        ctx.moveTo(origin.x, origin.y);
+        let px = origin.x;
+        let py = origin.y;
+        for (let n = 1; n <= 5; n += 1) {
+          px += Math.sin(now * 0.012 + n * 2.4 + seed) * 5;
+          py += Math.cos(now * 0.015 + n * 1.7 + seed) * 5 - 3;
+          ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = 'rgba(255,240,214,' + Math.max(0, Math.min(1, 0.5 * glow)).toFixed(3) + ')';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+      }
+    }
+
     // both ends flash, so the link reads as a conversation rather than a line
     const sprite = glowSprite('255,244,224');
     for (const node of [a, b]) {
       const p = project(node[0], node[1], node[2]);
       if (p.z <= -0.2 || p.behind === true) continue;
       const radius = (2.2 + 6 * life01) * (0.6 + p.k);
-      ctx.globalAlpha = 0.55 * fade;
+      ctx.globalAlpha = 0.55 * glow;
       ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
       ctx.globalAlpha = 1;
     }
@@ -1313,11 +1381,6 @@ function drawSparks(now) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-/**
- * Draw the marks real work left: the lit stars and the figures joining them.
- * @param now - current epoch ms.
- * @returns nothing.
- */
 function drawLit(now) {
   if (lit.size === 0) return;
   const monotonic = performance.now();
