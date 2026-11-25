@@ -270,12 +270,14 @@ export function intoTheUnknownPage(): string {
   html,body{margin:0;height:100%;background:#000;color:#F2F2F4;overflow:hidden;
     font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
   .stage{height:100%;display:grid;place-items:center;padding:1.5rem}
-  .orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
+  .orb-link{display:flex;flex-direction:column;align-items:center;gap:1.05rem;text-decoration:none}
   .orb{position:relative;width:min(68vw,320px);aspect-ratio:1;border-radius:50%;overflow:hidden;
     background:#000;box-shadow:0 0 90px rgba(217,130,43,.20),inset 0 0 50px rgba(0,0,0,.5);
     border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
   .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
   .spin{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none}
+  .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
+    letter-spacing:.06em;text-align:center;font-style:italic;max-width:19rem}
   .enter{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#5f5850;
     text-decoration:none;border-bottom:1px solid #2b2620}
   .enter:hover{color:#b98f5f;border-color:#5a4a2e}
@@ -345,8 +347,16 @@ export function intoTheUnknownPage(): string {
             aria-label="The mind. Turn it freely. Knock twice, or open your hand, to enter."></span>
     </span>
     <span class="label">Into the Unknown</span>
-    <span class="sub">it turns for anyone · a knock twice, or a hand that opens</span>
-    <span class="what">say what should exist — it gets built</span>
+    <p class="poem">
+      Two quick taps upon the light,<br>
+      or spread your fingers wide in flight.<br>
+      Knock upon the swirling glass<br>
+      to wake the stars and let you pass.<br>
+      Stretch the tunnel, deep and grand —<br>
+      an endless, living, thinking land.<br>
+      Follow where the bright threads wind,<br>
+      and step inside the Massai mind.
+    </p>
     <a class="enter" href="/flower">or go straight in →</a>
   </div>
 </div>
