@@ -1086,7 +1086,11 @@ function frame(now) {
   // while, then the voyage resumes from the new place instead of snapping back.
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
     driftPhase += dt * 0.00006;
-    const swing = (screensaver && now < voyageUntil) ? 1.75 : 0.85;
+    const sailing = screensaver && now < voyageUntil;
+    const swing = sailing ? 1.75 : 0.85;
+    // While it is sailing, the whole breath slides inward: one sphere every couple of
+    // minutes, so a long watch keeps arriving somewhere new rather than circling one.
+    if (sailing) driftBase -= dt * 0.0000075;
     zoomLogTarget = driftBase + Math.sin(driftPhase) * swing;
   }
   zoomLog += (zoomLogTarget - zoomLog) * 0.055;
@@ -1113,15 +1117,18 @@ function frame(now) {
       roll += (0 - roll) * 0.03;
       if (!reduce && auto) {
         yaw += dt * IDLE_SPEED * DRIFT * 0.7;
-        roll += dt * 0.0000022;
-        pitch += Math.sin(now * 0.000027) * dt * 0.0000045;
+        roll += dt * 0.0000052;
+        pitch += Math.sin(now * 0.000027) * dt * 0.0000062;
       }
     } else if (!reduce && auto) {
       // A spiral, not a spin: one slow turn, one slow roll, and a tilt on a period
       // that shares no factor with either. The pose never repeats exactly.
       yaw += dt * IDLE_SPEED * DRIFT;
-      roll += dt * 0.0000026;
-      pitch += Math.sin(now * 0.000029) * dt * 0.0000050;
+      // Multi-axial, on rates that never line up: a turn, a roll, two tilts.
+      roll += dt * 0.0000068;
+      pitch += Math.sin(now * 0.000029) * dt * 0.0000075;
+      pitch += Math.sin(now * 0.000041 + 2.1) * dt * 0.0000042;
+      yaw += Math.sin(now * 0.000019 + 0.7) * dt * IDLE_SPEED * 0.6;
       pitch = Math.max(-0.55, Math.min(0.55, pitch));
     }
   }
@@ -1170,7 +1177,8 @@ function frame(now) {
   // from the periphery and resolves in the centre. This is the "never ending"
   // quality: at 1x and at 3.5x the frame looks equally full, and the wrap is invisible.
   const lifeBase = life;
-  for (let k = -2; k <= 2; k += 1) {
+  const reach = quality > 0.55 ? 3 : 2;
+  for (let k = -reach; k <= reach; k += 1) {
     const rel = zoom * Math.pow(OCTAVE, k);
     // Floors, not windows: there is always a parent lattice above and a child below,
     // at every position in the octave. That is what keeps the frame reading as being
