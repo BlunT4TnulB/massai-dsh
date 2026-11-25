@@ -1035,9 +1035,14 @@ function frame(now) {
     let dx = (wantYaw - yaw) % (Math.PI * 2);
     if (dx > Math.PI) dx -= Math.PI * 2;
     if (dx < -Math.PI) dx += Math.PI * 2;
-    yaw += dx * 0.06;
-    pitch += ((wantPitch * 0.75) - pitch) * 0.06;
-    roll += (0 - roll) * 0.06;
+    // Glide, do not flip: exponential easing with a ceiling on how far the camera
+    // may turn in one frame, so a hop across the body reads as travel, not as a cut.
+    const MAX_STEP = 0.011;
+    const step = Math.max(-MAX_STEP, Math.min(MAX_STEP, dx * 0.045));
+    yaw += step;
+    const dPitch = ((wantPitch * 0.75) - pitch) * 0.045;
+    pitch += Math.max(-MAX_STEP, Math.min(MAX_STEP, dPitch));
+    roll += (0 - roll) * 0.03;
     diveGlow += (1 - diveGlow) * 0.06;
   } else if (diveNode < 0) {
     // No automatic retreat: where you put the camera is yours to keep. Coming back
@@ -1051,8 +1056,8 @@ function frame(now) {
   // around wherever the hand last left the camera. A manual zoom holds it off for a
   // while, then the voyage resumes from the new place instead of snapping back.
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
-    driftPhase += dt * 0.0000125;
-    zoomLogTarget = driftBase + Math.sin(driftPhase) * 0.9;
+    driftPhase += dt * 0.00006;
+    zoomLogTarget = driftBase + Math.sin(driftPhase) * 1.15;
   }
   zoomLog += (zoomLogTarget - zoomLog) * 0.11;
   zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
@@ -1078,22 +1083,22 @@ function frame(now) {
       // A spiral, not a spin: one slow turn, one slow roll, and a tilt on a period
       // that shares no factor with either. The pose never repeats exactly.
       yaw += dt * IDLE_SPEED * DRIFT;
-      roll += dt * 0.0000042;
-      pitch += Math.sin(now * 0.000029) * dt * 0.0000075;
+      roll += dt * 0.0000026;
+      pitch += Math.sin(now * 0.000029) * dt * 0.0000050;
       pitch = Math.max(-0.55, Math.min(0.55, pitch));
     }
   }
   // The screensaver: forty-five seconds of stillness and the mind takes itself for
   // a walk. It picks stars, names them, dives and withdraws — the same voyage a
   // hand would make, on its own schedule.
-  if (!reduce && !screensaver && now - lastInput > 45000) {
+  if (!reduce && !screensaver && now - lastInput > 14000) {
     screensaver = true;
     document.body.classList.add('screensaver');
     exploreAt = now;
   }
   if (screensaver) {
     if (now > exploreAt) {
-      exploreAt = now + 5200 + Math.random() * 3600;
+      exploreAt = now + 9000 + Math.random() * 6000;
       const label = document.getElementById('nodeName');
       // When the mind has real work to remember, it walks through that: a recent
       // moment is chosen, the camera goes to its star, and it says what it was.
