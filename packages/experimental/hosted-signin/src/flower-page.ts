@@ -1496,12 +1496,7 @@ export function flowerPageHtml(embed = false): string {
     color:#57575f;letter-spacing:.12em;transition:color .8s ease}
   .confession{position:fixed;left:0;right:0;top:4rem;text-align:center;font-size:.72rem;
     color:#8a6a3a;font-style:italic;opacity:0;transition:opacity 3s ease;padding:0 2rem}
-  .sim-ui{position:fixed;left:1.1rem;bottom:1.2rem;display:flex;align-items:center;gap:.55rem;
-    font-size:.68rem;color:#6f6f78;letter-spacing:.06em;background:rgba(12,12,14,.6);
-    border:1px solid #24242b;border-radius:999px;padding:.3rem .8rem;backdrop-filter:blur(6px)}
-  .sim-ui input{width:8rem;accent-color:#C1440E}
-  .sim-ui #levelName{color:#EFDCA4;min-width:5.6rem}
-  .skip{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.skip{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
   .skip:focus{left:1rem;top:1rem;width:auto;height:auto;padding:.5rem .8rem;z-index:99;
     background:#14100c;color:#EFDCA4;border:1px solid #7a3d12;border-radius:.4rem}
   .shapes{position:fixed;left:0;right:0;bottom:1.2rem;text-align:center;font-size:.7rem;
@@ -1547,11 +1542,7 @@ export function flowerPageHtml(embed = false): string {
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
 <p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>double tap</b> stirs it · one star is a door</p>
-<div class="sim-ui">
-    <label for="level">simulate intelligence</label>
-    <input type="range" id="level" min="0" max="5" step="1" value="0">
-    <span id="levelName">dormant</span>
-  </div>
+<!-- the simulator lives on the glass now: double tap stirs it, triple tap calms it -->
   <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
 <a class="skip" href="/access">skip to the workshop</a>
