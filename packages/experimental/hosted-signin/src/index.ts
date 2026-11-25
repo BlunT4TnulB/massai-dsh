@@ -407,10 +407,42 @@ export function apply(ctx: Context): void {
     name: string,
     handler: (session: { id: string }, event: unknown) => void,
   ) => void
+  /**
+   * Pull the first text out of a user message event, whatever shape it arrives in.
+   * Best effort by design: this only ever feeds a label, never a decision.
+   * @param data - the event's data payload.
+   * @returns the text, trimmed, or an empty string.
+   */
+  const readUserText = (data: unknown): string => {
+    const seen = new Set<unknown>()
+    const walk = (node: unknown, depth: number): string => {
+      if (depth > 4 || node === null || typeof node !== 'object' || seen.has(node)) return ''
+      seen.add(node)
+      const record = node as Record<string, unknown>
+      if (typeof record.text === 'string' && record.text.trim() !== '') return record.text.trim()
+      for (const value of Object.values(record)) {
+        const found = walk(value, depth + 1)
+        if (found !== '') return found
+      }
+      return ''
+    }
+    return walk(data, 0).replace(/\s+/g, ' ')
+  }
+
   onSessionEvent('session/event', (session, event) => {
     // Live activity: a tool call is the honest unit of "the agent is doing X".
     // Classification looks only at the tool name and argument text, never content.
     const typed = event as { type?: string; data?: { name?: string; arguments?: unknown } }
+    // The mind reacts to being spoken to: a user turn becomes one more moment in
+    // the activity trail, so the galaxy flickers when you talk to it and the
+    // screensaver has something of yours to walk through.
+    if (typed.type === 'user/message' || typed.type === 'message/user') {
+      const text = readUserText((event as { data?: unknown }).data)
+      if (text !== '') {
+        recordActivity('conversation', 'you said: ' + text.slice(0, 48), String(session.id))
+        touchSession(String(session.id), 'conversation')
+      }
+    }
     if (typed.type === 'tool/call') {
       const name = String(typed.data?.name ?? '')
       const rawArguments = typeof typed.data?.arguments === 'string'
