@@ -310,6 +310,33 @@ let thoughtTimer = 0;
 let pathsOn = params.get('paths') !== '0';
 // The lattice itself, switchable: L toggles it, ?lines=0 starts with it off.
 let linesOn = params.get('lines') !== '0';
+
+// Two dials, because the lattice does two different jobs. "far" is the voyage — the
+// vast web you watch. "near" is attention — the lines around the star being held.
+// Both are remembered per browser, adjustable live with [ and ], and overridable by
+// URL (?linesFar=0.8&linesNear=0.4). Report the numbers and they can be baked in.
+function readDial(name, fallback) {
+  try {
+    const stored = window.localStorage.getItem('massai_lines_' + name);
+    if (stored !== null) {
+      const value = Number(stored);
+      if (Number.isFinite(value)) return value;
+    }
+  } catch (error) { void error; }
+  const fromUrl = Number(params.get(name) ?? 'NaN');
+  return Number.isFinite(fromUrl) ? fromUrl : fallback;
+}
+
+function writeDial(name, value) {
+  try { window.localStorage.setItem('massai_lines_' + name, String(value.toFixed(2))); } catch (error) { void error; }
+}
+
+const LINES = { far: readDial('linesFar', 1), near: readDial('linesNear', 0.55) };
+
+/** The multiplier for the state the mind is in right now. */
+function lineScale() {
+  return diveNode >= 0 ? LINES.near : LINES.far;
+}
 // The automatic voyage: the mind breathes depth on its own — about eighty seconds
 // in, eighty out — and spirals while it does. It yields to the hand instantly and
 // resumes from wherever the hand left it.
@@ -662,8 +689,9 @@ function strokeCircle(index, points, now, front) {
   // individual great circles read as straight lines, which is the opposite of a
   // galaxy. The stars and the fog carry that depth instead.
   const soft = Math.max(0.08, Math.min(1, 1.45 - zoom * 0.28 - insideOf(zoom) * 0.35));
+  const dial = lineScale();
   ctx.strokeStyle = 'rgba(' + (weight > 2 ? '255,240,215' : GOLD) + ','
-    + Math.min(1, (base * life + 0.04 * breath) * weight * soft).toFixed(3) + ')';
+    + Math.min(1, (base * life + 0.04 * breath) * weight * soft * dial).toFixed(3) + ')';
   ctx.lineWidth = (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
   ctx.stroke();
   void now;
@@ -729,7 +757,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
       lastY = p.y;
     }
     const weight = i === -1 ? 2 : 1;
-    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight * lineScale()).toFixed(3) + ')';
     ctx.lineWidth = 0.6;
     ctx.stroke();
   }
@@ -770,7 +798,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
       lastX = p.x;
       lastY = p.y;
     }
-    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha * lineScale()).toFixed(3) + ')';
     ctx.lineWidth = 0.9;
     ctx.stroke();
   }
@@ -930,7 +958,7 @@ function drawGalaxy(now) {
           lastY = p.y;
         }
         ctx.closePath();
-        ctx.strokeStyle = 'rgba(214,168,120,' + ((0.045 * life + 0.012 * breath) * alpha).toFixed(3) + ')';
+        ctx.strokeStyle = 'rgba(214,168,120,' + ((0.045 * life + 0.012 * breath) * alpha * lineScale()).toFixed(3) + ')';
         ctx.lineWidth = 0.5;
         ctx.stroke();
       }
@@ -1588,6 +1616,19 @@ addEventListener('keydown', function (event) {
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'l' || event.key === 'L') { linesOn = !linesOn; }
+  if (event.key === '[' || event.key === ']') {
+    // tune the dial that is in play: the voyage web far out, the node web up close
+    const key = diveNode >= 0 ? 'near' : 'far';
+    const step = event.key === ']' ? 0.1 : -0.1;
+    LINES[key] = Math.max(0, Math.min(2, Math.round((LINES[key] + step) * 100) / 100));
+    writeDial('lines' + (key === 'near' ? 'Near' : 'Far'), LINES[key]);
+    const label = document.getElementById('nodeName');
+    if (label !== null) {
+      label.textContent = 'lines · ' + key + ' ' + LINES[key].toFixed(2);
+      clearTimeout(thoughtTimer);
+      thoughtTimer = setTimeout(function () { label.textContent = ''; }, 1600);
+    }
+  }
   if (event.key === 'f' || event.key === 'F') {
     if (document.fullscreenElement) { void document.exitFullscreen() } else { goFullscreen() }
   }

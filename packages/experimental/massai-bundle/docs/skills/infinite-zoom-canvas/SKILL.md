@@ -115,6 +115,17 @@ Add a `?z=<log>` parameter to preset the camera depth so a specific octave can b
 Then measure the result: the body's pixel centre should be ~50% of the width and height, and its radius
 should match `FIT * min(VW, VH)`.
 
+## Tunable lattice (Massai's two line dials)
+
+The circle lattice does two different jobs and is tuned separately:
+- `LINES.far` — the voyage: the vast web seen while travelling (default 1.0)
+- `LINES.near` — attention: the web around a star being held (default 0.55)
+
+Both are multiplied into the stroke alpha of every lattice pass (`lineScale()`), persisted in
+`localStorage` as `massai_lines_far` / `massai_lines_near`, adjustable live with `[` and `]`, and
+overridable by URL (`?linesFar=0.8&linesNear=0.4`). `?lines=0` disables the lattice entirely, `L`
+toggles it. When the owner reports a number, bake it into the defaults rather than re-guessing.
+
 ## Pitfalls
 - `ctx.globalAlpha` inside draw code overrides an outer multiplier — use a shared `life`/`alpha` variable.
 - Envelope thresholds tuned for one `OCTAVE` value do not transfer to another; keep `near/far` in terms of `rel`.
