@@ -28,6 +28,20 @@ const canvas = document.getElementById('flower');
 const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The visual viewport: what the glass actually shows. The layout viewport lies by
+// the height of the address bar (and by any pinch-zoom), which is enough to make a
+// centred body look pushed up and to the left.
+let VW = innerWidth;
+let VH = innerHeight;
+function measureViewport() {
+  const vv = (typeof window.visualViewport !== 'undefined' && window.visualViewport !== null)
+    ? window.visualViewport
+    : null;
+  VW = vv === null ? innerWidth : vv.width;
+  VH = vv === null ? innerHeight : vv.height;
+}
+
+
 const params = new URLSearchParams(location.search);
 const EMBEDDED = params.get('embed') === '1';
 const SHAPE = (params.get('shape') || 'galaxy').toLowerCase();
@@ -242,6 +256,7 @@ let velYaw = 0;
 let velPitch = 0;
 let velRoll = 0;
 let zoom = 1;
+let zoomTarget = 1;
 let dragging = false;
 let dragMode = 'turn';
 let last = performance.now();
@@ -321,15 +336,21 @@ for (let i = 0; i < 70; i += 1) {
   dust.push({ x: Math.sin(b) * Math.cos(a) * r, y: Math.sin(b) * Math.sin(a) * r, z: Math.cos(b) * r, s: 0.4 + Math.random() * 0.7 });
 }
 
-const DPR = Math.min((EMBEDDED || innerWidth < 700) ? 1.4 : 2, window.devicePixelRatio || 1);
+const DPR = Math.min((EMBEDDED || VW < 700) ? 1.4 : 2, window.devicePixelRatio || 1);
 function resize() {
-  canvas.width = Math.floor(innerWidth * DPR);
-  canvas.height = Math.floor(innerHeight * DPR);
-  canvas.style.width = innerWidth + 'px';
-  canvas.style.height = innerHeight + 'px';
+  measureViewport();
+  canvas.width = Math.floor(VW * DPR);
+  canvas.height = Math.floor(VH * DPR);
+  canvas.style.width = VW + 'px';
+  canvas.style.height = VH + 'px';
 }
+measureViewport();
 resize();
 addEventListener('resize', resize);
+if (typeof window.visualViewport !== 'undefined' && window.visualViewport !== null) {
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
 
 function project(x, y, z) {
   const ya = yaw + lookX;
@@ -348,9 +369,9 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  const scale = zoom * Math.min(innerWidth, innerHeight) * FIT;
+  const scale = zoom * Math.min(VW, VH) * FIT;
   const k = distance / (distance + z3);
-  return { x: innerWidth / 2 + x2 * scale * k, y: innerHeight * ANCHOR + y3 * scale * k, k: k, depth: z3, z: z3 };
+  return { x: VW / 2 + x2 * scale * k, y: VH * ANCHOR + y3 * scale * k, k: k, depth: z3, z: z3 };
 }
 
 function heat(now, x, y, z) {
@@ -368,9 +389,9 @@ function heat(now, x, y, z) {
 }
 
 function drawHalo(now) {
-  const cx = innerWidth / 2;
-  const cy = innerHeight * ANCHOR;
-  const reach = Math.max(innerWidth, innerHeight) * 0.82;
+  const cx = VW / 2;
+  const cy = VH * ANCHOR;
+  const reach = Math.max(VW, VH) * 0.82;
   breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * BREATH_SPEED);
   life = 0.45 + 0.55 * self.energy * self.memory;
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
@@ -384,12 +405,12 @@ function drawHalo(now) {
   // The fog: slow, enormous, additive. Everything above it is drawn over fog, so
   // the whole body sits inside something rather than in empty space.
   ctx.globalCompositeOperation = 'lighter';
-  const fogScale = Math.min(innerWidth, innerHeight) * FIT * 2.6;
+  const fogScale = Math.min(VW, VH) * FIT * 2.6;
   const inside = insideOf(zoom);
   const fogCount = Math.max(1, Math.round(FOG.length * Math.max(0.35, quality)));
   for (const blob of FOG.slice(0, fogCount)) {
-    const x = cx + Math.cos(now * blob.sx * FOG_ENERGY + blob.phase + MOOD * 6.28) * innerWidth * blob.ax;
-    const y = cy + Math.sin(now * blob.sy * FOG_ENERGY + blob.phase * 1.3 + MOOD * 6.28) * innerHeight * blob.ay;
+    const x = cx + Math.cos(now * blob.sx * FOG_ENERGY + blob.phase + MOOD * 6.28) * VW * blob.ax;
+    const y = cy + Math.sin(now * blob.sy * FOG_ENERGY + blob.phase * 1.3 + MOOD * 6.28) * VH * blob.ay;
     const radius = fogScale * blob.radius * (0.94 + 0.06 * breath) * (1 + 0.55 * inside);
     ctx.globalAlpha = ((0.030 + 0.012 * breath) * life) * (1 + 2.4 * inside);
     ctx.drawImage(fogSprite(blob.tint), x - radius, y - radius, radius * 2, radius * 2);
@@ -407,14 +428,14 @@ function drawHalo(now) {
   const outward = Math.max(0, Math.min(1, (1.0 - zoom) / 0.55));
   if (outward > 0.02 && quality > 0.5) {
     ctx.globalCompositeOperation = 'lighter';
-    const ring = Math.min(innerWidth, innerHeight) * (0.62 + 0.1 * (1 - outward));
+    const ring = Math.min(VW, VH) * (0.62 + 0.1 * (1 - outward));
     const siblingCount = 6;
     for (let i = 0; i < siblingCount; i += 1) {
       const angle = (i / siblingCount) * Math.PI * 2 + yaw * 0.2;
-      const cx2 = innerWidth / 2 + Math.cos(angle) * ring * (innerWidth / Math.min(innerWidth, innerHeight));
-      const cy2 = innerHeight * ANCHOR + Math.sin(angle) * ring * 0.55;
+      const cx2 = VW / 2 + Math.cos(angle) * ring * (VW / Math.min(VW, VH));
+      const cy2 = VH * ANCHOR + Math.sin(angle) * ring * 0.55;
       const alpha = outward * (0.10 + 0.05 * Math.sin(i * 2.4)) * life;
-      const radius = Math.min(innerWidth, innerHeight) * FIT * 0.34 * (0.6 + 0.3 * Math.sin(i * 1.7));
+      const radius = Math.min(VW, VH) * FIT * 0.34 * (0.6 + 0.3 * Math.sin(i * 1.7));
       const sprite = glowSprite('224,186,138');
       ctx.globalAlpha = alpha * 2.6;
       ctx.drawImage(sprite, cx2 - radius, cy2 - radius, radius * 2, radius * 2);
@@ -433,7 +454,7 @@ function drawHalo(now) {
   // a limb — faint, and gone as soon as you travel in.
   const retreat = Math.max(0, Math.min(1, (1.35 - zoom) / 0.55));
   if (retreat > 0.02) {
-    const rim = Math.min(innerWidth, innerHeight) * FIT * zoom;
+    const rim = Math.min(VW, VH) * FIT * zoom;
     const g2 = ctx.createRadialGradient(cx, cy, rim * 0.72, cx, cy, rim);
     g2.addColorStop(0, 'rgba(217,130,43,0)');
     g2.addColorStop(0.82, 'rgba(224,170,110,' + (0.05 * retreat).toFixed(3) + ')');
@@ -457,7 +478,7 @@ function drawHalo(now) {
 
   // Inside, the mind closes around you: a soft vignette with no edge of its own.
   if (insideNow > 0.02) {
-    const vg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(innerWidth, innerHeight) * 0.75);
+    const vg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(VW, VH) * 0.75);
     vg.addColorStop(0, 'rgba(8,8,10,0)');
     vg.addColorStop(0.72, 'rgba(6,6,8,' + (0.10 * insideNow).toFixed(3) + ')');
     vg.addColorStop(1, 'rgba(4,4,6,' + (0.55 * insideNow).toFixed(3) + ')');
@@ -482,13 +503,13 @@ function circlePath(axis, steps) {
   }
   return out;
 }
-const GREAT = axes.map(function (axis) { return circlePath(axis.n, EMBEDDED || innerWidth < 700 ? 56 : 84); });
+const GREAT = axes.map(function (axis) { return circlePath(axis.n, EMBEDDED || VW < 700 ? 56 : 84); });
 
 // --- the deeper axes -------------------------------------------------------
 // The same thirty-one circles, rotated onto four more orientations. Five
 // families in all: one fixed (the mark's own symmetry) and four the mind turns
 // for itself. A phone carries three families; a wide screen carries five.
-const FAMILIES = innerWidth < 700 ? 3 : 5;
+const FAMILIES = VW < 700 ? 3 : 5;
 
 /**
  * Rotate a direction by three angles (X, then Y, then Z).
@@ -892,9 +913,9 @@ function drawPathways(now) {
 
 function drawTrail(now) {
   if (trail.length === 0) return;
-  const cx = innerWidth / 2;
-  const cy = innerHeight * ANCHOR;
-  const base = Math.min(innerWidth, innerHeight) * FIT * 1.45;
+  const cx = VW / 2;
+  const cy = VH * ANCHOR;
+  const base = Math.min(VW, VH) * FIT * 1.45;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);
     const freshness = Math.max(0.06, 1 - age / 600000);
@@ -994,6 +1015,10 @@ function frame(now) {
     diveGlow += (0 - diveGlow) * 0.06;
   }
 
+  // Wheel, pinch and reset set both zoom and its target, so direct control is
+  // immediate; only the self-tour uses a distant target and eases into it.
+  if (Math.abs(zoomTarget - zoom) > 0.002) zoom += (zoomTarget - zoom) * 0.07;
+
   if (!dragging && spinning) {
     yaw += velYaw * dt;
     pitch += velPitch * dt;
@@ -1048,7 +1073,8 @@ function frame(now) {
         diveNode = exploreNode;
         if (label) label.textContent = exploreNode === PORTAL ? 'the door' : roleOf(exploreNode);
       }
-      zoom = Math.random() < 0.45 ? 2.4 : 1.15;
+      // Aim, never jump: the tour eases into its distance over about a second.
+      zoomTarget = Math.random() < 0.45 ? 2.4 : 1.15;
       rippleFrom(exploreNode);
     }
   } else {
@@ -1236,11 +1262,12 @@ canvas.addEventListener('pointermove', function (event) {
     const two = [...pointers.values()];
     const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
     zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (now / pinchStart)));
+    zoomTarget = zoom;
     return;
   }
   if (!reduce) {
-    lookX += ((event.clientX / innerWidth - 0.5) * 0.16 - lookX) * 0.06;
-    lookY += ((event.clientY / innerHeight - 0.5) * 0.11 - lookY) * 0.06;
+    lookX += ((event.clientX / VW - 0.5) * 0.16 - lookX) * 0.06;
+    lookY += ((event.clientY / VH - 0.5) * 0.11 - lookY) * 0.06;
   }
   if (!dragging) {
     // Hovering a star names it and lights its two circles: the mind shows its
@@ -1311,6 +1338,7 @@ canvas.addEventListener('wheel', function (event) {
   wake();
   event.preventDefault();
   zoom = Math.max(0.16, Math.min(20, zoom * (event.deltaY > 0 ? 0.95 : 1.05)));
+  zoomTarget = zoom;
 }, { passive: false });
 addEventListener('keydown', function (event) {
   wake();
@@ -1320,7 +1348,7 @@ addEventListener('keydown', function (event) {
   if (event.key === 'ArrowDown') pitch = Math.min(1.5, pitch + 0.07);
   if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
-  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; }
+  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoom = 1; zoomTarget = 1; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'f' || event.key === 'F') {
     if (document.fullscreenElement) { void document.exitFullscreen() } else { goFullscreen() }
