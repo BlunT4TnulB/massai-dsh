@@ -147,6 +147,19 @@ const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
 const FIT = EMBEDDED ? 0.46 : 0.40;
+
+/**
+ * How far inside the body you are, 0 at rest and 1 deep in.
+ *
+ * This is the one number the whole composition answers to: as it rises the
+ * circles step back, the fog thickens, the dust comes close and a soft vignette
+ * encloses the view. Looking at a sphere becomes standing within one.
+ * @param z - the current zoom factor.
+ * @returns the inside factor, clamped to 0..1.
+ */
+function insideOf(z) {
+  return Math.max(0, Math.min(1, (z - 1.75) / 2.6));
+}
 // Zoom bands: each passed threshold reveals the next galaxy inside the last.
 const ZOOM_BANDS = [1.5, 2.4, 3.8, 5.6, 8.0, 11.0];
 const ANCHOR = EMBEDDED ? 0.40 : 0.5;
@@ -336,11 +349,12 @@ function drawHalo(now) {
   // the whole body sits inside something rather than in empty space.
   ctx.globalCompositeOperation = 'lighter';
   const fogScale = Math.min(innerWidth, innerHeight) * FIT * 2.6;
+  const inside = insideOf(zoom);
   for (const blob of FOG) {
     const x = cx + Math.cos(now * blob.sx + blob.phase) * innerWidth * blob.ax;
     const y = cy + Math.sin(now * blob.sy + blob.phase * 1.3) * innerHeight * blob.ay;
-    const radius = fogScale * blob.radius * (0.94 + 0.06 * breath);
-    ctx.globalAlpha = (0.030 + 0.012 * breath) * life;
+    const radius = fogScale * blob.radius * (0.94 + 0.06 * breath) * (1 + 0.55 * inside);
+    ctx.globalAlpha = ((0.030 + 0.012 * breath) * life) * (1 + 2.4 * inside);
     ctx.drawImage(fogSprite(blob.tint), x - radius, y - radius, radius * 2, radius * 2);
   }
   // the entity's own core veil: brightest where the body is densest
@@ -365,12 +379,25 @@ function drawHalo(now) {
     ctx.fill();
   }
 
+  const insideNow = insideOf(zoom);
   for (const mote of dust) {
     const p = project(mote.x, mote.y, mote.z);
+    const near = 1 + insideNow * (0.6 + 1.6 * Math.max(0, p.k - 0.85));
     ctx.beginPath();
-    ctx.arc(p.x, p.y, DPR * mote.s * p.k, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(240,222,190,' + (0.05 + 0.14 * (p.k - 0.5)).toFixed(3) + ')';
+    ctx.arc(p.x, p.y, DPR * mote.s * p.k * near, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,222,190,'
+      + ((0.05 + 0.14 * (p.k - 0.5)) * (1 + 1.8 * insideNow)).toFixed(3) + ')';
     ctx.fill();
+  }
+
+  // Inside, the mind closes around you: a soft vignette with no edge of its own.
+  if (insideNow > 0.02) {
+    const vg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(innerWidth, innerHeight) * 0.75);
+    vg.addColorStop(0, 'rgba(8,8,10,0)');
+    vg.addColorStop(0.72, 'rgba(6,6,8,' + (0.10 * insideNow).toFixed(3) + ')');
+    vg.addColorStop(1, 'rgba(4,4,6,' + (0.55 * insideNow).toFixed(3) + ')');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
 
@@ -472,7 +499,7 @@ function strokeCircle(index, points, now, front) {
   // The further in you travel, the more the circles step back: up close the
   // individual great circles read as straight lines, which is the opposite of a
   // galaxy. The stars and the fog carry that depth instead.
-  const soft = Math.max(0.18, Math.min(1, 1.45 - zoom * 0.28));
+  const soft = Math.max(0.08, Math.min(1, 1.45 - zoom * 0.28 - insideOf(zoom) * 0.35));
   ctx.strokeStyle = 'rgba(' + (weight > 2 ? '255,240,215' : GOLD) + ','
     + Math.min(1, (base * life + 0.04 * breath) * weight * soft).toFixed(3) + ')';
   ctx.lineWidth = DPR * (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
@@ -900,6 +927,7 @@ function frame(now) {
       roll += (0 - roll) * 0.01;
     }
   }
+  document.body.classList.toggle('deep', zoom > 2.2);
   drawHalo(now);
   drawTrail(now);
   drawGalaxy(now);
@@ -1194,6 +1222,10 @@ export function flowerPageHtml(embed = false): string {
   .shapes a:hover{color:#7ee2a8}
   @media (prefers-reduced-motion: reduce) { .hint{transition:none} }
   /* Embedded as a stage: the object is the whole frame. */
+  /* Travelling in, the page's own voice fades: the deeper you are, the less the
+     interface says. Lost is a feature here, not a failure. */
+  .deep .overlay, .deep .hint, .deep .shapes, .deep .sim-ui, .deep .counter,
+  .deep .settled, .deep .sim, .deep .node-name { opacity: .12; transition: opacity 1.2s ease }
   body.embed .overlay, body.embed .hint, body.embed .shapes, body.embed .sim-ui,
   body.embed .being, body.embed .confession, body.embed .counter, body.embed .settled,
   body.embed .sim { display: none !important }
