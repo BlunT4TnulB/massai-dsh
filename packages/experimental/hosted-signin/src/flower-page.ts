@@ -211,9 +211,14 @@ function glowSprite(tint) {
   return c;
 }
 
-let yaw = 0.4;
-let pitch = -0.35;
-let roll = 0;
+// A randomised pose for the welcome orb, so the first sight of the mind is never
+// the same twice. Inside the app the pose stays fixed, because the door lives at
+// a known place there.
+const SPIN = params.get('spin') === '1';
+const seedAngle = function (spread) { return (Math.random() - 0.5) * spread; };
+let yaw = 0.4 + (SPIN ? seedAngle(Math.PI * 1.4) : 0);
+let pitch = -0.35 + (SPIN ? seedAngle(0.9) : 0);
+let roll = SPIN ? seedAngle(0.8) : 0;
 let velYaw = 0;
 let velPitch = 0;
 let velRoll = 0;

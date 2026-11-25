@@ -714,7 +714,7 @@ export class WebServer extends Service {
                 'content-type': 'text/html; charset=utf-8',
                 'content-length': String(splash.byteLength),
               })
-              res.end(req.method === 'HEAD' ? undefined : splash)
+              res.end(splash)
               return
             }
             const override = target.searchParams.get('line')

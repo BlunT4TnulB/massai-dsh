@@ -868,49 +868,12 @@ export function apply(ctx: Context): void {
 
   // The black page: nothing but a button. This is the first thing somebody meets
   // if they follow the door's own promise, and it asks for exactly one decision.
+  // The black page lives at the root now; this alias exists so old links work.
   ctx.webServer.register({
     kind: 'exact', path: '/unknown', auth: 'anonymous',
     handler: (req, res) => {
-      const html = Buffer.from(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Into the Unknown — Massai</title>
-<meta name="theme-color" content="#000000">
-<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
-<style>
-  html,body{margin:0;height:100%;background:#000;color:#F2F2F4;overflow:hidden;
-    font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
-  .stage{height:100%;display:grid;place-items:center;padding:1.5rem}
-  /* The button is the mind itself: a live orb of the galaxy, labelled. */
-  a.orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
-  .orb{position:relative;width:min(68vw,320px);aspect-ratio:1;border-radius:50%;overflow:hidden;
-    background:#000;box-shadow:0 0 90px rgba(217,130,43,.20),inset 0 0 50px rgba(0,0,0,.5);
-    border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
-  .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
-  a.orb-link:hover .orb, a.orb-link:active .orb{
-    box-shadow:0 0 140px rgba(217,130,43,.34),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.5)}
-  .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
-    animation:breathe 5.5s ease-in-out infinite}
-  .sub{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#6b6257;margin-top:-.6rem}
-  @keyframes breathe{0%,100%{opacity:.86}50%{opacity:1}}
-  @media (prefers-reduced-motion:reduce){.label{animation:none}}
-  .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-</style></head><body>
-<div class="stage">
-  <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
-    <span class="orb"><iframe src="/flower?embed=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
-    <span class="label">Into the Unknown</span>
-    <span class="sub">touch the sphere</span>
-  </a>
-</div>
-<a class="skip" href="/access">skip to the workshop</a>
-</body></html>`)
-      res.writeHead(200, {
-        'content-type': 'text/html; charset=utf-8',
-        'content-length': String(html.byteLength),
-        'cache-control': 'no-store',
-      })
-      res.end(req.method === 'HEAD' ? undefined : html)
+      res.writeHead(302, { location: '/', 'cache-control': 'no-store' })
+      res.end()
     },
   })
 

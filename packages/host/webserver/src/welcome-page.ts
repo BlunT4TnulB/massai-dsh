@@ -283,10 +283,52 @@ export function intoTheUnknownPage(): string {
   @keyframes breathe{0%,100%{opacity:.86}50%{opacity:1}}
   @media (prefers-reduced-motion:reduce){.label{animation:none}}
   .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  /* One button in the corner; every avenue behind it. */
+  .menu-btn{position:fixed;top:14px;left:14px;z-index:5;width:40px;height:40px;border-radius:50%;
+    border:1px solid rgba(247,205,140,.22);background:rgba(10,10,12,.7);color:#E9C98E;
+    display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(6px);font-size:16px}
+  .menu-btn:hover{border-color:rgba(247,205,140,.6)}
+  .drawer{position:fixed;inset:0 auto 0 0;width:min(18rem,82vw);z-index:6;
+    background:rgba(8,8,10,.97);border-right:1px solid rgba(247,205,140,.16);
+    padding:1.5rem 1rem;display:none;flex-direction:column;gap:2px}
+  .drawer[data-open='true']{display:flex}
+  .drawer h2{margin:0 0 1rem .6rem;font-size:.62rem;letter-spacing:.3em;text-transform:uppercase;color:#8a7c62}
+  .drawer a{display:block;padding:.62rem .6rem;border-radius:.5rem;color:#E7E2D6;
+    text-decoration:none;font-size:.94rem}
+  .drawer a:hover{background:rgba(247,205,140,.09);color:#FFF3E2}
+  .drawer-close{position:absolute;top:12px;right:12px;background:none;border:0;color:#8a7c62;
+    font-size:18px;cursor:pointer}
 </style></head><body>
+<button class="menu-btn" id="menuBtn" aria-label="Open the menu" aria-expanded="false">☰</button>
+<nav class="drawer" id="drawer" aria-label="Everything">
+  <button class="drawer-close" id="drawerClose" aria-label="Close the menu">×</button>
+  <h2>Massai</h2>
+  <a href="/flower">The mind</a>
+  <a href="/access">The workshop</a>
+  <a href="/projects">Projects</a>
+  <a href="/library">Library</a>
+  <a href="/map">Map</a>
+  <a href="/guide">Guide</a>
+  <a href="/limits">Limits</a>
+  <a href="/support">Support</a>
+</nav>
+<script>
+  (function () {
+    var btn = document.getElementById('menuBtn');
+    var drawer = document.getElementById('drawer');
+    var close = document.getElementById('drawerClose');
+    function set(open) {
+      drawer.setAttribute('data-open', open ? 'true' : 'false');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    btn.addEventListener('click', function () { set(drawer.getAttribute('data-open') !== 'true'); });
+    close.addEventListener('click', function () { set(false); });
+    addEventListener('keydown', function (event) { if (event.key === 'Escape') set(false); });
+  })();
+</script>
 <div class="stage">
   <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
-    <span class="orb"><iframe src="/flower?embed=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
+    <span class="orb"><iframe src="/flower?embed=1&spin=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
     <span class="label">Into the Unknown</span>
     <span class="sub">touch the sphere</span>
   </a>
