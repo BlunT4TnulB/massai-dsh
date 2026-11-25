@@ -866,12 +866,10 @@ export function apply(ctx: Context): void {
   })
 
 
-  // The black page: nothing but a button. This is the first thing somebody meets
-  // if they follow the door's own promise, and it asks for exactly one decision.
-  // The black page lives at the root now; this alias exists so old links work.
+  // The black page lives at the root now; this alias only keeps old links alive.
   ctx.webServer.register({
     kind: 'exact', path: '/unknown', auth: 'anonymous',
-    handler: (req, res) => {
+    handler: (_req, res) => {
       res.writeHead(302, { location: '/', 'cache-control': 'no-store' })
       res.end()
     },
