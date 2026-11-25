@@ -350,7 +350,7 @@ function writeDial(name, value) {
   try { window.localStorage.setItem('massai_lines_' + name, String(value.toFixed(2))); } catch (error) { void error; }
 }
 
-const LINES = { far: readDial('linesFar', 1), near: readDial('linesNear', 0.55) };
+const LINES = { far: readDial('linesFar', 0.85), near: readDial('linesNear', 0.4) };
 
 /** The multiplier for the state the mind is in right now. */
 function lineScale() {
@@ -686,6 +686,7 @@ function strokeCircle(index, points, now, front) {
   let started = false;
   let lastX = 0;
   let lastY = 0;
+  let maxSegment = 0;
   const jumpLimit = Math.max(VW, VH) * 1.5;
   for (const point of points) {
     const p = project(point[0], point[1], point[2]);
@@ -698,12 +699,17 @@ function strokeCircle(index, points, now, front) {
     } else {
       ctx.lineTo(p.x, p.y);
     }
+    if (lastX !== 0 || lastY !== 0) maxSegment = Math.max(maxSegment, Math.hypot(p.x - lastX, p.y - lastY));
     lastX = p.x;
     lastY = p.y;
   }
   const chosen = hoverNode >= 0 ? nodes[hoverNode] : (diveNode >= 0 ? nodes[diveNode] : null);
   const weight = chosen === null ? 1 : ((index === chosen.a || index === chosen.b) ? 2.6 : 0.55);
-  const base = front ? 0.20 : 0.07;
+  // A segment that spans most of the screen is a bar; one that spans a tenth is detail.
+  // Fade by length so the bars recede and the fine web stays.
+  const reach = Math.max(1, maxSegment);
+  const lengthFade = Math.min(1, Math.max(0.16, 260 / reach));
+  const base = (front ? 0.20 : 0.07) * lengthFade;
   // The further in you travel, the more the circles step back: up close the
   // individual great circles read as straight lines, which is the opposite of a
   // galaxy. The stars and the fog carry that depth instead.
@@ -765,18 +771,22 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     let started = false;
     let lastX = 0;
     let lastY = 0;
+    let maxSeg = 0;
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
       if (localZ(point) > 0 || p.behind === true) { started = false; continue; }
-      if (started && Math.hypot(p.x - lastX, p.y - lastY) > jumpMax) { started = false; }
+      const seg = Math.hypot(p.x - lastX, p.y - lastY);
+      if (started && seg > jumpMax) { started = false; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
+      if (seg < jumpMax) maxSeg = Math.max(maxSeg, seg);
       lastX = p.x;
       lastY = p.y;
     }
     const weight = i === -1 ? 2 : 1;
-    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight * lineScale()).toFixed(3) + ')';
+    const fade = Math.min(1, Math.max(0.16, 260 / Math.max(1, maxSeg)));
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight * lineScale() * fade).toFixed(3) + ')';
     ctx.lineWidth = 0.6;
     ctx.stroke();
   }
@@ -807,17 +817,21 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     let started = false;
     let lastX = 0;
     let lastY = 0;
+    let maxSeg2 = 0;
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
       if (localZ(point) <= 0 || p.behind === true) { started = false; continue; }
-      if (started && Math.hypot(p.x - lastX, p.y - lastY) > jumpMax) { started = false; }
+      const seg = Math.hypot(p.x - lastX, p.y - lastY);
+      if (started && seg > jumpMax) { started = false; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
+      if (seg < jumpMax) maxSeg2 = Math.max(maxSeg2, seg);
       lastX = p.x;
       lastY = p.y;
     }
-    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha * lineScale()).toFixed(3) + ')';
+    const fade2 = Math.min(1, Math.max(0.16, 260 / Math.max(1, maxSeg2)));
+    ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha * lineScale() * fade2).toFixed(3) + ')';
     ctx.lineWidth = 0.9;
     ctx.stroke();
   }
