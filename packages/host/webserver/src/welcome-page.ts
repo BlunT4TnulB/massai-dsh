@@ -342,10 +342,10 @@ export function intoTheUnknownPage(): string {
     <span class="orb">
       <iframe id="orbFrame" src="/flower?embed=1&spin=1&fit=orb&quiet=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe>
       <span class="spin" id="spinPad" role="button" tabindex="0"
-            aria-label="The mind. Turn it freely; knock twice to enter."></span>
+            aria-label="The mind. Turn it freely. Knock twice, or open your hand, to enter."></span>
     </span>
     <span class="label">Into the Unknown</span>
-    <span class="sub">it turns for anyone · it opens to a double knock</span>
+    <span class="sub">it turns for anyone · a knock twice, or a hand that opens</span>
     <span class="what">say what should exist — it gets built</span>
     <a class="enter" href="/flower">or go straight in →</a>
   </div>
@@ -354,46 +354,85 @@ export function intoTheUnknownPage(): string {
   (function () {
     var pad = document.getElementById('spinPad');
     var frame = document.getElementById('orbFrame');
-    var dragging = false;
+    var pointers = new Map();
     var lx = 0;
     var ly = 0;
     var knocks = 0;
     var knockTimer = 0;
+    var pinchStart = 0;
+    var pinched = false;
 
     /** Hand a movement to the mind inside the frame. */
     function spin(dx, dy) {
       try { frame.contentWindow.postMessage({ type: 'massai:spin', dx: dx, dy: dy }, '*'); } catch (e) { /* nothing */ }
     }
 
+    /** Let them in. */
+    function open() {
+      location.href = '/flower';
+    }
+
+    /** Distance between the two fingers currently down. */
+    function spread() {
+      var two = [...pointers.values()];
+      if (two.length < 2) return 0;
+      return Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+    }
+
     pad.addEventListener('pointerdown', function (event) {
-      dragging = true;
-      lx = event.clientX;
-      ly = event.clientY;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       pad.setPointerCapture(event.pointerId);
-      pad.style.cursor = 'grabbing';
+      if (pointers.size === 1) {
+        lx = event.clientX;
+        ly = event.clientY;
+        pad.style.cursor = 'grabbing';
+      } else if (pointers.size === 2) {
+        pinchStart = spread();
+        pinched = false;
+      }
     });
+
     pad.addEventListener('pointermove', function (event) {
-      if (!dragging) return;
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size >= 2) {
+        // An opening hand: starting closed and widening is how you look further in.
+        var now = spread();
+        if (pinchStart > 0 && now > pinchStart * 1.55 && now - pinchStart > 36) {
+          pinched = true;
+          open();
+        }
+        return;
+      }
       spin(event.clientX - lx, event.clientY - ly);
       lx = event.clientX;
       ly = event.clientY;
     });
-    pad.addEventListener('pointerup', function () { dragging = false; pad.style.cursor = 'grab'; });
-    pad.addEventListener('pointercancel', function () { dragging = false; });
 
-    /* two knocks, and only two: a spin can never open it by accident */
-    pad.addEventListener('pointerup', function () {
+    pad.addEventListener('pointerup', function (event) {
+      pointers.delete(event.pointerId);
+      pad.style.cursor = 'grab';
+      if (pointers.size > 0) return;
+      if (pinched) { pinched = false; return; }
+      if (pinchStart > 0) { pinchStart = 0; return; }
+      // Two knocks, and only two: turning it can never open it by accident.
       knocks += 1;
       clearTimeout(knockTimer);
       if (knocks >= 2) {
         knocks = 0;
-        location.href = '/flower';
+        open();
         return;
       }
       knockTimer = setTimeout(function () { knocks = 0; }, 340);
     });
+
+    pad.addEventListener('pointercancel', function (event) {
+      pointers.delete(event.pointerId);
+      pinchStart = 0;
+    });
+
     pad.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' || event.key === ' ') { location.href = '/flower'; }
+      if (event.key === 'Enter' || event.key === ' ') open();
     });
   })();
 </script>
