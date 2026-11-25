@@ -96,6 +96,15 @@ export function ConversationContent(props: ConversationContentProps) {
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
+  // The galaxy hides one door among its stars. When it is found, the frame posts
+  // one message and the composer appears — before that, the mind IS the screen.
+  // The door also hands over the thought you were near, so the workshop and the
+  // mind share one sentence.
+  const [entered, setEntered] = useState(false)
+  const [enteredThought, setEnteredThought] = useState<string | undefined>(undefined)
+  // Nobody is ever trapped in the mind: after a while a quiet way in appears,
+  // and Enter always works. The door is an invitation, not a lock.
+  const [nudged, setNudged] = useState(false)
   const pickerAnchor = useRef<HTMLButtonElement>(null)
 
   // Publishes the two live measurements floating View chrome reads off the
@@ -222,15 +231,6 @@ export function ConversationContent(props: ConversationContentProps) {
           : {}),
   })
 
-  // The galaxy hides one door among its stars. When it is found, the frame posts
-  // one message and the composer appears — before that, the mind IS the screen.
-  const [entered, setEntered] = useState(false)
-  // The door hands over the thought you were near when you entered: the workshop
-  // greets you with it, so the mind and the tool share one sentence.
-  const [enteredThought, setEnteredThought] = useState<string | undefined>(undefined)
-  // Nobody is ever trapped in the mind: after a while a quiet way in appears,
-  // and Enter always works. The door is an invitation, not a lock.
-  const [nudged, setNudged] = useState(false)
   useEffect(() => {
     const receive = (event: MessageEvent): void => {
       const data = event.data as { type?: unknown } | null
