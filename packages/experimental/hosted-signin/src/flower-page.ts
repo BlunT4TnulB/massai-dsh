@@ -165,9 +165,10 @@ const IDLE_SPEED = 0.00006 * 1.3;
 const MOTION = {
   yaw: { rate: 1.0 },                       // the dominant turn
   yawSecond: { rate: 0.000019, amp: 0.48 }, // a slow sway on top of it
-  roll: { rate: 0.0000078 },                // 0.6x the turn's feel, opposite axis
-  pitchA: { rate: 0.000029, amp: 0.0000068 },
-  pitchB: { rate: 0.000041, amp: 0.0000032 },
+  roll: { rate: 0.0000115 },                // a slow, constant roll: the body never sits level
+  tumble: { rate: 0.0000072, limit: 0.5 },  // the pole travels, then reverses — real tumbling
+  pitchA: { rate: 0.000029, amp: 0.0000055 },
+  pitchB: { rate: 0.000041, amp: 0.0000026 },
   // while aiming at a star the body keeps all of this at 60% — attention, not freeze
   aiming: { scale: 0.6 },
 };
@@ -444,6 +445,7 @@ let driftPhase = 0;
 // spheres, because that first fall is the best part and a hop to a node cut it off.
 let voyageUntil = 0;
 let swingNow = 0.85;
+let tumbleDir = 1;
 const VOYAGE_MS = 150000;
 let driftBase = 0;
 let driftHoldUntil = 0;
@@ -1436,6 +1438,9 @@ function frame(now) {
       const k = arrived ? 1 : MOTION.aiming.scale;
       yaw += dt * IDLE_SPEED * MOTION.yaw.rate * k;
       roll += dt * MOTION.roll.rate * k;
+      pitch += dt * MOTION.tumble.rate * tumbleDir * k;
+      if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
+      if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
       pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
     }
     diveGlow += (1 - diveGlow) * 0.06;
@@ -1496,6 +1501,9 @@ function frame(now) {
         const k = MOTION.aiming.scale;
         yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate * k;
         roll += dt * MOTION.roll.rate * k;
+        pitch += dt * MOTION.tumble.rate * tumbleDir * k;
+        if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
+        if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
         pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
       }
     } else if (!reduce && auto) {
@@ -1504,9 +1512,14 @@ function frame(now) {
       yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate;
       yaw += Math.sin(now * MOTION.yawSecond.rate + 0.7) * dt * IDLE_SPEED * MOTION.yawSecond.amp;
       roll += dt * MOTION.roll.rate;
+      // the tumble: the pole keeps going until the limit, then turns back, so the body
+      // is never level and never repeats the same attitude twice
+      pitch += dt * MOTION.tumble.rate * tumbleDir;
+      if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
+      if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
       pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp;
       pitch += Math.sin(now * MOTION.pitchB.rate + 2.1) * dt * MOTION.pitchB.amp;
-      pitch = Math.max(-0.55, Math.min(0.55, pitch));
+      pitch = Math.max(-0.6, Math.min(0.6, pitch));
     }
   }
   // The screensaver: forty-five seconds of stillness and the mind takes itself for
