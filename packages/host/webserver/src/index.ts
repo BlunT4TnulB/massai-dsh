@@ -707,7 +707,7 @@ export class WebServer extends Service {
             // The root is not an explanation, it is an invitation: a black page
             // with the mind in it. Everything a first-timer needs is behind that
             // one circle; the words can wait until they have seen the thing.
-            if (target.pathname === '/') {
+            if (target.pathname === '/' || target.pathname === '/welcome') {
               const splash = Buffer.from(intoTheUnknownPage())
               res.writeHead(200, {
                 'cache-control': 'no-store',

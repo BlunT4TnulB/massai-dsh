@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
-import { accessPageHtml, mapPageHtml } from '@deepseek-ai/dsh-host-webserver'
+import { accessPageHtml, intoTheUnknownPage, mapPageHtml } from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { logoPreviewHtml } from './logo-preview.ts'
 import { adminPageHtml } from './admin-page.ts'
@@ -866,11 +866,25 @@ export function apply(ctx: Context): void {
   })
 
 
-  // The black page lives at the root now; this alias only keeps old links alive.
+  // The black page has addresses of its own that work whether or not you are
+  // signed in: the owner's browser carries a session, so `/` takes them straight
+  // to the app and they would never meet the orb otherwise.
+  ctx.webServer.register({
+    kind: 'exact', path: '/welcome', auth: 'anonymous',
+    handler: (_req, res) => {
+      const html = Buffer.from(intoTheUnknownPage())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(html)
+    },
+  })
   ctx.webServer.register({
     kind: 'exact', path: '/unknown', auth: 'anonymous',
     handler: (_req, res) => {
-      res.writeHead(302, { location: '/', 'cache-control': 'no-store' })
+      res.writeHead(302, { location: '/welcome', 'cache-control': 'no-store' })
       res.end()
     },
   })
