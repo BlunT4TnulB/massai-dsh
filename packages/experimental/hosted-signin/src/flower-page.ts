@@ -1057,9 +1057,9 @@ function frame(now) {
   // while, then the voyage resumes from the new place instead of snapping back.
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
     driftPhase += dt * 0.00006;
-    zoomLogTarget = driftBase + Math.sin(driftPhase) * 1.15;
+    zoomLogTarget = driftBase + Math.sin(driftPhase) * 0.85;
   }
-  zoomLog += (zoomLogTarget - zoomLog) * 0.11;
+  zoomLog += (zoomLogTarget - zoomLog) * 0.055;
   zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
 
   if (!dragging && spinning) {
@@ -1134,10 +1134,13 @@ function frame(now) {
   const lifeBase = life;
   for (let k = -2; k <= 2; k += 1) {
     const rel = zoom * Math.pow(OCTAVE, k);
-    const near = Math.min(1, Math.max(0, (rel - 0.22) / 0.5));
-    const far = 1 - Math.min(1, Math.max(0, (rel - 2.0) / 2.4));
+    // Floors, not windows: there is always a parent lattice above and a child below,
+    // at every position in the octave. That is what keeps the frame reading as being
+    // inside something instead of looking at a sphere.
+    const near = Math.min(1, Math.max(0.16, (rel - 0.10) / 0.42));
+    const far = Math.max(0.14, 1 - Math.min(1, (rel - 2.6) / 3.4));
     const envelope = near * far;
-    if (envelope <= 0.03) continue;
+    if (envelope <= 0.02) continue;
     octaveScale = Math.pow(OCTAVE, k);
     life = lifeBase * envelope;
     drawGalaxy(now);
