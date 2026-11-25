@@ -305,6 +305,8 @@ let thoughtTimer = 0;
 // Pathways are a reading of the work, not a feature of the body: let them be turned
 // off (P, or ?paths=0) for anyone who finds them too much.
 let pathsOn = params.get('paths') !== '0';
+// The lattice itself, switchable: L toggles it, ?lines=0 starts with it off.
+let linesOn = params.get('lines') !== '0';
 // The automatic voyage: the mind breathes depth on its own — about eighty seconds
 // in, eighty out — and spirals while it does. It yields to the hand instantly and
 // resumes from wherever the hand left it.
@@ -629,6 +631,7 @@ function circleWeight(index) {
 }
 
 function strokeCircle(index, points, now, front) {
+  if (!linesOn) return;
   ctx.beginPath();
   let started = false;
   let lastX = 0;
@@ -705,6 +708,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
 
   // back circles
   for (let i = 0; i < GREAT.length; i += 1) {
+    if (!linesOn) break;
     const points = GREAT[i];
     ctx.beginPath();
     let started = false;
@@ -741,6 +745,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
 
   // front circles
   for (let i = 0; i < GREAT.length; i += 1) {
+    if (!linesOn) break;
     const points = GREAT[i];
     ctx.beginPath();
     let started = false;
@@ -895,6 +900,7 @@ function drawGalaxy(now) {
       const alpha = reveal(fi);
       if (alpha <= 0.01) continue;
       for (const points of EXTRA_CIRCLES[fi]) {
+        if (!linesOn) break;
         ctx.beginPath();
         let started = false;
         for (const point of points) {
@@ -1560,6 +1566,7 @@ addEventListener('keydown', function (event) {
   if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoomLog = 0; zoomLogTarget = 0; panX = 0; panY = 0; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
+  if (event.key === 'l' || event.key === 'L') { linesOn = !linesOn; }
   if (event.key === 'f' || event.key === 'F') {
     if (document.fullscreenElement) { void document.exitFullscreen() } else { goFullscreen() }
   }
