@@ -168,8 +168,13 @@ function refuseUnlessOwner(req: IncomingMessage, res: ServerResponse): boolean {
   return true
 }
 
-function respond(res: ServerResponse, status: number, payload: unknown): void {
-  res.writeHead(status, JSON_HEADERS)
+function respond(
+  res: ServerResponse,
+  status: number,
+  payload: unknown,
+  extraHeaders?: Record<string, string>,
+): void {
+  res.writeHead(status, extraHeaders === undefined ? JSON_HEADERS : { ...JSON_HEADERS, ...extraHeaders })
   res.end(JSON.stringify(payload))
 }
 
@@ -918,6 +923,86 @@ export function apply(ctx: Context): void {
     handler: (_req, res) => {
       res.writeHead(302, { location: '/welcome', 'cache-control': 'no-store' })
       res.end()
+    },
+  })
+
+
+  // ---------------------------------------------------------------------------
+  // The mind as its own thing: a visualiser anyone can leave running, with no
+  // account, no app chrome and no door. It can watch the workshop live through a
+  // deliberately coarse feed, or run as pure art with nothing behind it.
+  // ---------------------------------------------------------------------------
+  ctx.webServer.register({
+    kind: 'exact', path: '/mind', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(flowerPageHtml(false, true))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
+
+  // Installable, so it can live fullscreen on a spare screen.
+  ctx.webServer.register({
+    kind: 'exact', path: '/mind.webmanifest', auth: 'anonymous',
+    handler: (req, res) => {
+      const manifest = {
+        name: 'Massai Mind',
+        short_name: 'Mind',
+        description: 'An endless, breathing sphere of thoughts.',
+        start_url: '/mind',
+        scope: '/',
+        display: 'fullscreen',
+        orientation: 'any',
+        background_color: '#060504',
+        theme_color: '#060504',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/massai-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      }
+      const body = Buffer.from(JSON.stringify(manifest))
+      res.writeHead(200, {
+        'content-type': 'application/manifest+json; charset=utf-8',
+        'content-length': String(body.byteLength),
+        'cache-control': 'public, max-age=3600',
+      })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
+
+  // The feed: counts and capabilities, never people, never text. A visualiser can
+  // show that a workshop is alive without learning anything about who is in it.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/feed', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const now = Date.now()
+        const counts = countsOf(now)
+        const events = readActivity(now)
+        const focus = focusOf(now)
+        let works = 0
+        try {
+          const rows = await runSql('SELECT count(*)::int AS n FROM one_turn_projects')
+          works = Number(rows[0]?.['n'] ?? 0)
+        } catch { works = 0 }
+        respond(res, 200, {
+          live: events.length > 0,
+          // counts by capability only: no labels, no sessions, no identities
+          skills: counts,
+          recent: events.length,
+          focus: focus === undefined ? null : { skill: focus.skill },
+          works,
+          at: new Date(now).toISOString(),
+        }, { 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=5' })
+      } catch (error) {
+        respond(res, 503, { error: error instanceof Error ? error.message : String(error) })
+      }
     },
   })
 

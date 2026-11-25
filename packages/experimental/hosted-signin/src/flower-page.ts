@@ -180,6 +180,7 @@ const ORB = params.get('fit') === 'orb';
 // A decorative orb (the welcome page) must not chat: no activity polls, no vitals,
 // no counters. It is the mind as an object, not as a dashboard.
 const QUIET = params.get('quiet') === '1' || ORB;
+const VISUALIZER = params.get('viz') === '1' || /(^|\s)viz(\s|$)/.test(document.documentElement.className);
 const FIT = ORB ? 0.40 : EMBEDDED ? 0.52 : 0.40;
 
 /**
@@ -966,7 +967,7 @@ function drawGalaxy(now) {
     // close enough to be looking, or when the pointer is already on it.
     // Under reduced motion there is no drift to reveal the ring, so it is simply
     // always there: the Easter egg still has to be reachable without hunting.
-    if (entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
+    if (!VISUALIZER && entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + 3) * p.k, 0, Math.PI * 2);
@@ -1929,10 +1930,11 @@ void SHAPE;
  * Render the immersive flower page.
  * @returns the page HTML.
  */
-export function flowerPageHtml(embed = false): string {
+export function flowerPageHtml(embed = false, visualizer = false): string {
+  const classes = [embed ? 'embed' : '', visualizer ? 'viz' : ''].filter(Boolean).join(' ');
   return `<!doctype html>
-<html lang="en"${embed ? ' class="embed"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>The flower — Massai</title>
+<html lang="en"${classes === '' ? '' : ' class="' + classes + '"'}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>${visualizer ? 'Massai Mind' : 'The flower — Massai'}</title>
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
 <meta name="description" content="The Massai mark as a place: turn it, zoom it, and use its points to move.">
 <style>
@@ -1992,6 +1994,12 @@ export function flowerPageHtml(embed = false): string {
   body.embed .being, body.embed .confession, body.embed .counter, body.embed .settled,
   body.embed .sim { display: none !important }
   body.embed { background: #08080a }
+  /* Visualizer: the mind is the whole object. No door, no counters, no confession,
+     no hint — a screen you can leave on a wall. */
+  body.viz .back, body.viz .counter, body.viz .being, body.viz .confession,
+  body.viz .hint, body.viz .shapes, body.viz .settled, body.viz .sim,
+  body.viz .node-name, body.viz .skip { display: none !important }
+  body.viz { background: #060504 }
 </style></head><body${embed ? ' class="embed"' : ''}>
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
 <div class="overlay">
