@@ -292,6 +292,12 @@ let thoughtTimer = 0;
 // Pathways are a reading of the work, not a feature of the body: let them be turned
 // off (P, or ?paths=0) for anyone who finds them too much.
 let pathsOn = params.get('paths') !== '0';
+// The automatic voyage: the mind breathes depth on its own — about eighty seconds
+// in, eighty out — and spirals while it does. It yields to the hand instantly and
+// resumes from wherever the hand left it.
+let driftPhase = 0;
+let driftBase = 0;
+let driftHoldUntil = 0;
 // The screensaver: when nobody is driving, the mind drives. Any real input takes
 // the wheel straight back, without moving the camera the user left.
 let lastInput = performance.now();
@@ -1041,6 +1047,13 @@ function frame(now) {
 
   // The log eases; the visible size is derived from it, so every step of travel is
   // the same size of step — that is what makes the zoom feel unbounded.
+  // The depth breathes on its own when nobody is driving: ~80 s inward, ~80 s back,
+  // around wherever the hand last left the camera. A manual zoom holds it off for a
+  // while, then the voyage resumes from the new place instead of snapping back.
+  if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
+    driftPhase += dt * 0.0000125;
+    zoomLogTarget = driftBase + Math.sin(driftPhase) * 0.9;
+  }
   zoomLog += (zoomLogTarget - zoomLog) * 0.11;
   zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
 
@@ -1062,12 +1075,12 @@ function frame(now) {
       pitch += (-0.30 - pitch) * 0.03;
       roll += (0 - roll) * 0.03;
     } else if (!reduce && auto) {
+      // A spiral, not a spin: one slow turn, one slow roll, and a tilt on a period
+      // that shares no factor with either. The pose never repeats exactly.
       yaw += dt * IDLE_SPEED * DRIFT;
-      // It tilts as well as turns, on periods that do not divide into each other,
-      // so the pose never repeats exactly.
-      pitch += Math.sin(now * 0.000034) * dt * 0.0000042;
-      roll += Math.sin(now * 0.000021 + 1.7) * dt * 0.0000056;
-      pitch = Math.max(-0.6, Math.min(0.6, pitch));
+      roll += dt * 0.0000042;
+      pitch += Math.sin(now * 0.000029) * dt * 0.0000075;
+      pitch = Math.max(-0.55, Math.min(0.55, pitch));
     }
   }
   // The screensaver: forty-five seconds of stillness and the mind takes itself for
@@ -1099,7 +1112,6 @@ function frame(now) {
         if (label) label.textContent = exploreNode === PORTAL ? 'the door' : roleOf(exploreNode);
       }
       // Aim, never jump: the tour eases into its distance over about a second.
-      zoomLogTarget = zoomLog + (Math.random() < 0.5 ? 0.55 : -0.55);
       rippleFrom(exploreNode);
     }
   } else {
@@ -1309,6 +1321,9 @@ canvas.addEventListener('pointermove', function (event) {
     const spread = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
     const centre = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
     zoomLogTarget = zoomLogAtPinch + Math.log(spread / pinchStart) / LOG_OCTAVE;
+    driftHoldUntil = performance.now() + 22000;
+    driftBase = zoomLogTarget;
+    driftPhase = 0;
     // Slide the centre by however far the pair of fingers travelled together.
     panX = panOrigin.x + (centre.x - pinchCentre.x);
     panY = panOrigin.y + (centre.y - pinchCentre.y);
@@ -1433,6 +1448,9 @@ canvas.addEventListener('wheel', function (event) {
   wake();
   event.preventDefault();
   zoomLogTarget += event.deltaY > 0 ? -0.11 : 0.11;
+  driftHoldUntil = performance.now() + 22000;
+  driftBase = zoomLogTarget;
+  driftPhase = 0;
 }, { passive: false });
 addEventListener('keydown', function (event) {
   wake();
