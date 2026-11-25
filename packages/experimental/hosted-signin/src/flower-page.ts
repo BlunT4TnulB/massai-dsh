@@ -353,6 +353,9 @@ function resize() {
   canvas.height = Math.floor(VH * DPR);
   canvas.style.width = VW + 'px';
   canvas.style.height = VH + 'px';
+  // Draw in CSS pixels; the transform puts them on the device-pixel bitmap. Without
+  // this the scene is squeezed into the top-left corner at 1/DPR size.
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 measureViewport();
 resize();
@@ -458,7 +461,7 @@ function drawHalo(now) {
       ctx.globalAlpha = 1;
       // a few faint circle lines inside each sibling, so they read as bodies
       ctx.strokeStyle = 'rgba(206,168,120,' + (alpha * 0.8).toFixed(3) + ')';
-      ctx.lineWidth = DPR * 0.5;
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.arc(cx2, cy2, radius * 0.82, 0, Math.PI * 2);
       ctx.stroke();
@@ -486,7 +489,7 @@ function drawHalo(now) {
     const p = project(mote.x, mote.y, mote.z);
     const near = 1 + insideNow * (0.6 + 1.6 * Math.max(0, p.k - 0.85));
     ctx.beginPath();
-    ctx.arc(p.x, p.y, DPR * mote.s * p.k * near, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, mote.s * p.k * near, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(240,222,190,'
       + ((0.05 + 0.14 * (p.k - 0.5)) * (1 + 1.8 * insideNow)).toFixed(3) + ')';
     ctx.fill();
@@ -604,7 +607,7 @@ function strokeCircle(index, points, now, front) {
   const soft = Math.max(0.08, Math.min(1, 1.45 - zoom * 0.28 - insideOf(zoom) * 0.35));
   ctx.strokeStyle = 'rgba(' + (weight > 2 ? '255,240,215' : GOLD) + ','
     + Math.min(1, (base * life + 0.04 * breath) * weight * soft).toFixed(3) + ')';
-  ctx.lineWidth = DPR * (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
+  ctx.lineWidth = (front ? 0.9 : 0.6) * (weight > 2 ? 1.9 : 1);
   ctx.stroke();
   void now;
 }
@@ -664,7 +667,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     }
     const weight = i === -1 ? 2 : 1;
     ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.6;
+    ctx.lineWidth = 0.6;
     ctx.stroke();
   }
 
@@ -680,7 +683,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
     const hot = heat(now, entry.point[0], entry.point[1], entry.point[2]);
     const sprite = glowSprite(hot > 0.1 ? GREEN : GOLD);
-    const radius = DPR * (0.7 + 2.2 * near) * (1 + hot * 1.4);
+    const radius = (0.7 + 2.2 * near) * (1 + hot * 1.4);
     ctx.globalAlpha = Math.min(1, ((0.10 + 0.5 * near) * life + hot * 0.4) * alpha);
     ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
     ctx.globalAlpha = 1;
@@ -699,7 +702,7 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.30 * alpha).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.9;
+    ctx.lineWidth = 0.9;
     ctx.stroke();
   }
 }
@@ -719,7 +722,7 @@ function drawGalaxy(now) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.strokeStyle = 'rgba(255,236,205,' + (0.05 * life + 0.02 * breath).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.7;
+    ctx.lineWidth = 0.7;
     ctx.stroke();
   }
 
@@ -746,7 +749,7 @@ function drawGalaxy(now) {
     const isDoor = entry.index === PORTAL;
     // thoughts sit a shade darker than the door and far lighter in weight
     const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
-    const core = DPR * (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
+    const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
     const cloud = core * (isDoor ? 5.5 : 3.6);
     const strength = Math.min(1, (0.07 + 0.34 * near) * life + hot * 0.35 + (picked ? 0.4 : 0));
     const sprite = glowSprite(tint);
@@ -762,9 +765,9 @@ function drawGalaxy(now) {
     if (entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, (pulse + DPR * 3) * DPR * p.k, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, (pulse + 3) * p.k, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,242,214,' + (0.18 + 0.14 * breath).toFixed(3) + ')';
-      ctx.lineWidth = DPR * 1.2;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
     }
   }
@@ -787,7 +790,7 @@ function drawGalaxy(now) {
         else ctx.lineTo(p.x, p.y);
       }
       ctx.strokeStyle = 'rgba(232,186,132,' + (shell.a * life).toFixed(3) + ')';
-      ctx.lineWidth = DPR * 0.55;
+      ctx.lineWidth = 0.55;
       ctx.stroke();
     }
   }
@@ -805,7 +808,7 @@ function drawGalaxy(now) {
       else ctx.lineTo(p.x, p.y);
     }
     ctx.strokeStyle = 'rgba(255,240,215,' + (0.16 * life + 0.03 * breath).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 0.8;
+    ctx.lineWidth = 0.8;
     ctx.stroke();
   }
 
@@ -837,7 +840,7 @@ function drawGalaxy(now) {
         }
         ctx.closePath();
         ctx.strokeStyle = 'rgba(214,168,120,' + ((0.045 * life + 0.012 * breath) * alpha).toFixed(3) + ')';
-        ctx.lineWidth = DPR * 0.5;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
       }
     }
@@ -848,7 +851,7 @@ function drawGalaxy(now) {
       const famAlpha = reveal(node.family - 1);
       if (famAlpha <= 0.01) continue;
       const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
-      const radius = DPR * (0.5 + 1.5 * near);
+      const radius = (0.5 + 1.5 * near);
       ctx.globalAlpha = (0.05 + 0.20 * near) * life * famAlpha;
       ctx.drawImage(sky, p.x - radius, p.y - radius, radius * 2, radius * 2);
     }
@@ -905,7 +908,7 @@ function drawPathways(now) {
   if (zoom > 1.5) return;
   const recent = trail.slice(-6);
   ctx.globalCompositeOperation = 'lighter';
-  ctx.lineWidth = DPR * 0.8;
+  ctx.lineWidth = 0.8;
   for (let i = 1; i < recent.length; i += 1) {
     const from = nodes[(recent[i - 1].skill.length * 37 + i) % nodes.length].p;
     const to = nodes[(recent[i].skill.length * 53 + i * 7) % nodes.length].p;
@@ -921,8 +924,8 @@ function drawPathways(now) {
       else ctx.lineTo(p.x, p.y);
     }
     // the dash walks along the arc: light running down a pathway
-    ctx.setLineDash([DPR * 2, DPR * 12]);
-    ctx.lineDashOffset = -((now * 0.05) % (DPR * 14));
+    ctx.setLineDash([2, 12]);
+    ctx.lineDashOffset = -((now * 0.05) % (14));
     ctx.strokeStyle = 'rgba(126,226,168,' + (0.05 + 0.17 * fresh).toFixed(3) + ')';
     ctx.stroke();
     ctx.setLineDash([]);
@@ -942,7 +945,7 @@ function drawTrail(now) {
     const angle = -Math.PI / 2 + (turn % 1) * Math.PI * 2;
     const radius = base * (0.72 + 0.05 * Math.min(4, Math.floor(turn)) + 0.10 * (turn % 1));
     const colour = event.skill === 'geometry' ? GREEN : event.skill === 'dashboard' ? BLUE : GOLD;
-    drawGlow(colour, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, DPR * (1.8 + 2.2 * freshness), (0.06 + 0.35 * freshness) * life);
+    drawGlow(colour, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, (1.8 + 2.2 * freshness), (0.06 + 0.35 * freshness) * life);
   });
 }
 
@@ -957,7 +960,7 @@ function drawAgents() {
   agents.forEach(function (agent, index) {
     const angle = -Math.PI / 2 + (index / Math.max(1, agents.length)) * Math.PI * 2 + yaw * 0.45;
     const p = project(Math.cos(angle) * 1.25, Math.sin(angle) * 1.25, Math.sin(yaw + index) * 0.4);
-    drawGlow(GOLD, p.x, p.y, DPR * (5 + Math.min(5, agent.steps * 0.5)), 0.30);
+    drawGlow(GOLD, p.x, p.y, (5 + Math.min(5, agent.steps * 0.5)), 0.30);
   });
 }
 
@@ -983,7 +986,7 @@ function drawRipples(now) {
     }
     ctx.closePath();
     ctx.strokeStyle = 'rgba(' + GREEN + ',' + (left * 0.18).toFixed(3) + ')';
-    ctx.lineWidth = DPR * 1.2;
+    ctx.lineWidth = 1.2;
     ctx.stroke();
   }
   ripples = ripples.filter(function (ripple) { return ((now - ripple.t0) / 1000) * 1.1 < 2.6; });
@@ -1212,11 +1215,11 @@ function nodeAt(clientX, clientY) {
   let best = -1;
   // A thumb is not a mouse: on glass the door needs a generous target, and the
   // nearest star to the finger wins so a near miss still finds it.
-  let bestDistance = 34 * DPR;
+  let bestDistance = 34;
   for (let i = 0; i < nodes.length; i += 1) {
     const p = project(nodes[i].p[0], nodes[i].p[1], nodes[i].p[2]);
     if (p.z < -0.1) continue;
-    const distance = Math.hypot(p.x - clientX * DPR, p.y - clientY * DPR);
+    const distance = Math.hypot(p.x - clientX, p.y - clientY);
     if (distance < bestDistance) { bestDistance = distance; best = i; }
   }
   return best;
@@ -1287,8 +1290,8 @@ canvas.addEventListener('pointermove', function (event) {
     zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (spread / pinchStart)));
     zoomTarget = zoom;
     // Slide the centre by however far the pair of fingers travelled together.
-    panX = panOrigin.x + (centre.x - pinchCentre.x) * DPR;
-    panY = panOrigin.y + (centre.y - pinchCentre.y) * DPR;
+    panX = panOrigin.x + (centre.x - pinchCentre.x);
+    panY = panOrigin.y + (centre.y - pinchCentre.y);
     return;
   }
   if (!reduce) {
