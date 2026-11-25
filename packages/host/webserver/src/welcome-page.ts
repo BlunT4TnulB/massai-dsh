@@ -248,6 +248,53 @@ function headlineOf(line?: number): string {
  * @param line - test override (wraps into range); omitted picks a fresh line per load.
  * @returns the complete HTML document.
  */
+
+/**
+ * The black page: one orb, one label, one decision.
+ *
+ * This is what a person meets at the root before they belong anywhere: nothing
+ * but the mind, in a circle, with its name under it. The orb is a live frame of
+ * the galaxy, so the button and the thing it opens are the same object. The whole
+ * circle is the link; a hidden skip keeps the page usable without a pointer.
+ * @returns the full HTML document.
+ */
+export function intoTheUnknownPage(): string {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Into the Unknown — Massai</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#F2F2F4;overflow:hidden;
+    font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  .stage{height:100%;display:grid;place-items:center;padding:1.5rem}
+  a.orb-link{display:flex;flex-direction:column;align-items:center;gap:1.4rem;text-decoration:none}
+  .orb{position:relative;width:min(68vw,320px);aspect-ratio:1;border-radius:50%;overflow:hidden;
+    background:#000;box-shadow:0 0 90px rgba(217,130,43,.20),inset 0 0 50px rgba(0,0,0,.5);
+    border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
+  .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
+  a.orb-link:hover .orb,a.orb-link:active .orb{
+    box-shadow:0 0 140px rgba(217,130,43,.34),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.5)}
+  .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
+    animation:breathe 5.5s ease-in-out infinite}
+  .sub{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#6b6257;margin-top:-.6rem}
+  @keyframes breathe{0%,100%{opacity:.86}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.label{animation:none}}
+  .skip{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+</style></head><body>
+<div class="stage">
+  <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
+    <span class="orb"><iframe src="/flower?embed=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
+    <span class="label">Into the Unknown</span>
+    <span class="sub">touch the sphere</span>
+  </a>
+</div>
+<a class="skip" href="/access">skip to the workshop</a>
+</body></html>`
+}
+
 export function welcomePage(line?: number, cookieHeader = ''): string {
   const comfort = comfortOf(cookieHeader)
   // A deployment that carries its own key can let visitors start immediately;

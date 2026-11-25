@@ -27,7 +27,7 @@ import Negotiator from 'negotiator'
 import { renderIndexInjections, type IndexInjection } from './injections.ts'
 
 export { renderIndexInjections } from './injections.ts'
-import { accessPageHtml, welcomePage } from './welcome-page.ts'
+import { accessPageHtml, intoTheUnknownPage, welcomePage } from './welcome-page.ts'
 export type { IndexInjection, IndexInjectionPlacement } from './injections.ts'
 
 /** One application entry URL contributed for startup printing or browser handoff. */
@@ -704,6 +704,19 @@ export class WebServer extends Service {
           // shared access link carries the token, so tell the visitor exactly that.
           const wantsHtml = String(req.headers.accept ?? '').includes('text/html')
           if (admission.status === 401 && req.method === 'GET' && (target.pathname === '/' || wantsHtml)) {
+            // The root is not an explanation, it is an invitation: a black page
+            // with the mind in it. Everything a first-timer needs is behind that
+            // one circle; the words can wait until they have seen the thing.
+            if (target.pathname === '/') {
+              const splash = Buffer.from(intoTheUnknownPage())
+              res.writeHead(200, {
+                'cache-control': 'no-store',
+                'content-type': 'text/html; charset=utf-8',
+                'content-length': String(splash.byteLength),
+              })
+              res.end(req.method === 'HEAD' ? undefined : splash)
+              return
+            }
             const override = target.searchParams.get('line')
             const requested = override === null ? undefined : Number(override)
             res.writeHead(401, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' })
@@ -948,5 +961,5 @@ export class WebServer extends Service {
 }
 
 export default WebServer
-export { accessPageHtml, welcomePage }
+export { accessPageHtml, intoTheUnknownPage, welcomePage }
 export { mapPageHtml } from './map-page.ts'
