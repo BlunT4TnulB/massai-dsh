@@ -281,9 +281,8 @@ export function intoTheUnknownPage(): string {
   .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
     letter-spacing:.06em;text-align:center;font-style:italic;max-width:19rem;
     opacity:1;transition:opacity 1.1s ease;min-height:9.8em}
-  .enter{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:#5f5850;
-    text-decoration:none;border-bottom:1px solid #2b2620}
-  .enter:hover{color:#b98f5f;border-color:#5a4a2e}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0}
   .orb-link:hover .orb{
     box-shadow:0 0 140px rgba(217,130,43,.30),inset 0 0 60px rgba(0,0,0,.4);border-color:rgba(247,205,140,.42)}
   .label{font-size:.92rem;letter-spacing:.34em;text-transform:uppercase;color:#F3E6CE;
@@ -359,8 +358,8 @@ export function intoTheUnknownPage(): string {
       Follow where the bright threads wind,<br>
       and step inside the Massai mind.</p>
     <p class="slogan" id="slogan">Speak the future you want to live in, then build it together.</p>
-    <a class="enter" href="/flower">or go straight in →</a>
-    <a class="enter" href="/mind">or leave it running as a visualiser ↗</a>
+    <a class="sr" href="/flower">Enter the Unknown</a>
+    <a class="sr" href="/mind">Open the visualiser instead</a>
   </div>
 </div>
 <script>
@@ -464,7 +463,7 @@ export function intoTheUnknownPage(): string {
         }, 900);
       }
       sloganEl.textContent = SLOGANS[index];
-      setInterval(nextSlogan, 8000);
+      setInterval(nextSlogan, 18000);
       void order;
     }
 
@@ -483,7 +482,7 @@ export function intoTheUnknownPage(): string {
         }, 1100);
       }
       poemEl.innerHTML = POEMS[poemIndex].join('<br>');
-      setInterval(nextPoem, 14000);
+      setInterval(nextPoem, 28000);
     }
   })();
 </script>
