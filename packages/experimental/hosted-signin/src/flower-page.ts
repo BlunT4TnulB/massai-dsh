@@ -146,7 +146,11 @@ const SKILL_ORDER = ['geometry', 'dashboard', 'web-app', 'scripting', 'scanner',
 const IDLE_SPEED = 0.00006 * 1.3;
 const FRICTION = 0.955;
 const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full stretch'];
-const FIT = EMBEDDED ? 0.46 : 0.40;
+// Framing by intent. The app wants the mind filling the screen, because there is
+// no composer until the door is found; the welcome orb wants the whole sphere
+// inside its circle, so the button reads as a complete object.
+const ORB = params.get('fit') === 'orb';
+const FIT = ORB ? 0.40 : EMBEDDED ? 0.58 : 0.40;
 
 /**
  * How far inside the body you are, 0 at rest and 1 deep in.
@@ -162,7 +166,8 @@ function insideOf(z) {
 }
 // Zoom bands: each passed threshold reveals the next galaxy inside the last.
 const ZOOM_BANDS = [1.5, 2.4, 3.8, 5.6, 8.0, 11.0];
-const ANCHOR = EMBEDDED ? 0.40 : 0.5;
+// Dead centre now: nothing is waiting at the foot of the screen to make room for.
+const ANCHOR = 0.5;
 
 const spriteCache = new Map();
 
