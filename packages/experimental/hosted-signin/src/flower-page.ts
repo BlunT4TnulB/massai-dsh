@@ -2020,10 +2020,10 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
   body.embed { background: #08080a }
   /* Visualizer: the mind is the whole object. No door, no counters, no confession,
      no hint — a screen you can leave on a wall. */
-  body.viz .back, body.viz .counter, body.viz .being, body.viz .confession,
-  body.viz .hint, body.viz .shapes, body.viz .settled, body.viz .sim,
-  body.viz .node-name, body.viz .skip { display: none !important }
-  body.viz { background: #060504 }
+  html.viz .back, html.viz .counter, html.viz .being, html.viz .confession,
+  html.viz .hint, html.viz .shapes, html.viz .settled, html.viz .sim,
+  html.viz .node-name, html.viz .skip { display: none !important }
+  html.viz body { background: #060504 }
 </style></head><body${embed ? ' class="embed"' : ''}>
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
 <div class="overlay">
