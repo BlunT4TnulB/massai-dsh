@@ -257,6 +257,11 @@ let velPitch = 0;
 let velRoll = 0;
 let zoom = 1;
 let zoomTarget = 1;
+// Where the view is centred. One finger turns the body; two fingers slide this
+// centre across the screen so you can look off-axis, hold a region in view, or
+// push the body to one side while you read another part of it.
+let panX = 0;
+let panY = 0;
 let dragging = false;
 let dragMode = 'turn';
 let last = performance.now();
@@ -297,6 +302,8 @@ let diveGlow = 0;
 let auto = true;
 let pointers = new Map();
 let pinchStart = 0;
+let pinchCentre = { x: 0, y: 0 };
+let panOrigin = { x: 0, y: 0 };
 let zoomAtPinch = 1;
 const KIND = { vertex: 'vertex', edge: 'edge', face: 'face' };
 // What a star is, for the nine-tenths of them that are not the door.
@@ -374,7 +381,13 @@ function project(x, y, z) {
   const distance = 6.4;
   const scale = zoom * Math.min(VW, VH) * FIT;
   const k = distance / (distance + z3);
-  return { x: VW / 2 + x2 * scale * k, y: VH * ANCHOR + y3 * scale * k, k: k, depth: z3, z: z3 };
+  return {
+    x: VW / 2 + panX + x2 * scale * k,
+    y: VH * ANCHOR + panY + y3 * scale * k,
+    k: k,
+    depth: z3,
+    z: z3,
+  };
 }
 
 function heat(now, x, y, z) {
@@ -392,8 +405,8 @@ function heat(now, x, y, z) {
 }
 
 function drawHalo(now) {
-  const cx = VW / 2;
-  const cy = VH * ANCHOR;
+  const cx = VW / 2 + panX;
+  const cy = VH * ANCHOR + panY;
   const reach = Math.max(VW, VH) * 0.82;
   breath = (reduce || !auto) ? 0.5 : 0.5 + 0.5 * Math.sin(now * BREATH_SPEED);
   life = 0.45 + 0.55 * self.energy * self.memory;
@@ -435,8 +448,8 @@ function drawHalo(now) {
     const siblingCount = 6;
     for (let i = 0; i < siblingCount; i += 1) {
       const angle = (i / siblingCount) * Math.PI * 2 + yaw * 0.2;
-      const cx2 = VW / 2 + Math.cos(angle) * ring * (VW / Math.min(VW, VH));
-      const cy2 = VH * ANCHOR + Math.sin(angle) * ring * 0.55;
+      const cx2 = VW / 2 + panX + Math.cos(angle) * ring * (VW / Math.min(VW, VH));
+      const cy2 = VH * ANCHOR + panY + Math.sin(angle) * ring * 0.55;
       const alpha = outward * (0.10 + 0.05 * Math.sin(i * 2.4)) * life;
       const radius = Math.min(VW, VH) * FIT * 0.34 * (0.6 + 0.3 * Math.sin(i * 1.7));
       const sprite = glowSprite('224,186,138');
@@ -919,8 +932,8 @@ function drawPathways(now) {
 
 function drawTrail(now) {
   if (trail.length === 0) return;
-  const cx = VW / 2;
-  const cy = VH * ANCHOR;
+  const cx = VW / 2 + panX;
+  const cy = VH * ANCHOR + panY;
   const base = Math.min(VW, VH) * FIT * 1.45;
   trail.forEach(function (event, index) {
     const age = Math.max(0, now - event.at);
@@ -1247,10 +1260,13 @@ canvas.addEventListener('pointerdown', function (event) {
   goFullscreen();
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2) {
-    // pinch: two fingers decide distance, the way a hand would
+    // Two fingers own the camera: their spread sets the depth, their shared motion
+    // slides the centre. One finger still turns the body, as before.
     const two = [...pointers.values()];
     pinchStart = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
     zoomAtPinch = zoom;
+    pinchCentre = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
+    panOrigin = { x: panX, y: panY };
     dragging = false;
     return;
   }
@@ -1266,9 +1282,13 @@ canvas.addEventListener('pointermove', function (event) {
   if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
-    const now = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
-    zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (now / pinchStart)));
+    const spread = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
+    const centre = { x: (two[0].x + two[1].x) / 2, y: (two[0].y + two[1].y) / 2 };
+    zoom = Math.max(0.16, Math.min(20, zoomAtPinch * (spread / pinchStart)));
     zoomTarget = zoom;
+    // Slide the centre by however far the pair of fingers travelled together.
+    panX = panOrigin.x + (centre.x - pinchCentre.x) * DPR;
+    panY = panOrigin.y + (centre.y - pinchCentre.y) * DPR;
     return;
   }
   if (!reduce) {
@@ -1354,7 +1374,7 @@ addEventListener('keydown', function (event) {
   if (event.key === 'ArrowDown') pitch = Math.min(1.5, pitch + 0.07);
   if (event.key === 'q' || event.key === 'Q') roll -= 0.1;
   if (event.key === 'e' || event.key === 'E') roll += 0.1;
-  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoom = 1; zoomTarget = 1; }
+  if (event.key === 'r' || event.key === 'R') { yaw = 0.4; pitch = -0.35; roll = 0; zoom = 1; zoomTarget = 1; panX = 0; panY = 0; }
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'f' || event.key === 'F') {
@@ -1451,7 +1471,7 @@ export function flowerPageHtml(embed = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to travel · <b>shift-drag</b> to roll · <b>pinch</b>/<b>scroll</b> for depth · <b>tap once</b> for the whole screen · one star is a door</p>
+<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> to move the centre and the depth · <b>scroll</b> for depth · one star is a door</p>
 <div class="sim-ui">
     <label for="level">simulate intelligence</label>
     <input type="range" id="level" min="0" max="5" step="1" value="0">
