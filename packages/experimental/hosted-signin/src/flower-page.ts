@@ -202,6 +202,9 @@ const LOG_OCTAVE = Math.log(OCTAVE);
 // ?z=<log> starts the camera at a given depth, which is how a screenshot can show
 // any octave without a hand on the glass.
 const START_Z = Number(params.get('z') ?? '0');
+// ?dive=<index> starts with that star attended, so the node-finding state can be
+// photographed (and so the bright-line bug could be reproduced deliberately).
+const START_DIVE = Number(params.get('dive') ?? '-1');
 let zoomLog = Number.isFinite(START_Z) ? START_Z : 0;
 let zoomLogTarget = zoomLog;
 let octaveScale = 1;
@@ -314,6 +317,7 @@ let driftPhase = 0;
 // The opening of the self-tour is travel only, for long enough to cross a few
 // spheres, because that first fall is the best part and a hop to a node cut it off.
 let voyageUntil = 0;
+let swingNow = 0.85;
 const VOYAGE_MS = 150000;
 let driftBase = 0;
 let driftHoldUntil = 0;
@@ -331,7 +335,7 @@ let exploreAt = 0;
 let exploreNode = -1;
 let simLevel = 0;
 let hoverNode = -1;
-let diveNode = -1;
+let diveNode = Number.isFinite(START_DIVE) && START_DIVE >= 0 ? START_DIVE : -1;
 let diveGlow = 0;
 let auto = true;
 let pointers = new Map();
@@ -712,12 +716,17 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     const points = GREAT[i];
     ctx.beginPath();
     let started = false;
+    let lastX = 0;
+    let lastY = 0;
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
       if (localZ(point) > 0 || p.behind === true) { started = false; continue; }
+      if (started && Math.hypot(p.x - lastX, p.y - lastY) > jumpMax) { started = false; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
+      lastX = p.x;
+      lastY = p.y;
     }
     const weight = i === -1 ? 2 : 1;
     ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.10 * alpha * weight).toFixed(3) + ')';
@@ -749,12 +758,17 @@ function drawGalaxyAt(now, anchor, radius, rotPhase, alpha) {
     const points = GREAT[i];
     ctx.beginPath();
     let started = false;
+    let lastX = 0;
+    let lastY = 0;
     for (const raw of points) {
       const point = local(raw);
       const p = project(point[0], point[1], point[2]);
       if (localZ(point) <= 0 || p.behind === true) { started = false; continue; }
+      if (started && Math.hypot(p.x - lastX, p.y - lastY) > jumpMax) { started = false; }
       if (!started) { ctx.moveTo(p.x, p.y); started = true; }
       else ctx.lineTo(p.x, p.y);
+      lastX = p.x;
+      lastY = p.y;
     }
     ctx.strokeStyle = 'rgba(' + GOLD + ',' + (0.17 * alpha).toFixed(3) + ')';
     ctx.lineWidth = 0.9;
@@ -903,11 +917,17 @@ function drawGalaxy(now) {
         if (!linesOn) break;
         ctx.beginPath();
         let started = false;
+        let lastX = 0;
+        let lastY = 0;
+        const jumpMax = Math.max(VW, VH) * 1.5;
         for (const point of points) {
           const p = project(point[0], point[1], point[2]);
           if (p.behind === true) { started = false; continue; }
           if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else if (Math.hypot(p.x - lastX, p.y - lastY) > jumpMax) ctx.moveTo(p.x, p.y);
           else ctx.lineTo(p.x, p.y);
+          lastX = p.x;
+          lastY = p.y;
         }
         ctx.closePath();
         ctx.strokeStyle = 'rgba(214,168,120,' + ((0.045 * life + 0.012 * breath) * alpha).toFixed(3) + ')';
@@ -1131,7 +1151,8 @@ function frame(now) {
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
     driftPhase += dt * 0.000052;
     const sailing = screensaver && now < voyageUntil;
-    const swing = sailing ? 1.75 : 0.85;
+    swingNow += ((sailing ? 1.75 : 0.85) - swingNow) * 0.02;
+    const swing = swingNow;
     // While it is sailing, the whole breath slides inward: one sphere every couple of
     // minutes, so a long watch keeps arriving somewhere new rather than circling one.
     if (sailing) driftBase -= dt * 0.0000075;
