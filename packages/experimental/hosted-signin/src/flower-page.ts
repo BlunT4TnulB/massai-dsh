@@ -253,6 +253,12 @@ let thoughtTimer = 0;
 // the wheel straight back, without moving the camera the user left.
 let lastInput = performance.now();
 let screensaver = false;
+// Adaptive quality: the frame is measured continuously and layers are shed in
+// order of cost-before-beauty. A phone in a car park gets the same mind, at a
+// weight it can actually carry.
+let frameAvg = 16;
+let quality = 1;
+let qualityTick = 0;
 let exploreAt = 0;
 let exploreNode = -1;
 let simLevel = 0;
@@ -369,7 +375,8 @@ function drawHalo(now) {
   ctx.globalCompositeOperation = 'lighter';
   const fogScale = Math.min(innerWidth, innerHeight) * FIT * 2.6;
   const inside = insideOf(zoom);
-  for (const blob of FOG) {
+  const fogCount = Math.max(1, Math.round(FOG.length * Math.max(0.35, quality)));
+  for (const blob of FOG.slice(0, fogCount)) {
     const x = cx + Math.cos(now * blob.sx * FOG_ENERGY + blob.phase + MOOD * 6.28) * innerWidth * blob.ax;
     const y = cy + Math.sin(now * blob.sy * FOG_ENERGY + blob.phase * 1.3 + MOOD * 6.28) * innerHeight * blob.ay;
     const radius = fogScale * blob.radius * (0.94 + 0.06 * breath) * (1 + 0.55 * inside);
@@ -387,7 +394,7 @@ function drawHalo(now) {
   // of the same body, one beyond the next. Retreat far enough and the whole thing
   // is a star inside something bigger.
   const outward = Math.max(0, Math.min(1, (1.0 - zoom) / 0.7));
-  if (outward > 0.02) {
+  if (outward > 0.02 && quality > 0.55) {
     ctx.globalCompositeOperation = 'lighter';
     for (const step of [1, 2, 3]) {
       const scale = 1 + step * (1.15 * outward + 0.25);
@@ -706,7 +713,9 @@ function drawGalaxy(now) {
     ctx.globalAlpha = 1;
     // The door is an Easter egg, not a signpost: the ring appears only when you are
     // close enough to be looking, or when the pointer is already on it.
-    if (entry.index === PORTAL && (zoom > 1.5 || hoverNode === PORTAL)) {
+    // Under reduced motion there is no drift to reveal the ring, so it is simply
+    // always there: the Easter egg still has to be reachable without hunting.
+    if (entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + DPR * 3) * DPR * p.k, 0, Math.PI * 2);
@@ -721,7 +730,8 @@ function drawGalaxy(now) {
   // with layers of light rather than a single skin. Drawn additive beside the
   // root so the centre gains depth without gaining weight.
   ctx.globalCompositeOperation = 'lighter';
-  for (const shell of [{ r: 0.86, a: 0.16 }, { r: 0.70, a: 0.11 }, { r: 0.55, a: 0.07 }]) {
+  const shells = [{ r: 0.86, a: 0.16 }, { r: 0.70, a: 0.11 }, { r: 0.55, a: 0.07 }];
+  for (const shell of shells.slice(0, Math.max(1, Math.ceil(shells.length * quality)))) {
     for (let i = 0; i < GREAT.length; i += 1) {
       const points = GREAT[i];
       ctx.beginPath();
@@ -761,7 +771,7 @@ function drawGalaxy(now) {
   // The deeper sky emerges one family at a time as you travel: at rest there is
   // the fixed flower and its first extra family; deeper zoom surfaces the next,
   // and the next. The sky is never all of it, which is what makes it feel endless.
-  if (EXTRA_CIRCLES.length > 0) {
+  if (EXTRA_CIRCLES.length > 0 && quality > 0.5) {
     ctx.globalCompositeOperation = 'lighter';
     // At full retreat every family is present: the complete sphere, which is the
     // shape this has always been. Travelling inward lets the deeper families step
@@ -943,6 +953,14 @@ function drawMood() {
 function frame(now) {
   const dt = Math.min(64, now - last);
   last = now;
+  // Measure, then decide. Below ~42 fps shed a layer; comfortably above, recover
+  // one. Nothing is shown to the user about this: it is just the body pacing itself.
+  frameAvg += (dt - frameAvg) * 0.06;
+  qualityTick += 1;
+  if (qualityTick % 90 === 0) {
+    if (frameAvg > 23) quality = Math.max(0.3, quality - 0.15);
+    else if (frameAvg < 14) quality = Math.min(1, quality + 0.06);
+  }
   if (document.visibilityState === 'hidden') {
     requestAnimationFrame(frame);
     return;
@@ -999,7 +1017,7 @@ function frame(now) {
   // The screensaver: forty-five seconds of stillness and the mind takes itself for
   // a walk. It picks stars, names them, dives and withdraws — the same voyage a
   // hand would make, on its own schedule.
-  if (!screensaver && now - lastInput > 45000) {
+  if (!reduce && !screensaver && now - lastInput > 45000) {
     screensaver = true;
     document.body.classList.add('screensaver');
     exploreAt = now;
