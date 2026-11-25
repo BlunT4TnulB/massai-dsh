@@ -233,7 +233,7 @@ const BREATH_SPEED = 0.00042 + random() * 0.00026;
 const DRIFT = 0.78 + random() * 0.5;
 const FOG_ENERGY = 0.75 + random() * 0.6;
 // The door lives at the rest pose, dead centre. Only the welcome orb spins in a
-// random pose (`spin=1`); the app keeps the fixed pose so the door stays findable
+// random pose (spin=1); the app keeps the fixed pose so the door stays findable
 // and the body sits where it belongs.
 let yaw = SPIN ? 0.4 + seedAngle(Math.PI * 1.4) : 0.4;
 let pitch = SPIN ? -0.35 + seedAngle(0.9) : -0.35;
