@@ -334,7 +334,7 @@ export function intoTheUnknownPage(): string {
 </script>
 <div class="stage">
   <a class="orb-link" href="/flower" aria-label="Into the Unknown — enter the galaxy">
-    <span class="orb"><iframe src="/flower?embed=1&spin=1&fit=orb" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
+    <span class="orb"><iframe src="/flower?embed=1&spin=1&fit=orb&quiet=1" title="The Massai galaxy" loading="eager" tabindex="-1" scrolling="no"></iframe></span>
     <span class="label">Into the Unknown</span>
     <span class="sub">touch the sphere</span>
   </a>

@@ -40,7 +40,7 @@ function CornerMenu() {
   // they meant without reading all of them.
   const groups: ReadonlyArray<readonly [string, ReadonlyArray<readonly [string, string]>]> = [
     ['Make', [['New conversation', '/'], ['The workshop', '/access'], ['Projects', '/projects']]],
-    ['Wander', [['The mind', '/flower'], ['Map', '/map'], ['Library', '/library']]],
+    ['Wander', [['The mind', '/flower'], ['The welcome page', '/welcome'], ['Map', '/map'], ['Library', '/library']]],
     ['Understand', [['Limits', '/limits'], ['Guide', '/guide'], ['Support', '/support']]],
     ['Yours', [['You', '/me'], ['Settings', '/settings'], ['Operator', '/admin']]],
   ]

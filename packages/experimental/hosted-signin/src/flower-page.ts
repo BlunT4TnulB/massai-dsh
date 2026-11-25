@@ -150,6 +150,9 @@ const LEVELS = ['dormant', 'stirring', 'working', 'busy', 'surging', 'at full st
 // no composer until the door is found; the welcome orb wants the whole sphere
 // inside its circle, so the button reads as a complete object.
 const ORB = params.get('fit') === 'orb';
+// A decorative orb (the welcome page) must not chat: no activity polls, no vitals,
+// no counters. It is the mind as an object, not as a dashboard.
+const QUIET = params.get('quiet') === '1' || ORB;
 const FIT = ORB ? 0.40 : EMBEDDED ? 0.58 : 0.40;
 
 /**
@@ -1098,6 +1101,7 @@ if (counter) {
   }
 
 async function poll() {
+  if (QUIET) return;
   try {
     const response = await fetch('/api/one-turn/activity', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
@@ -1119,9 +1123,10 @@ async function poll() {
   } catch { /* a live view that fails is still a galaxy */ }
 }
 poll();
-setInterval(poll, 2500);
+if (!QUIET) setInterval(poll, 2500);
 
 async function pollVitals() {
+  if (QUIET) return;
   try {
     const response = await fetch('/api/vitals', { headers: { accept: 'application/json' } });
     if (!response.ok) return;
@@ -1153,7 +1158,7 @@ async function pollVitals() {
   } catch { /* not knowing how you are is also a state */ }
 }
 pollVitals();
-setInterval(pollVitals, 15000);
+if (!QUIET) setInterval(pollVitals, 15000);
 
 // --- interaction ----------------------------------------------------------
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
@@ -1373,6 +1378,9 @@ export function flowerPageHtml(embed = false): string {
     border:1px solid #24242b;border-radius:999px;padding:.3rem .8rem;backdrop-filter:blur(6px)}
   .sim-ui input{width:8rem;accent-color:#C1440E}
   .sim-ui #levelName{color:#EFDCA4;min-width:5.6rem}
+  .skip{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .skip:focus{left:1rem;top:1rem;width:auto;height:auto;padding:.5rem .8rem;z-index:99;
+    background:#14100c;color:#EFDCA4;border:1px solid #7a3d12;border-radius:.4rem}
   .shapes{position:fixed;left:0;right:0;bottom:1.2rem;text-align:center;font-size:.7rem;
     color:#5f5f68;letter-spacing:.06em;pointer-events:none}
   .shapes a{pointer-events:auto}
@@ -1416,5 +1424,6 @@ export function flowerPageHtml(embed = false): string {
   </div>
   <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
+<a class="skip" href="/access">skip to the workshop</a>
 </body></html>`
 }
