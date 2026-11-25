@@ -296,6 +296,10 @@ let pathsOn = params.get('paths') !== '0';
 // in, eighty out — and spirals while it does. It yields to the hand instantly and
 // resumes from wherever the hand left it.
 let driftPhase = 0;
+// The opening of the self-tour is travel only, for long enough to cross a few
+// spheres, because that first fall is the best part and a hop to a node cut it off.
+let voyageUntil = 0;
+const VOYAGE_MS = 85000;
 let driftBase = 0;
 let driftHoldUntil = 0;
 // The screensaver: when nobody is driving, the mind drives. Any real input takes
@@ -1082,7 +1086,8 @@ function frame(now) {
   // while, then the voyage resumes from the new place instead of snapping back.
   if (!reduce && auto && !dragging && pointers.size === 0 && now > driftHoldUntil) {
     driftPhase += dt * 0.00006;
-    zoomLogTarget = driftBase + Math.sin(driftPhase) * 0.85;
+    const swing = (screensaver && now < voyageUntil) ? 1.75 : 0.85;
+    zoomLogTarget = driftBase + Math.sin(driftPhase) * swing;
   }
   zoomLog += (zoomLogTarget - zoomLog) * 0.055;
   zoom = Math.pow(OCTAVE, zoomLog - Math.floor(zoomLog));
@@ -1119,11 +1124,12 @@ function frame(now) {
   if (!reduce && !screensaver && now - lastInput > 14000) {
     screensaver = true;
     document.body.classList.add('screensaver');
-    exploreAt = now;
+    voyageUntil = now + VOYAGE_MS;
+    exploreAt = voyageUntil;
   }
   if (screensaver) {
-    if (now > exploreAt) {
-      exploreAt = now + 9000 + Math.random() * 6000;
+    if (now > exploreAt && now > voyageUntil) {
+      exploreAt = now + 11000 + Math.random() * 7000;
       const label = document.getElementById('nodeName');
       // When the mind has real work to remember, it walks through that: a recent
       // moment is chosen, the camera goes to its star, and it says what it was.
