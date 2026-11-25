@@ -352,6 +352,73 @@ function writeDial(name, value) {
 
 const LINES = { far: readDial('linesFar', 0.85), near: readDial('linesNear', 0.4) };
 
+// ---------------------------------------------------------------------------
+// The mind as its own instrument: every dial in one object, saved per browser,
+// editable from a panel (S, or ?panel=1) instead of only by keyboard shortcuts.
+// ---------------------------------------------------------------------------
+const MIND_DEFAULTS = {
+  swing: 1,        // travel amplitude multiplier (1 = as designed)
+  speed: 1,        // how fast the voyage breathes
+  spark: 2,        // 0 off · 1 rare · 2 often · 3 restless
+  linesFar: 0.85,  // lattice strength on the voyage
+  linesNear: 0.4,  // lattice strength while a star is held
+  paths: true,     // the dashed paths of use
+  lines: true,     // the great-circle lattice
+  keepAwake: false // hold the screen awake (a visualiser left on a monitor)
+};
+
+/** Read the saved instrument settings, falling back to the defaults. */
+function loadMind() {
+  const out = Object.assign({}, MIND_DEFAULTS);
+  try {
+    const raw = window.localStorage.getItem('massai_mind');
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      for (const key of Object.keys(out)) {
+        if (parsed !== null && typeof parsed === 'object' && typeof parsed[key] === typeof out[key]) {
+          out[key] = parsed[key];
+        }
+      }
+    }
+  } catch (error) { void error; }
+  return out;
+}
+
+let MIND = loadMind();
+LINES.far = MIND.linesFar;
+LINES.near = MIND.linesNear;
+pathsOn = MIND.paths;
+linesOn = MIND.lines;
+sparkLevel = MIND.spark;
+
+/** Push the current settings into the live variables, and persist them. */
+function applyMind(persist) {
+  LINES.far = MIND.linesFar;
+  LINES.near = MIND.linesNear;
+  pathsOn = MIND.paths;
+  linesOn = MIND.lines;
+  sparkLevel = MIND.spark;
+  if (persist !== false) {
+    try { window.localStorage.setItem('massai_mind', JSON.stringify(MIND)); } catch (error) { void error; }
+  }
+}
+
+/** Ask the browser to keep the screen awake while the mind is on show. */
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && navigator.wakeLock !== undefined) {
+      await navigator.wakeLock.request('screen');
+    }
+  } catch (error) { void error; }
+}
+
+const PRESETS = {
+  voyage: { swing: 1, speed: 1, spark: 2, linesFar: 0.85, linesNear: 0.4, paths: true, lines: true },
+  still: { swing: 0.15, speed: 0.35, spark: 0, linesFar: 0.6, linesNear: 0.25, paths: false, lines: true },
+  storm: { swing: 1.7, speed: 1.5, spark: 3, linesFar: 1.1, linesNear: 0.7, paths: true, lines: true },
+  bare: { swing: 1, speed: 1, spark: 1, linesFar: 0, linesNear: 0, paths: false, lines: false }
+};
+
 /** The multiplier for the state the mind is in right now. */
 function lineScale() {
   return diveNode >= 0 ? LINES.near : LINES.far;
@@ -1472,6 +1539,8 @@ async function poll() {
 }
 poll();
 if (!QUIET) setInterval(poll, 2500);
+if (params.get('panel') === '1') togglePanel();
+if (MIND.keepAwake) void keepAwake(true);
 
 async function pollVitals() {
   if (QUIET) return;
@@ -1511,6 +1580,75 @@ if (!QUIET) setInterval(pollVitals, 15000);
 // --- interaction ----------------------------------------------------------
 // The welcome page holds this frame like a coin and turns it by hand: it sends the
 // drag here, so the small version spins on every axis without ever being a link.
+/**
+ * Build (once) and toggle the instrument panel.
+ * @returns nothing.
+ */
+function togglePanel() {
+  let panel = document.getElementById('mindPanel');
+  if (panel !== null) {
+    panel.remove();
+    return;
+  }
+  panel = document.createElement('div');
+  panel.id = 'mindPanel';
+  panel.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:50;width:min(19rem,88vw);'
+    + 'background:rgba(12,11,10,.94);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
+    + 'padding:12px 14px;font:12px system-ui,sans-serif;color:#E7DCC6;backdrop-filter:blur(8px)';
+
+  const rows = [
+    ['swing', 'travel', 0, 2.2, 0.05],
+    ['speed', 'pace', 0.2, 2.5, 0.05],
+    ['spark', 'sparks', 0, 3, 1],
+    ['linesFar', 'lattice far', 0, 2, 0.05],
+    ['linesNear', 'lattice near', 0, 2, 0.05]
+  ];
+  let html = '<div style="letter-spacing:.22em;font-size:10px;color:#8a7c62;margin-bottom:8px">MIND</div>';
+  for (const [key, label, min, max, step] of rows) {
+    html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
+      + '<span style="width:5.6rem;color:#9a8f7c">' + label + '</span>'
+      + '<input type="range" data-key="' + key + '" min="' + min + '" max="' + max + '" step="' + step
+      + '" value="' + MIND[key] + '" style="flex:1;accent-color:#C1440E">'
+      + '<span data-out="' + key + '" style="width:2.2rem;text-align:right;color:#EFDCA4">'
+      + Number(MIND[key]).toFixed(2) + '</span></label>';
+  }
+  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
+    + '<input type="checkbox" data-key="paths"' + (MIND.paths ? ' checked' : '') + '> paths of use</label>';
+  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
+    + '<input type="checkbox" data-key="lines"' + (MIND.lines ? ' checked' : '') + '> lattice</label>';
+  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
+    + '<input type="checkbox" data-key="keepAwake"' + (MIND.keepAwake ? ' checked' : '') + '> keep screen awake</label>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">';
+  for (const name of Object.keys(PRESETS)) {
+    html += '<button data-preset="' + name + '" style="padding:4px 8px;border-radius:6px;'
+      + 'border:1px solid #3a332a;background:#1a1714;color:#E7DCC6;cursor:pointer">' + name + '</button>';
+  }
+  html += '<button data-preset="reset" style="padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
+    + 'background:#1a1714;color:#8a7c62;cursor:pointer">reset</button></div>';
+  panel.innerHTML = html;
+
+  panel.addEventListener('input', function (event) {
+    const el = event.target;
+    const key = el.getAttribute('data-key');
+    if (key === null) return;
+    MIND[key] = el.type === 'checkbox' ? el.checked : Number(el.value);
+    const out = panel.querySelector('[data-out="' + key + '"]');
+    if (out !== null) out.textContent = Number(MIND[key]).toFixed(2);
+    applyMind(true);
+    void keepAwake(MIND.keepAwake);
+  });
+  panel.addEventListener('click', function (event) {
+    const button = event.target;
+    const name = button.getAttribute('data-preset');
+    if (name === null) return;
+    MIND = name === 'reset' ? Object.assign({}, MIND_DEFAULTS) : Object.assign({}, MIND, PRESETS[name]);
+    applyMind(true);
+    togglePanel();
+    togglePanel();
+  });
+  document.body.appendChild(panel);
+}
+
 addEventListener('message', function (event) {
   const data = event.data;
   if (data === null || typeof data !== 'object' || data.type !== 'massai:spin') return;
@@ -1747,6 +1885,7 @@ addEventListener('keydown', function (event) {
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'l' || event.key === 'L') { linesOn = !linesOn; }
+  if (event.key === 's' || event.key === 'S') { togglePanel(); }
   if (event.key === 'k' || event.key === 'K') {
     sparkLevel = (sparkLevel + 1) % 4;
     try { window.localStorage.setItem('massai_sparks', String(sparkLevel)); } catch (error) { void error; }
