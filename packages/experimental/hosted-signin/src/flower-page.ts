@@ -308,6 +308,25 @@ let thoughtTimer = 0;
 // Pathways are a reading of the work, not a feature of the body: let them be turned
 // off (P, or ?paths=0) for anyone who finds them too much.
 let pathsOn = params.get('paths') !== '0';
+
+// Sparks: a sudden link between two stars, bright for about a second, then gone. They
+// are the mind appearing to notice itself. Visual only — nothing is transmitted — but
+// they are driven by real activity when there is any, and by a slow restlessness when
+// there is not.
+const SPARK_RATE = [0, 9000, 4500, 2200];
+let sparkLevel = (function () {
+  try {
+    const stored = window.localStorage.getItem('massai_sparks');
+    if (stored !== null) {
+      const value = Number(stored);
+      if (Number.isFinite(value)) return Math.max(0, Math.min(3, Math.round(value)));
+    }
+  } catch (error) { void error; }
+  const fromUrl = Number(params.get('sparks') ?? 'NaN');
+  return Number.isFinite(fromUrl) ? Math.max(0, Math.min(3, Math.round(fromUrl))) : 2;
+})();
+let sparkNext = 0;
+const sparks = [];
 // The lattice itself, switchable: L toggles it, ?lines=0 starts with it off.
 let linesOn = params.get('lines') !== '0';
 
@@ -1089,6 +1108,89 @@ function rippleFrom(index) {
   void label;
 }
 
+/**
+ * Light a link between two nearby stars.
+ * @param now - current epoch ms.
+ * @returns nothing.
+ */
+function spawnSpark(now) {
+  const level = sparkLevel;
+  if (level <= 0) return;
+  // Prefer a star touched by real work; otherwise borrow one from the pattern.
+  let a = Math.floor(Math.random() * nodes.length);
+  if (trail.length > 0) {
+    const event = trail[Math.floor(Math.random() * Math.min(trail.length, 6))];
+    a = (String(event.skill).length * 53 + Math.floor(Math.random() * 40)) % nodes.length;
+  }
+  // Find a partner that is close enough for the link to read as a connection.
+  const from = nodes[a].p;
+  let best = -1;
+  let bestScore = -1;
+  for (let tries = 0; tries < 24; tries += 1) {
+    const candidate = Math.floor(Math.random() * nodes.length);
+    if (candidate === a) continue;
+    const d = Math.hypot(
+      nodes[candidate].p[0] - from[0],
+      nodes[candidate].p[1] - from[1],
+      nodes[candidate].p[2] - from[2],
+    );
+    if (d < 0.25 || d > 0.95) continue;
+    const score = 1 - Math.abs(d - 0.6) / 0.35;
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  }
+  if (best < 0) return;
+  sparks.push({ a: a, b: best, t0: now });
+  if (sparks.length > 14) sparks.shift();
+}
+
+/**
+ * Draw the live sparks: a bright arc that fades, with both ends glowing.
+ * @param now - current epoch ms.
+ * @returns nothing.
+ */
+function drawSparks(now) {
+  if (sparks.length === 0) return;
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = sparks.length - 1; i >= 0; i -= 1) {
+    const spark = sparks[i];
+    const age = now - spark.t0;
+    const life01 = 1 - age / 1300;
+    if (life01 <= 0) { sparks.splice(i, 1); continue; }
+    const a = nodes[spark.a].p;
+    const b = nodes[spark.b].p;
+    const arc = arcBetween(a, b, 22);
+    ctx.beginPath();
+    let started = false;
+    let lx = 0;
+    let ly = 0;
+    const jump = Math.max(VW, VH) * 1.5;
+    for (const point of arc) {
+      const p = project(point[0], point[1], point[2]);
+      if (p.z <= -0.15 || p.behind === true) { started = false; continue; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else if (Math.hypot(p.x - lx, p.y - ly) > jump) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+      lx = p.x;
+      ly = p.y;
+    }
+    const fade = life01 * life01;
+    ctx.strokeStyle = 'rgba(255,246,222,' + (0.75 * fade).toFixed(3) + ')';
+    ctx.lineWidth = 1.6 + 2.4 * life01;
+    ctx.stroke();
+    // both ends flash, so the link reads as a conversation rather than a line
+    const sprite = glowSprite('255,244,224');
+    for (const node of [a, b]) {
+      const p = project(node[0], node[1], node[2]);
+      if (p.z <= -0.2 || p.behind === true) continue;
+      const radius = (2.2 + 6 * life01) * (0.6 + p.k);
+      ctx.globalAlpha = 0.55 * fade;
+      ctx.drawImage(sprite, p.x - radius, p.y - radius, radius * 2, radius * 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 function drawRipples(now) {
   for (const ripple of ripples) {
     const radius = ((now - ripple.t0) / 1000) * 1.1;
@@ -1631,6 +1733,17 @@ addEventListener('keydown', function (event) {
   // Space stills the whole thing: sometimes you want to study the mind, not watch it.
   if (event.key === 'p' || event.key === 'P') { pathsOn = !pathsOn; }
   if (event.key === 'l' || event.key === 'L') { linesOn = !linesOn; }
+  if (event.key === 'k' || event.key === 'K') {
+    sparkLevel = (sparkLevel + 1) % 4;
+    try { window.localStorage.setItem('massai_sparks', String(sparkLevel)); } catch (error) { void error; }
+    const names = ['off', 'rare', 'often', 'restless'];
+    const label = document.getElementById('nodeName');
+    if (label !== null) {
+      label.textContent = 'sparks · ' + names[sparkLevel];
+      clearTimeout(thoughtTimer);
+      thoughtTimer = setTimeout(function () { label.textContent = ''; }, 1600);
+    }
+  }
   if (event.key === '[' || event.key === ']') {
     // tune the dial that is in play: the voyage web far out, the node web up close
     const key = diveNode >= 0 ? 'near' : 'far';
