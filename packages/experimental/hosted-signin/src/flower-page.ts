@@ -502,9 +502,11 @@ const roleOf = function (index) { return ROLES[(index * 7 + 3) % ROLES.length]; 
 // this is the only one you can enter. It drifts with the day, not with the view.
 const REST_YAW = 0.4;
 const REST_PITCH = -0.35;
-// The door is real but hidden for now. One switch, so every place that used to draw
-// or answer to it agrees: no ring, no glow, no "touch it to enter", no tap target.
-const DOOR_VISIBLE = false;
+// The door is an Easter egg now: nothing draws it, nothing names it, nothing suggests it
+// exists — but the star is still there and still opens the mind when touched. Two
+// switches, because "looks like a door" and "works like a door" are different promises.
+const DOOR_SHOWN = false; // ring, glow, label, hint: all off
+const DOOR_WORKS = true;  // the tap target: on, for whoever finds it
 const PORTAL = (function () {
   // rotate the rest camera's forward axis back into the sphere: that direction is
   // what the viewer is looking at when the page settles.
@@ -972,7 +974,7 @@ function drawGalaxy(now) {
     const p = project(node.p[0], node.p[1], node.p[2]);
     return { node: node, index: index, p: p };
   }).filter(function (entry) {
-    return entry.index % stride === 0 || (DOOR_VISIBLE && entry.index === PORTAL) || entry.index === hoverNode;
+    return entry.index % stride === 0 || (DOOR_SHOWN && entry.index === PORTAL) || entry.index === hoverNode;
   }).sort(function (a, b) { return a.p.depth - b.p.depth; });
   // Every star carries a wide, faint halo. Drawn additively, the haloes of a few
   // hundred stars accumulate into one cloud: no single star is bright, the sum of
@@ -984,7 +986,7 @@ function drawGalaxy(now) {
     const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
     const hot = heat(now, entry.node.p[0], entry.node.p[1], entry.node.p[2]);
     const picked = entry.index === hoverNode || entry.index === diveNode;
-    const isDoor = DOOR_VISIBLE && entry.index === PORTAL;
+    const isDoor = DOOR_SHOWN && entry.index === PORTAL;
     // thoughts sit a shade darker than the door and far lighter in weight
     const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
     const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
@@ -1000,7 +1002,7 @@ function drawGalaxy(now) {
     // close enough to be looking, or when the pointer is already on it.
     // Under reduced motion there is no drift to reveal the ring, so it is simply
     // always there: the Easter egg still has to be reachable without hunting.
-    if (DOOR_VISIBLE && !VISUALIZER && entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
+    if (DOOR_SHOWN && !VISUALIZER && entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + 3) * p.k, 0, Math.PI * 2);
@@ -1674,7 +1676,7 @@ function frame(now) {
       } else {
         exploreNode = (exploreNode + 37 + Math.floor(Math.random() * 40)) % nodes.length;
         diveNode = exploreNode;
-        if (label) label.textContent = (DOOR_VISIBLE && exploreNode === PORTAL) ? 'the door' : roleOf(exploreNode);
+        if (label) label.textContent = (DOOR_SHOWN && exploreNode === PORTAL) ? 'the door' : roleOf(exploreNode);
       }
       // Aim, never jump: the tour eases into its distance over about a second.
       rippleFrom(exploreNode);
@@ -1992,7 +1994,7 @@ function nodeAt(clientX, clientY) {
 
 function describe(index) {
   if (index < 0) return '';
-  if (DOOR_VISIBLE && index === PORTAL) return 'the door — touch it to enter';
+  if (DOOR_SHOWN && index === PORTAL) return 'the door — touch it to enter';
   return roleOf(index);
 }
 
@@ -2153,7 +2155,7 @@ function resolveTaps() {
   }
   // a single tap: the old behaviour, explore what is under it
   const picked = lastTapPick;
-  if (DOOR_VISIBLE && picked === PORTAL) {
+  if (DOOR_WORKS && picked === PORTAL) {
     const thought = describe(hoverNode >= 0 ? hoverNode : picked);
     flashNote('entering…');
     try {
