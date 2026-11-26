@@ -834,6 +834,36 @@ export function apply(ctx: Context): void {
   })
 
 
+
+  // The operator's own door, as a form: the token is typed rather than carried in a
+  // URL, and the browser leaves with the same marker cookie + session a link would set.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/owner/claim', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const configured = process.env.DSH_WEB_TOKEN ?? ''
+      try {
+        const fields = await readFields(req)
+        const supplied = (fields.get('token') ?? '').trim()
+        if (configured === '' || supplied !== configured) {
+          res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+          res.end('<!doctype html><meta charset="utf-8"><title>Not the operator</title>'
+            + '<body style="background:#0b0b0d;color:#e8e2d5;font:16px system-ui;padding:2rem">'
+            + '<p>That token was not accepted.</p><p><a style="color:#c99a5b" href="/access">Try again →</a></p>')
+          return
+        }
+        res.writeHead(303, {
+          'cache-control': 'no-store',
+          location: `/?token=${encodeURIComponent(configured)}`,
+          'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
+        })
+        res.end()
+      } catch (error) {
+        respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
   // Self-awareness: the workshop's own condition, readable by anyone because a
   // being that hides how it is doing is not being honest, it is performing.
   ctx.webServer.register({

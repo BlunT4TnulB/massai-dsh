@@ -575,13 +575,28 @@ export function accessPageHtml(line?: number, cookieHeader = ''): string {
         <span class="glyph">💳</span> Add a few dollars of credit <small>a little goes a long way</small></a>
     </div>
 
+    ${cookieHeader.includes('dsh_owner=') ? `<p class="hero" style="margin-bottom:1.1rem">
+      You are the operator in this browser — <a href="/">open the workshop →</a></p>` : ''}
+
     <div class="manual">
-      <label for="apiKey">Already have a key? Paste it here</label>
+      <label for="apiKey">Bringing your own key? Paste it here</label>
       <form method="POST" action="/api/signin">
         <input id="apiKey" type="text" name="apiKey" placeholder="sk-…" autocomplete="off" required>
         <button type="submit">Sign in</button>
       </form>
     </div>
+
+    <details class="manual" style="margin-top:.9rem">
+      <summary style="cursor:pointer;color:#8a8a93;font-size:.82rem">I am the operator of this
+        Massai (token, not a key)</summary>
+      <p class="fine" style="margin:.5rem 0">The operator token is the deployment's
+        <b>DSH_WEB_TOKEN</b>, set on the server. It is not a DeepSeek key and costs nothing.</p>
+      <form method="POST" action="/api/owner/claim">
+        <input id="operatorToken" type="password" name="token" placeholder="operator token"
+          autocomplete="off" required>
+        <button type="submit">Open as operator</button>
+      </form>
+    </details>
 
     ${clerkReady ? `<div class="social">
       <div class="socialhead">or continue with</div>
