@@ -943,6 +943,31 @@ The workspace list is client state, so each folder is added once in the UI:
 **Add workspace → path `/app/Projects/<name>`**. The exact paths are returned by
 `/api/mind/projects`, so the list can be copied from there.
 
+## Where we are, 2026-11-26 (live on `ce1194b4`)
+**Live and verified:** the mind (octave engine, breath, plasma arcs, five-kind language), `/mind`
+visualiser, the door (8 riddles · 21 slogans · spin · double-knock · pinch), entry gate fixed and
+persistent, the galaxy layering fixed (it had covered the whole app), the settings panel, the Android
+wrapper parked, `/app/Massai` holding the whole project at HEAD, 14 project folders, the session port
+(owner-only import), the operator door (`/access` → token), Clerk origins fixed, `DSH_WEB_TOKEN`
+rotated after it appeared in a tool log.
+**The mind's language is now causal:** `agent/error` and `agent/request-error` record a `fail`, so a
+failed route draws crimson (committed today, `ce1194b4`).
+
+### Waiting on the owner (four things, all small)
+1. **Session port decision** — A (full 25.6 MB transcript), B (trimmed messages, recommended), C (fresh
+   with handoff docs). This is the "same chat, through Massai" step.
+2. **Workspaces** — add `/app/Projects/<name>` per project in the UI; the folders already exist, the
+   list is at `/api/mind/projects`. Client state, so it cannot be done from the server.
+3. **Nous Portal** (optional) — sign up, generate a key; then the OpenAI-compatible provider is a config
+   insert and the free tier can be raised safely.
+4. **APK** (deferred by decision) — keystore, fingerprint, three repo secrets, `ANDROID_ASSETLINKS`.
+
+### What the operator can do next without waiting
+- Allowance meter + per-user rate limit, then raise `DSH_USER_BUDGET_USD` (0.25 → ~1.00) once Nous is
+  verified cheaper on a real invoice.
+- One-turn builder quality (68% → 85%) — the item that decides whether anyone comes back.
+- `learn` kinds: emit from the lesson recorder so green sparks are real, not simulated.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
