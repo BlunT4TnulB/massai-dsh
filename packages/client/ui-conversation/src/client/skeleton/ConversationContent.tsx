@@ -102,7 +102,12 @@ export function ConversationContent(props: ConversationContentProps) {
   // mind share one sentence.
   const enteredKey = 'massai.entered'
   const [entered, setEntered] = useState<boolean>(() => {
-    try { return window.sessionStorage.getItem(enteredKey) === '1' } catch { return false }
+    // Local first: passing the door once is remembered for this browser, not just this
+    // tab. sessionStorage is still read so anyone mid-session keeps their entry.
+    try {
+      if (window.localStorage.getItem(enteredKey) === '1') return true
+      return window.sessionStorage.getItem(enteredKey) === '1'
+    } catch { return false }
   })
   /**
    * Open the workshop for the rest of the tab.
@@ -110,7 +115,10 @@ export function ConversationContent(props: ConversationContentProps) {
    */
   const enter = useCallback((): void => {
     setEntered(true)
-    try { window.sessionStorage.setItem(enteredKey, '1') } catch { /* private mode */ }
+    try {
+      window.localStorage.setItem(enteredKey, '1')
+      window.sessionStorage.setItem(enteredKey, '1')
+    } catch { /* private mode */ }
   }, [])
   const [enteredThought, setEnteredThought] = useState<string | undefined>(undefined)
   // Nobody is ever trapped in the mind: after a while a quiet way in appears,
@@ -271,7 +279,12 @@ export function ConversationContent(props: ConversationContentProps) {
   const firstWorkspaceCount = useRef<number | null>(null)
   useEffect(() => {
     if (workspaces.phase !== 'ready') return
-    if (firstWorkspaceCount.current === null) { firstWorkspaceCount.current = workspaceCount; return }
+    if (firstWorkspaceCount.current === null) {
+      firstWorkspaceCount.current = workspaceCount
+      // Existing workspaces mean this is not a first encounter.
+      if (workspaceCount > 0) enter()
+      return
+    }
     if (workspaceCount > firstWorkspaceCount.current) enter()
   }, [workspaceCount, workspaces.phase, enter])
 
