@@ -986,6 +986,25 @@ failed route draws crimson (committed today, `ce1194b4`).
   the workspace list is browser state, and adding one goes through a directory-picker dialog. That is
   two taps for the owner, and I could not do them for them.
 
+## Every folder is already a workspace (2026-11-26, live on `bbcd4ee4`)
+The workspace list turned out to be **server-side** (`~/.dsh/storages/workspace.json`, a storage-domain
+file), which means it can be seeded rather than tapped in one dialog at a time.
+- **Boot seeder** (`/usr/local/lib/massai-seed-workspaces.mjs`, run from the entrypoint before the app
+  starts): creates a workspace for `/app/Massai` and for every folder in `/app/Projects`, using the
+  harness's own `projectKey()` rule; it also **attaches any session it finds on disk** to the workspace
+  whose path produces that project directory, so a brought conversation is owned rather than orphaned.
+- **Verified live**: the sidebar lists 15 workspaces (Massai, 150-200-Scanner-tool, 150-200MA-scanner,
+  Crowbar-Workbench, Leather-Vest-DB1, Nest-Inventory, Scanner-Tool, cambium-ip-scanner,
+  cambium-ip-scanner-projects, coding-agent-interface, massai, massai-mind, private-ptt,
+  stock-scan-dashboard, stock-scanning-dashboard) with no owner action at all.
+- **Caveat**: the sidebar lists *workspaces*; a session appears when its workspace is opened or through
+  **Search sessions**. The ported conversation is at
+  `~/.dsh/sessions/--app-Massai--/session-5da38d81-…/session.v4.jsonl.zstd` (3.7 MB) and attached to
+  the Massai workspace, but a headless click on the row did not expand a session list, so its rendering
+  is unconfirmed.
+- **Ephemerality, stated plainly**: the transcript survives restarts (the seeder reattaches it) but not
+  deploys. Persisting it needs an archive restored at boot — a private repository or a Render disk.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
