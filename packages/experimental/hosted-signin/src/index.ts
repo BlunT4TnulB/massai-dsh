@@ -1223,7 +1223,7 @@ export function apply(ctx: Context): void {
         // Same directory rule the harness uses (session-persistence-jsonl projectKey):
         // separators collapse to one dash, other unsafe units become ~XXXX, then the
         // slug is wrapped in double dashes.
-        function projectKeyOf(path): string {
+        const projectKeyOf = (path: string): string => {
           let readable = ''
           let separatorRun = false
           for (let index = 0; index < path.length; index += 1) {
