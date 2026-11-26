@@ -386,15 +386,38 @@ const LINES = { far: readDial('linesFar', 0.85), near: readDial('linesNear', 0.4
 // The mind as its own instrument: every dial in one object, saved per browser,
 // editable from a panel (S, or ?panel=1) instead of only by keyboard shortcuts.
 // ---------------------------------------------------------------------------
+/**
+ * Everything the mind can be tuned by, in one object.
+ *
+ * The first line of each group is the default, and the defaults are what Massai is
+ * meant to feel like — every dial starts at 1.0 (or its designed value), so "reset"
+ * always returns to the mind as it was built rather than to a stale experiment.
+ */
 const MIND_DEFAULTS = {
-  swing: 1,        // travel amplitude multiplier (1 = as designed)
-  speed: 1,        // how fast the voyage breathes
-  spark: 2,        // 0 off · 1 rare · 2 often · 3 restless
-  linesFar: 0.85,  // lattice strength on the voyage
-  linesNear: 0.4,  // lattice strength while a star is held
-  paths: true,     // the dashed paths of use
-  lines: true,     // the great-circle lattice
-  keepAwake: false // hold the screen awake (a visualiser left on a monitor)
+  // motion
+  swing: 1,          // travel amplitude (the breath)
+  speed: 1,          // how fast the voyage breathes
+  tilt: 1,           // the travelling pole (tumble)
+  roll: 1,           // the standing roll
+  // thought
+  spark: 2,          // 0 off · 1 rare · 2 often · 3 restless
+  arcJitter: 1,      // how wildly a plasma arc wanders
+  arcLife: 1,        // how long an arc lives
+  aura: 1,           // star glow strength
+  marks: 1,          // how long real work stays lit (× 10 min)
+  marksOn: true,     // draw those lit marks at all
+  arcsOn: true,      // draw plasma arcs at all
+  // structure
+  linesFar: 0.85,    // lattice on the voyage
+  linesNear: 0.4,    // lattice while a star is held
+  lines: true,       // the great-circle lattice
+  paths: true,       // the dashed paths of use
+  // atmosphere
+  fog: 1,            // the volume of dust and fog
+  wash: true,        // the slow hour-of-day tint
+  // the world
+  feed: 'auto',      // 'auto' | 'real' | 'simulated'
+  keepAwake: false   // hold the screen awake (a visualiser on a monitor)
 };
 
 /** Read the saved instrument settings, falling back to the defaults. */
@@ -420,6 +443,10 @@ LINES.near = MIND.linesNear;
 pathsOn = MIND.paths;
 linesOn = MIND.lines;
 sparkLevel = MIND.spark;
+/** Whether the mind is allowed to use what the workshop is really doing. */
+const wantsFeed = () => MIND.feed !== 'simulated';
+/** Whether the mind may invent activity of its own. */
+const wantsSimulated = () => MIND.feed !== 'real';
 
 /** Push the current settings into the live variables, and persist them. */
 function applyMind(persist) {
@@ -443,10 +470,14 @@ async function keepAwake(on) {
 }
 
 const PRESETS = {
-  voyage: { swing: 1, speed: 1, spark: 2, linesFar: 0.85, linesNear: 0.4, paths: true, lines: true },
-  still: { swing: 0.15, speed: 0.35, spark: 0, linesFar: 0.6, linesNear: 0.25, paths: false, lines: true },
-  storm: { swing: 1.7, speed: 1.5, spark: 3, linesFar: 1.1, linesNear: 0.7, paths: true, lines: true },
-  bare: { swing: 1, speed: 1, spark: 1, linesFar: 0, linesNear: 0, paths: false, lines: false }
+  // the mind as designed
+  voyage: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 2, arcJitter: 1, arcLife: 1, aura: 1, marks: 1, marksOn: true, arcsOn: true, linesFar: 0.85, linesNear: 0.4, lines: true, paths: true, fog: 1, wash: true, feed: 'auto' },
+  // slow, quiet, no weather
+  still: { swing: 0.15, speed: 0.35, tilt: 0.2, roll: 0.3, spark: 0, arcJitter: 0.5, arcLife: 1.4, aura: 0.8, marks: 0.6, marksOn: true, arcsOn: false, linesFar: 0.6, linesNear: 0.25, lines: true, paths: false, fog: 1.3, wash: true, feed: 'auto' },
+  // restless: more sparks, more wander
+  storm: { swing: 1.7, speed: 1.5, tilt: 1.8, roll: 1.6, spark: 3, arcJitter: 2, arcLife: 0.8, aura: 1.2, marks: 1, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.7, lines: true, paths: true, fog: 0.9, wash: true, feed: 'auto' },
+  // the mind alone: no lattice, no arcs, no marks
+  bare: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 1, arcJitter: 1, arcLife: 1, aura: 1.1, marks: 1, marksOn: false, arcsOn: false, linesFar: 0, linesNear: 0, lines: false, paths: false, fog: 1, wash: true, feed: 'real' }
 };
 
 /** The multiplier for the state the mind is in right now. */
@@ -602,6 +633,7 @@ function heat(now, x, y, z) {
 }
 
 function drawHalo(now) {
+  const fog = MIND.fog;
   const cx = VW / 2 + panX;
   const cy = VH * ANCHOR + panY;
   const reach = Math.max(VW, VH) * 0.82;
@@ -989,7 +1021,7 @@ function drawGalaxy(now) {
     const isDoor = DOOR_SHOWN && entry.index === PORTAL;
     // thoughts sit a shade darker than the door and far lighter in weight
     const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
-    const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
+    const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1) * MIND.aura;
     const cloud = core * (isDoor ? 5.5 : 3.6);
     const strength = Math.min(1, (0.07 + 0.34 * near) * life + hot * 0.35 + (picked ? 0.4 : 0));
     const sprite = glowSprite(tint);
@@ -1328,14 +1360,14 @@ function spawnSparkAt(index) {
  * @returns nothing.
  */
 function drawSparks(now) {
-  if (sparks.length === 0) return;
+  if (!MIND.arcsOn || sparks.length === 0) return;
   const jump = Math.max(VW, VH) * 1.5;
   ctx.globalCompositeOperation = 'lighter';
   for (let i = sparks.length - 1; i >= 0; i -= 1) {
     const spark = sparks[i];
     const spec = SPARK_KINDS[spark.kind] ?? SPARK_KINDS.tool;
     const age = now - spark.t0;
-    const life01 = 1 - age / spec.life;
+    const life01 = 1 - age / (spec.life * MIND.arcLife);
     if (life01 <= 0) { sparks.splice(i, 1); continue; }
     if (spark.rippled !== true && spec.ripple > 0 && life01 > 0.85) {
       // an epiphany shakes the whole body, once
@@ -1373,7 +1405,7 @@ function drawSparks(now) {
       const wave = Math.sin(u * 9 + now * 0.004 + seed) * 0.65
         + Math.sin(u * 21 - now * 0.011 + seed * 1.7) * 0.35
         + Math.sin(now * 0.02 + n * 1.9 + seed) * 0.18;
-      const amplitude = Math.min(38, (6 + total * 0.04) * spec.amplitude) * belly;
+      const amplitude = Math.min(38, (6 + total * 0.04) * spec.amplitude * MIND.arcJitter) * belly;
       live.push({
         x: here.x + (-dy / length) * wave * amplitude,
         y: here.y + (dx / length) * wave * amplitude,
@@ -1443,13 +1475,14 @@ function drawSparks(now) {
 }
 
 function drawLit(now) {
-  if (lit.size === 0) return;
+  if (!MIND.marksOn || lit.size === 0) return;
   const monotonic = performance.now();
   const entries = [];
   for (const [index, entry] of lit) {
     const age = monotonic - entry.t0;
-    if (age > LIT_MS) { lit.delete(index); continue; }
-    const life01 = 1 - age / LIT_MS;
+    const span = LIT_MS * MIND.marks;
+    if (age > span) { lit.delete(index); continue; }
+    const life01 = 1 - age / span;
     entries.push({ index: index, life: life01, skill: entry.skill, kind: entry.kind ?? 'tool' });
   }
   if (entries.length === 0) return;
@@ -1510,6 +1543,7 @@ function drawRipples(now) {
 }
 
 function drawMood() {
+  if (!MIND.wash) return;
   const hour = new Date().getHours();
   const dayness = Math.max(0, Math.cos(((hour - 13) / 24) * Math.PI * 2));
   ctx.fillStyle = 'rgba(' + Math.round(60 + 30 * dayness) + ',' + Math.round(34 + 40 * dayness) + ','
@@ -1561,8 +1595,8 @@ function frame(now) {
       // there, less while the gaze is still settling.
       const k = arrived ? 1 : MOTION.aiming.scale;
       yaw += dt * IDLE_SPEED * MOTION.yaw.rate * k;
-      roll += dt * MOTION.roll.rate * k;
-      pitch += dt * MOTION.tumble.rate * tumbleDir * k;
+      roll += dt * MOTION.roll.rate * MIND.roll * k;
+      pitch += dt * MOTION.tumble.rate * MIND.tilt * tumbleDir * k;
       if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
       if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
       pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
@@ -1624,8 +1658,8 @@ function frame(now) {
       if (!reduce && auto) {
         const k = MOTION.aiming.scale;
         yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate * k;
-        roll += dt * MOTION.roll.rate * k;
-        pitch += dt * MOTION.tumble.rate * tumbleDir * k;
+        roll += dt * MOTION.roll.rate * MIND.roll * k;
+        pitch += dt * MOTION.tumble.rate * MIND.tilt * tumbleDir * k;
         if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
         if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
         pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp * k;
@@ -1635,10 +1669,10 @@ function frame(now) {
       // that shares no factor with either. The pose never repeats exactly.
       yaw += dt * IDLE_SPEED * DRIFT * MOTION.yaw.rate;
       yaw += Math.sin(now * MOTION.yawSecond.rate + 0.7) * dt * IDLE_SPEED * MOTION.yawSecond.amp;
-      roll += dt * MOTION.roll.rate;
+      roll += dt * MOTION.roll.rate * MIND.roll;
       // the tumble: the pole keeps going until the limit, then turns back, so the body
       // is never level and never repeats the same attitude twice
-      pitch += dt * MOTION.tumble.rate * tumbleDir;
+      pitch += dt * MOTION.tumble.rate * MIND.tilt * tumbleDir;
       if (pitch > MOTION.tumble.limit) { pitch = MOTION.tumble.limit; tumbleDir = -1; }
       if (pitch < -MOTION.tumble.limit) { pitch = -MOTION.tumble.limit; tumbleDir = 1; }
       pitch += Math.sin(now * MOTION.pitchA.rate) * dt * MOTION.pitchA.amp;
@@ -1710,7 +1744,7 @@ function frame(now) {
   }
   octaveScale = 1;
   life = lifeBase;
-  if (now > sparkNext) {
+  if (wantsSimulated() && now > sparkNext) {
     spawnSpark(now);
     const base = SPARK_RATE[Math.max(0, Math.min(3, sparkLevel))] || 6000;
     sparkNext = now + base * (0.6 + Math.random() * 0.9);
@@ -1911,28 +1945,50 @@ function togglePanel() {
     + 'background:rgba(12,11,10,.94);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
     + 'padding:12px 14px;font:12px system-ui,sans-serif;color:#E7DCC6;backdrop-filter:blur(8px)';
 
-  const rows = [
-    ['swing', 'travel', 0, 2.2, 0.05],
-    ['speed', 'pace', 0.2, 2.5, 0.05],
-    ['spark', 'sparks', 0, 3, 1],
-    ['linesFar', 'lattice far', 0, 2, 0.05],
-    ['linesNear', 'lattice near', 0, 2, 0.05]
-  ];
   let html = '<div style="letter-spacing:.22em;font-size:10px;color:#8a7c62;margin-bottom:8px">MIND</div>';
-  for (const [key, label, min, max, step] of rows) {
-    html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
-      + '<span style="width:5.6rem;color:#9a8f7c">' + label + '</span>'
-      + '<input type="range" data-key="' + key + '" min="' + min + '" max="' + max + '" step="' + step
-      + '" value="' + MIND[key] + '" style="flex:1;accent-color:#C1440E">'
-      + '<span data-out="' + key + '" style="width:2.2rem;text-align:right;color:#EFDCA4">'
-      + Number(MIND[key]).toFixed(2) + '</span></label>';
-  }
-  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
-    + '<input type="checkbox" data-key="paths"' + (MIND.paths ? ' checked' : '') + '> paths of use</label>';
-  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
-    + '<input type="checkbox" data-key="lines"' + (MIND.lines ? ' checked' : '') + '> lattice</label>';
-  html += '<label style="display:flex;gap:6px;align-items:center;margin:6px 0">'
-    + '<input type="checkbox" data-key="keepAwake"' + (MIND.keepAwake ? ' checked' : '') + '> keep screen awake</label>';
+  /** One labelled slider row. */
+  const slider = (key, label, min, max, step) => '<label style="display:flex;align-items:center;gap:8px;margin:3px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">' + label + '</span>'
+    + '<input type="range" data-key="' + key + '" min="' + min + '" max="' + max + '" step="' + step
+    + '" value="' + MIND[key] + '" style="flex:1;accent-color:#C1440E">'
+    + '<span data-out="' + key + '" style="width:2.4rem;text-align:right;color:#EFDCA4">'
+    + Number(MIND[key]).toFixed(2) + '</span></label>';
+  /** One labelled checkbox row. */
+  const toggle = (key, label) => '<label style="display:flex;gap:6px;align-items:center;margin:4px 0">'
+    + '<input type="checkbox" data-key="' + key + '"' + (MIND[key] ? ' checked' : '') + '> ' + label + '</label>';
+  /** One section heading. */
+  const head = label => '<p style="margin:9px 0 3px;font-size:9px;letter-spacing:.2em;color:#6f6553;text-transform:uppercase">' + label + '</p>';
+
+  html += head('motion');
+  html += slider('tilt', 'tumble', 0, 2.5, 0.05);
+  html += slider('roll', 'roll', 0, 2.5, 0.05);
+  html += head('travel');
+  html += slider('swing', 'depth', 0, 2.2, 0.05);
+  html += slider('speed', 'pace', 0.2, 2.5, 0.05);
+  html += head('thought');
+  html += slider('spark', 'arcs rate', 0, 3, 1);
+  html += slider('arcJitter', 'arc wander', 0, 3, 0.05);
+  html += slider('arcLife', 'arc life', 0.2, 2.5, 0.05);
+  html += slider('aura', 'star aura', 0, 2, 0.05);
+  html += slider('marks', 'mark life', 0, 3, 0.05);
+  html += toggle('arcsOn', 'plasma arcs');
+  html += toggle('marksOn', 'lit marks');
+  html += head('structure');
+  html += slider('linesFar', 'lattice far', 0, 2, 0.05);
+  html += slider('linesNear', 'lattice near', 0, 2, 0.05);
+  html += toggle('lines', 'lattice');
+  html += toggle('paths', 'paths of use');
+  html += head('atmosphere');
+  html += slider('fog', 'fog', 0, 2, 0.05);
+  html += toggle('wash', 'hour wash');
+  html += head('the world');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">activity</span>'
+    + '<select data-key="feed" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
+    + ['auto', 'real', 'simulated'].map(option => '<option value="' + option + '"'
+      + (MIND.feed === option ? ' selected' : '') + '>' + option + '</option>').join('')
+    + '</select></label>';
+  html += toggle('keepAwake', 'keep screen awake');
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">';
   for (const name of Object.keys(PRESETS)) {
     html += '<button data-preset="' + name + '" style="padding:4px 8px;border-radius:6px;'
@@ -1940,13 +1996,17 @@ function togglePanel() {
   }
   html += '<button data-preset="reset" style="padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#8a7c62;cursor:pointer">reset</button></div>';
+  html += '<p style="margin:8px 0 0;font-size:10px;color:#6f6553;line-height:1.5">'
+    + 'Reset returns to the mind as built. Nothing here changes what the workshop actually does.</p>';
   panel.innerHTML = html;
 
   panel.addEventListener('input', function (event) {
     const el = event.target;
     const key = el.getAttribute('data-key');
     if (key === null) return;
-    MIND[key] = el.type === 'checkbox' ? el.checked : Number(el.value);
+    if (el.type === 'checkbox') MIND[key] = el.checked;
+    else if (el.tagName === 'SELECT') MIND[key] = el.value;
+    else MIND[key] = Number(el.value);
     const out = panel.querySelector('[data-out="' + key + '"]');
     if (out !== null) out.textContent = Number(MIND[key]).toFixed(2);
     applyMind(true);
@@ -1956,7 +2016,9 @@ function togglePanel() {
     const button = event.target;
     const name = button.getAttribute('data-preset');
     if (name === null) return;
-    MIND = name === 'reset' ? Object.assign({}, MIND_DEFAULTS) : Object.assign({}, MIND, PRESETS[name]);
+    MIND = name === 'reset'
+      ? Object.assign({}, MIND_DEFAULTS)
+      : Object.assign({}, MIND_DEFAULTS, PRESETS[name]);
     applyMind(true);
     togglePanel();
     togglePanel();

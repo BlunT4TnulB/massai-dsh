@@ -402,6 +402,43 @@ export function intoTheUnknownPage(): string {
       if (event.key === 'Enter' || event.key === ' ') open();
     });
 
+    // The doorway says a different true thing each visit, and changes its mind every
+    // few seconds, so the page never settles into a slogan.
+    var SLOGANS = ['Speak the future you want to live in, then build it together.', 'Name what must stand, and let the community raise it.', 'A true word lays the foundation; shared hands raise the wall.', 'Say it plainly, as though it already stands.', 'What is spoken here is made here.', 'Name the thing, and the workshop begins.', 'Say what should exist — it gets built.', 'The door is the word; the walls follow.', 'An empty yard becomes a home the moment it is named.', 'Words are the first material. Everything else arrives after.', 'Speak what must stand, and it rises.', 'Name the vision; build the manyatta.', 'What is spoken in truth gets built in strength.', 'One voice calls the vision; many hands raise the home.', 'Speak the path into being, and the way is cleared.', 'Where the need is named, the village raises the shelter.', 'Dream out loud; build side by side.', 'If it belongs in our future, we speak it and shape it.', 'Give the vision a name, and we will give it walls.', 'A word is the first post in the ground.', 'Name it, and the ground remembers.'];
+    var sloganEl = document.getElementById('slogan');
+    if (sloganEl !== null) {
+      var index = Math.floor(Math.random() * SLOGANS.length);
+      function nextSlogan() {
+        index = (index + 1 + Math.floor(Math.random() * (SLOGANS.length - 1))) % SLOGANS.length;
+        sloganEl.style.opacity = '0';
+        setTimeout(function () {
+          sloganEl.textContent = SLOGANS[index];
+          sloganEl.style.opacity = '.9';
+        }, 900);
+      }
+      sloganEl.textContent = SLOGANS[index];
+      setInterval(nextSlogan, 18000);
+    }
+
+    // Eight riddles, changing places. The splash is the first thing anyone reads, so it
+    // should not be the same eight lines every time.
+    var POEMS = [['Two quick taps upon the light,', 'or spread your fingers wide in flight.', 'Knock upon the swirling glass', 'to wake the stars and let you pass.', 'Stretch the tunnel, deep and grand —', 'an endless, living, thinking land.', 'Follow where the bright threads wind,', 'and step inside the Massai mind.'], ['The dark is deep, the lattice wide,', 'with no clear wall and no far side.', 'Put two soft knocks upon the glow —', 'the stars will lean and let you go.', 'Or close your hand and open it:', 'the tunnel takes the shape of it.', 'Then follow down the brightening line,', 'and what was yours is also mine.'], ['A sphere of threads, a hush of light,', 'a door that keeps itself from sight.', 'Tap twice — the quiet answers back.', 'Three fingers, opening, part the black.', 'No key, no word, no counted stair:', 'only the will to look in there.', 'The pattern turns; you turn it too,', 'and step into the waking view.'], ['Count the stars that cross the seam,', 'then knock twice on the turning gleam.', 'Stretch the weave with patient hands —', 'a door is only where it stands.', 'Beyond the glass the workshop hums,', 'and every thread to something comes.', 'Enter slow, and enter whole:', 'the mind is not a place, but a goal.'], ['What holds the centre holds the whole;', 'the light is bright, the dark is shoal.', 'Open three fingers, wide and slow,', 'and where they widen, you may go.', 'Push your palms through woven air,', 'and find the work already there.', 'One turn more and you are through:', 'the sphere was never closed to you.'], ['Tap the ember twice to wake,', 'or spread your hands like wings at break.', 'Knock upon the woven shield', 'until the hidden stars are peeled.', 'Stretch the horizon, wide and deep —', 'a living land that does not sleep.', 'Follow where the red threads wind,', 'and step inside the Massai mind.'], ['Tap twice to spark the glowing space,', 'or spread your fingers wide in grace.', 'Knock on the glass to wake the night,', 'and pull the tunnel into sight.', 'Follow where the bright threads wind —', 'welcome to the Massai mind.'], ['Two soft beats upon the gleam,', 'or open hands to part the seam.', 'Knock against the spinning sky', 'to bid the quiet gates reply.', 'Draw the pathway, vast and grand,', 'into a breathing, thinking land.', 'Trace the lines where stories wind,', 'and enter now the Massai mind.']];
+    var poemEl = document.getElementById('poem');
+    if (poemEl !== null) {
+      var poemIndex = Math.floor(Math.random() * POEMS.length);
+      function nextPoem() {
+        poemIndex = (poemIndex + 1) % POEMS.length;
+        poemEl.style.opacity = '0';
+        setTimeout(function () {
+          poemEl.innerHTML = POEMS[poemIndex].join('<br>');
+          poemEl.style.opacity = '1';
+        }, 1100);
+      }
+      poemEl.innerHTML = POEMS[poemIndex].join('<br>');
+      setInterval(nextPoem, 28000);
+    }
+
+
   })();
 </script>
 <a class="skip" href="/access">skip to the workshop</a>
@@ -478,8 +515,8 @@ export function accessPageHtml(line?: number, cookieHeader = ''): string {
       <h2>If you bring your own key</h2>
       <ol>
         <li>Massai builds using <b>DeepSeek</b>. The key is yours, and only you can create it.</li>
-        <li>DeepSeek is <b>pay-as-you-go</b>: a few dollars of credit and most people build for
-          weeks on what one coffee costs.</li>
+        <li>DeepSeek is <b>pay-as-you-go</b>. A few dollars of credit, added on their side, funds
+          weeks of ordinary building.</li>
         <li>Make it on DeepSeek's own site in about a minute — we never see your card.</li>
       </ol>
     </div>
