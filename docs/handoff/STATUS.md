@@ -907,6 +907,24 @@ never from the owner's cookie). The gate fix was real but **not the user's block
 Exchange it with `GET /?token=<token>` → 303 + signed `dsh-auth-*` cookie (30 days). The `dsh_owner`
 marker is `HMAC-SHA256(token, 'massai-owner')`. **Never ask the owner to paste a session cookie.**
 
+## The hosted instance carries the whole project (2026-11-26, live on `95b74f14`)
+"Transfer everything into Massai" is done, and it closes a loop rather than copying a folder.
+- **Boot clone**: `Dockerfile` gained an `ENTRYPOINT` (`/usr/local/bin/massai-boot`) that, when
+  `MASSAA_GIT_REPO` is set, clones or fast-forwards the repository into `MASSAA_WORKSPACE_DIR`
+  (default `/app/Massai`) before the server starts. Runtime env set on Render:
+  `MASSAA_GIT_REPO`, `MASSAA_GIT_PAT` (a repo-scoped token), `MASSAA_WORKSPACE_DIR=/app/Massai`.
+- **Verified from the server itself**: `GET /api/mind/project` reports
+  `{dir: /app/Massai, present: true, git: true, head: 95b74f14, tracked: 22530, remote: …***…}` —
+  the full tree, at the deployed commit, with an authenticated remote already configured.
+- **The loop**: the agent edits in `/app/Massai` → commits and pushes → CI builds → Render deploys →
+  the new container clones the new commit. Git is the source of truth; the container filesystem is
+  disposable (Render has **0** persistent disks, so this is the only honest design).
+- **Consolidation**: the Android wrapper moved into the project (`android/`, `docs/android/`,
+  `.github/workflows/android.yml`, manual-dispatch only so it never slows a push). The separate
+  `massai-mind` repository is now redundant and should be archived to prevent drift.
+- **Security note**: the PAT lives in the container's `git remote` URL. That is what lets the hosted
+  mind push, and it is why the instance is owner-gated. Rotate the token if it ever leaks.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
