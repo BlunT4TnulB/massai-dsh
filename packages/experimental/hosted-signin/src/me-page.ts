@@ -52,6 +52,8 @@ export function mePageHtml(): string {
   .hint{color:#6f6f78;font-size:.78rem;line-height:1.6}
   a{color:#7ee2a8}
   .muted{color:#7d7d86}
+  .meter{margin-top:.8rem;height:6px;border-radius:3px;background:#26262d;overflow:hidden}
+  .meter span{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a5a2a,#C1440E);transition:width .4s ease}
   .foot{margin-top:2.4rem;padding-top:1rem;border-top:1px solid #26262d;color:#6f6f78;font-size:.8rem}
 </style></head><body><main>
 <div class="brand"><img src="/massai-crest.svg" alt=""><span>MASSAI</span></div>
@@ -71,12 +73,18 @@ spent, and any credit you were given.</p>
 <h2>This month</h2>
 <div class="card">
   <table>
+    <tr><td>Left this month</td><td id="remaining"><b>—</b></td></tr>
     <tr><td>Spent by you</td><td id="spent">—</td></tr>
+    <tr><td>Your ceiling</td><td id="ceiling">—</td></tr>
     <tr><td>Calls</td><td id="calls">—</td></tr>
     <tr><td>Free allowance</td><td id="allowance">—</td></tr>
     <tr><td>Credit from tips</td><td id="credit">—</td></tr>
     <tr><td>Month</td><td id="month">—</td></tr>
   </table>
+  <div class="meter" aria-hidden="true"><span id="meterfill"></span></div>
+  <p class="hint" style="margin-top:.5rem">The bar is what you have used of your ceiling. Hitting the
+  bottom never loses anything you built — it only pauses new steps until the month turns, or until a
+  tip tops you up.</p>
 </div>
 
 <h2>If you run out</h2>
@@ -116,6 +124,10 @@ limits are</a>. Nothing you built is lost by hitting a cap.</p>
       show('allowance', '$' + Number(data.allowanceUsd ?? 0).toFixed(2))
       show('credit', '$' + Number(data.creditUsd ?? 0).toFixed(2))
       show('month', String(data.month ?? '—'))
+      show('remaining', '$' + Number(data.remainingUsd ?? 0).toFixed(3))
+      show('ceiling', '$' + Number(data.ceilingUsd ?? data.allowanceUsd ?? 0).toFixed(2))
+      const fill = document.getElementById('meterfill')
+      if (fill !== null) fill.style.width = Math.round(Number(data.ratio ?? 0) * 100) + '%'
     })
     .catch(() => { show('spent', 'unavailable right now') })
 })()

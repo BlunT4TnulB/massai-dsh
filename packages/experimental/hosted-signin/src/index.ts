@@ -491,6 +491,25 @@ export function apply(ctx: Context): void {
     ) => Promise<unknown>,
   ) => void
   const explained = new Set<string>()
+  // Pace: the money gate limits the month, this limits the minute. A loop that tries to
+  // spend a whole allowance in one sitting is refused here, not after the invoice.
+  const turns = new Map<string, number[]>()
+  const turnsPerMinute = Number(process.env.DSH_USER_TURNS_PER_MIN ?? '12')
+  /**
+   * Whether this user may take another step right now.
+   * @param userId - who is asking.
+   * @returns true when they are within the pace limit.
+   */
+  const withinPace = (userId: string): boolean => {
+    if (!Number.isFinite(turnsPerMinute) || turnsPerMinute <= 0) return true
+    const now = Date.now()
+    const recent = (turns.get(userId) ?? []).filter(at => now - at < 60_000)
+    if (recent.length >= turnsPerMinute) { turns.set(userId, recent); return false }
+    recent.push(now)
+    turns.set(userId, recent)
+    return true
+  }
+
   onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
     // The control node: notes the operator queued from the hive arrive here, once,
     // labelled as the operator speaking. This runs before the money gate because a
@@ -508,8 +527,22 @@ export function apply(ctx: Context): void {
       }
       return { kind: 'enter', messages: [...((rest as { messages?: unknown[] }).messages ?? []), notice] }
     }
-    if (!databaseConfigured()) return next()
     const userId = String(agent.session.header?.userId ?? '')
+    if (userId !== '' && !withinPace(userId)) {
+      const key = 'pace:' + userId
+      if (!explained.has(key)) {
+        explained.add(key)
+        const note = {
+          role: 'user' as const,
+          source: { kind: 'user' as const },
+          content: [{ type: 'text' as const, text: `[budget note — not the user speaking] you are going faster than the free tier allows (${turnsPerMinute} steps a minute). `
+            + 'Say so in one short sentence and wait a moment before the next request.' }],
+        }
+        return { kind: 'enter', messages: [...((rest as { messages?: unknown[] }).messages ?? []), note] }
+      }
+      return { kind: 'reject' }
+    }
+    if (!databaseConfigured()) return next()
     const verdict = await checkBudget(userId).catch(() => ({ allowed: true } as const))
     if (verdict.allowed) return next()
     const key = userId === '' ? '(unattributed)' : userId
@@ -667,13 +700,22 @@ export function apply(ctx: Context): void {
       try {
         const report = await budgetReport()
         const mine = report.users.find(user => user.userId === userId)
+        const credit = await creditTotal(userId)
+        const spent = mine?.cost ?? 0
+        // What a person actually has left: the allowance for everyone, plus any credit a
+        // tip earned, minus what they have spent this month.
+        const ceiling = (report.userCap > 0 ? report.userCap : 0) + Math.max(0, credit)
+        const remaining = Math.max(0, ceiling - spent)
         respond(res, 200, {
           userId,
           month: report.month,
-          spentUsd: Number((mine?.cost ?? 0).toFixed(4)),
+          spentUsd: Number(spent.toFixed(4)),
           calls: mine?.calls ?? 0,
-          creditUsd: Number((await creditTotal(userId)).toFixed(2)),
+          creditUsd: Number(credit.toFixed(2)),
           allowanceUsd: report.userCap,
+          ceilingUsd: Number(ceiling.toFixed(2)),
+          remainingUsd: Number(remaining.toFixed(4)),
+          ratio: ceiling > 0 ? Math.min(1, Math.max(0, spent / ceiling)) : 0,
         })
       } catch (error) {
         respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
