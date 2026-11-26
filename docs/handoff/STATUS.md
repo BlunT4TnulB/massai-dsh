@@ -925,6 +925,24 @@ marker is `HMAC-SHA256(token, 'massai-owner')`. **Never ask the owner to paste a
 - **Security note**: the PAT lives in the container's `git remote` URL. That is what lets the hosted
   mind push, and it is why the instance is owner-gated. Rotate the token if it ever leaks.
 
+## Every project in its own folder (2026-11-26, live on `8e2480b8`)
+All sixteen GitHub repositories are now accounted for on the hosted instance.
+- `/usr/local/bin/massai-clone <repo>` clones or fast-forwards one repository into
+  `MASSAA_PROJECTS_DIR` (default `/app/Projects/<repo>`) using the configured token.
+- The boot script creates the folder for each name in `MASSAA_PROJECTS` (comma list) and clones it
+  shallowly. Fourteen small repositories are cloned at boot (`~26 MB` total, a few seconds).
+  Deliberately excluded: `massai-dsh` (the app itself, already at `/app/Massai`) and
+  `massai-private` (437 MB — pull it on demand instead).
+- `GET /api/mind/projects` — public-safe listing: name, cloned, commit, subject, file count.
+- `POST /api/mind/projects/clone {name}` — **owner only** (403 anonymous, 400 for a name that is not
+  a plain repository name), 202 accepted, clones in the background.
+- Verified live: 14 folders, 12 with commits (two repositories are genuinely empty), 26–613 files each.
+
+### Making them workspaces
+The workspace list is client state, so each folder is added once in the UI:
+**Add workspace → path `/app/Projects/<name>`**. The exact paths are returned by
+`/api/mind/projects`, so the list can be copied from there.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
