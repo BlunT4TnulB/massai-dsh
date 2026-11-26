@@ -2112,8 +2112,23 @@ function resolveTaps() {
   const n = tapCount;
   tapCount = 0;
   if (n >= 3) {
-    applyLevel(Math.max(0, simLevel - 1));
-    flashNote('simulate · ' + (LEVELS[simLevel] || 'none'));
+    // Triple tap: the perfect fullscreen — no chrome, no bars, just the mind.
+    if (document.fullscreenElement === null) {
+      const target = document.documentElement;
+      const request = target.requestFullscreen ?? undefined;
+      if (typeof request === 'function') {
+        void request.call(target, { navigationUI: 'hide' }).then(function () {
+          flashNote('the whole screen');
+        }).catch(function () {
+          flashNote('fullscreen was refused');
+        });
+      } else {
+        flashNote('this browser has no fullscreen');
+      }
+    } else {
+      void document.exitFullscreen().catch(function () { /* already out */ });
+      flashNote('the frame, back');
+    }
     return;
   }
   if (n === 2) {

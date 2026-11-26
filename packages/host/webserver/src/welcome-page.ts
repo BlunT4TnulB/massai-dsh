@@ -276,6 +276,19 @@ export function intoTheUnknownPage(): string {
     border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
   .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
   .spin{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none}
+  .menu{position:fixed;top:14px;left:14px;z-index:20;width:42px;height:42px;display:flex;
+    flex-direction:column;justify-content:center;align-items:center;gap:4px;background:rgba(18,16,14,.72);
+    border:1px solid rgba(247,205,140,.18);border-radius:50%;cursor:pointer;backdrop-filter:blur(6px)}
+  .menu span{display:block;width:16px;height:1.5px;background:#E7DCC6;border-radius:1px}
+  .drawer{position:fixed;top:14px;left:14px;z-index:21;width:min(15rem,72vw);max-height:82vh;overflow:auto;
+    background:rgba(14,13,12,.97);border:1px solid rgba(247,205,140,.2);border-radius:12px;
+    padding:14px 12px;font-size:.82rem;backdrop-filter:blur(8px)}
+  .drawer[hidden]{display:none}
+  .drawerTitle{margin:0 0 .7rem;letter-spacing:.24em;font-size:.62rem;color:#8a7c62}
+  .drawerGroup{margin-bottom:.8rem}
+  .drawerGroupTitle{margin:0 0 .3rem;font-size:.6rem;letter-spacing:.18em;color:#6f6553;text-transform:uppercase}
+  .drawer a{display:block;padding:.32rem .2rem;color:#E7DCC6;text-decoration:none;border-radius:6px}
+  .drawer a:hover{background:rgba(247,205,140,.09);color:#F7CD8C}
   .slogan{margin:.1rem 0 .2rem;font-size:.72rem;letter-spacing:.1em;color:#b98f5f;
     text-align:center;max-width:20rem;opacity:.9;transition:opacity .9s ease;min-height:1.2em}
   .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
@@ -341,6 +354,30 @@ export function intoTheUnknownPage(): string {
     addEventListener('keydown', function (event) { if (event.key === 'Escape') set(false); });
   })();
 </script>
+<button class="menu" id="menuBtn" type="button" aria-label="Open the menu" aria-expanded="false">
+  <span></span><span></span><span></span>
+</button>
+<nav class="drawer" id="menuDrawer" aria-label="Everything" hidden>
+  <p class="drawerTitle">Massai</p>
+  <div class="drawerGroup">
+    <p class="drawerGroupTitle">Make</p>
+    <a href="/">New conversation</a>
+    <a href="/access">The workshop</a>
+    <a href="/projects">Projects</a>
+  </div>
+  <div class="drawerGroup">
+    <p class="drawerGroupTitle">Wander</p>
+    <a href="/flower">The mind</a>
+    <a href="/mind">Visualiser</a>
+    <a href="/welcome">The welcome page</a>
+  </div>
+  <div class="drawerGroup">
+    <p class="drawerGroupTitle">Yours</p>
+    <a href="/me">You</a>
+    <a href="/settings">Settings</a>
+    <a href="/limits">Limits</a>
+  </div>
+</nav>
 <div class="stage">
   <div class="orb-link">
     <span class="orb">
@@ -446,6 +483,24 @@ export function intoTheUnknownPage(): string {
     pad.addEventListener('keydown', function (event) {
       if (event.key === 'Enter' || event.key === ' ') open();
     });
+
+    // The corner mark: never leave anyone stranded on the riddle.
+    var menuBtn = document.getElementById('menuBtn');
+    var drawer = document.getElementById('menuDrawer');
+    if (menuBtn !== null && drawer !== null) {
+      menuBtn.addEventListener('click', function () {
+        var showing = !drawer.hidden;
+        drawer.hidden = showing;
+        menuBtn.setAttribute('aria-expanded', showing ? 'false' : 'true');
+        menuBtn.style.opacity = showing ? '1' : '0';
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !drawer.hidden) {
+          drawer.hidden = true;
+          menuBtn.style.opacity = '1';
+        }
+      });
+    }
 
     // The doorway says a different true thing each visit, and changes its mind every
     // few seconds, so the page never settles into a slogan.
