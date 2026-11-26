@@ -456,6 +456,11 @@ export function apply(ctx: Context): void {
       const classified = classifyToolCall(name, rawArguments, String(session.id))
       if (classified !== undefined) touchSession(String(session.id), classified.skill)
     }
+    // A failed route is a moment of its own: the mind draws those crimson, so the
+    // inference has to come from the harness's own error events rather than a guess.
+    if (typed.type === 'agent/error' || typed.type === 'agent/request-error') {
+      recordActivity('general', 'a route that did not hold', String(session.id), 'fail')
+    }
     if (!databaseConfigured()) return
     const data = (event as { data?: { usage?: Record<string, number>; message?: { source?: { model?: string } }; model?: string } }).data
     const usage = data?.usage
