@@ -92,6 +92,23 @@ RUN printf '%s\n' \
     '  IFS="$OLD_IFS"' \
     '  echo "massai projects: $(ls -1 "${PROJECTS_DIR}" | wc -l) folders in ${PROJECTS_DIR}"' \
     'fi' \
+    'ARCHIVE="${MASSAA_SESSIONS_DIR:-/app/.sessions-archive}"' \
+    'if [ -n "${MASSAA_SESSIONS_REPO:-}" ]; then' \
+    '  if [ -n "${MASSAA_GIT_PAT:-}" ]; then' \
+    '    ACLEAN="$(printf %s "${MASSAA_SESSIONS_REPO}" | sed -e "s#https://[^@/]*@#https://#")"' \
+    '  else' \
+    '    ACLEAN="${MASSAA_SESSIONS_REPO}"' \
+    '  fi' \
+    '  if [ -d "${ARCHIVE}/.git" ]; then' \
+    '    git -C "${ARCHIVE}" remote set-url origin "${MASSAA_SESSIONS_REPO}" || true' \
+    '    git -C "${ARCHIVE}" fetch --depth 1 origin HEAD || true' \
+    '    git -C "${ARCHIVE}" reset --hard FETCH_HEAD || true' \
+    '  else' \
+    '    git clone --depth 1 "${MASSAA_SESSIONS_REPO}" "${ARCHIVE}" || echo "massai sessions: archive unavailable"' \
+    '  fi' \
+    '  if [ -n "${ACLEAN:-}" ] && [ -d "${ARCHIVE}/.git" ]; then git -C "${ARCHIVE}" remote set-url origin "${ACLEAN}" || true; fi' \
+    'fi' \
+    'node /usr/local/lib/massai-restore-sessions.mjs || echo "massai: session restore skipped"' \
     'if [ "${MASSAA_SEED_WORKSPACES:-1}" != "0" ]; then' \
     '  node /usr/local/lib/massai-seed-workspaces.mjs || echo "massai: workspace seeding skipped"' \
     'fi' \
@@ -194,6 +211,34 @@ RUN mkdir -p /usr/local/lib && printf '%s\n' \
     'if (attached > 0) { const tmp = file + ".tmp"; writeFileSync(tmp, JSON.stringify(data, null, 2)); renameSync(tmp, file) }' \
     'console.log(`massai workspaces: ${added} added, ${attached} sessions attached, ${Object.keys(data.tables.workspaces).length} total`)' \
     > /usr/local/lib/massai-seed-workspaces.mjs
+
+RUN printf '%s\n' \
+    'import { readFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs"' \
+    'import { join } from "node:path"' \
+    'import { homedir } from "node:os"' \
+    'const home = process.env.DSH_HOME ?? join(homedir(), ".dsh")' \
+    'const archive = process.env.MASSAA_SESSIONS_DIR ?? "/app/.sessions-archive"' \
+    'const manifestPath = join(archive, "manifest.json")' \
+    'if (!existsSync(manifestPath)) { console.log("massai sessions: no archive"); process.exit(0) }' \
+    'const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))' \
+    'const projectKey = (cwd) => { let readable = ""; let run = false' \
+    '  for (let i = 0; i < cwd.length; i += 1) { const ch = cwd[i]' \
+    '    if (ch === "/" || ch === "\\\\" || ch === ":") { if (!run) readable += "-"; run = true }' \
+    '    else if (/^[A-Za-z0-9._-]$/.test(ch)) { readable += ch; run = false }' \
+    '    else { readable += "~" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0"); run = false } }' \
+    '  return "--" + (readable.replace(/^-+/, "") || "root").slice(0, 251) + "--" }' \
+    'let restored = 0' \
+    'for (const entry of manifest.sessions ?? []) {' \
+    '  const source = join(archive, entry.file)' \
+    '  if (!existsSync(source)) continue' \
+    '  const dir = join(home, "sessions", projectKey(entry.cwd), entry.id)' \
+    '  const target = join(dir, "session.v4.jsonl.zstd")' \
+    '  if (existsSync(target)) continue' \
+    '  mkdirSync(dir, { recursive: true })' \
+    '  copyFileSync(source, target)' \
+    '  restored += 1 }' \
+    'console.log(`massai sessions: ${restored} restored from archive`)' \
+    > /usr/local/lib/massai-restore-sessions.mjs
 
 ENTRYPOINT ["/usr/local/bin/massai-boot"]
 CMD ["sh", "-c", "echo massai booting on 10000 && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000"]
