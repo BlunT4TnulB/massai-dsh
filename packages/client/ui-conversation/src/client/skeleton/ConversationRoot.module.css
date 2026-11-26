@@ -753,6 +753,10 @@
 
 /* The corner: always present, never loud. One dot; the menu it opens holds every
    surface, so no immersive state can strand a person. */
+.root[data-phase='hero'] .corner {
+  /* The hero is the door: a second door in the corner is one too many. */
+  display: none;
+}
 .corner {
   position: fixed;
   top: 10px;

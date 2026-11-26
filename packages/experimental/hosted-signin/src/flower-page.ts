@@ -2328,7 +2328,7 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
 <div class="overlay">
   <div class="brand"><img src="/massai-crest.svg" alt="" width="22" height="22"><span>MASSAI</span></div>
-  <a class="back" href="/">← the door</a>
+  <a class="back" href="/access">← the door</a>
 </div>
 <p class="caption" id="caption"></p>
 <p class="node-name" id="nodeName"></p>
