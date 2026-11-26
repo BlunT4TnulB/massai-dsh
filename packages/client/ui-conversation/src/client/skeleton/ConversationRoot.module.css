@@ -753,6 +753,13 @@
 
 /* The corner: always present, never loud. One dot; the menu it opens holds every
    surface, so no immersive state can strand a person. */
+/* The app shell's sidebar toggle lives outside this tree, so it is hidden by the phase
+   the body publishes: while the mind is the screen, the door is the only chrome. */
+body[data-massai-phase='hero'] [aria-label='Open sidebar'],
+body[data-massai-phase='hero'] [aria-label='Collapse sidebar'] {
+  display: none !important;
+}
+
 .root[data-phase='hero'] .corner {
   /* The hero is the door: a second door in the corner is one too many. */
   display: none;

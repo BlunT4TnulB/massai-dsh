@@ -273,6 +273,13 @@ export function ConversationContent(props: ConversationContentProps) {
     return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey) }
   }, [hero, entered, enter])
 
+  // The shell's own chrome reads this: in the hero the mind is the screen, so a sidebar
+  // toggle in the corner is a second door nobody asked for.
+  useEffect(() => {
+    document.body.dataset['massaiPhase'] = phase
+    return () => { delete document.body.dataset['massaiPhase'] }
+  }, [phase])
+
   // Creating a workspace is an act of intent: the drawer offered it before the door was
   // found, so making one now opens the workshop rather than leaving it shut.
   const workspaceCount = workspaces.items.length
