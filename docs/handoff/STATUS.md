@@ -1047,6 +1047,26 @@ project) are both feasible on the existing import path (`/import`, `appendImport
   `"conversation"` payloads (undocumented, moves often) and falls back to visible text. One real share
   link is needed to confirm or correct it.
 
+## The port found the real format (2026-11-26, live on `5509cd9` + archive `massai-sessions`)
+Three findings, each one earned by an experiment:
+1. **The log is multi-frame.** The app writes `session.v4.jsonl.zstd` as **one zstd frame per
+   record** (the original transcript has 22,040 frames). A single-frame re-encode is *listed* by the
+   store but unreadable, and initially not listed at all. Re-encoding one frame per line made the
+   session appear in the sidebar.
+2. **Never trim structured events.** Capping every string corrupted a `developer/message`
+   tool-addition and the app said so precisely: *"tool-addition \"terminal_send\" must name exactly
+   one tool in headerSeq 611"*. The safe trim caps only `tool/result` (2000 chars) and
+   `assistant/message` (6000), and leaves `developer/message`, headers and tool declarations
+   byte-for-byte.
+3. **It is now listed and it opens.** The sidebar shows `Ungrouped → Untitled`, the session opens, and
+   the panel reads "Loading history…". The replay of that 30 MB / 39,559-frame log did not complete
+   within 45 s in a headless check — so the last unknown is whether it is merely slow or stuck.
+   Next step: open it on a real device and wait; if it never lands, keep the original frames and
+   rewrite only the header frame instead of re-encoding the whole log (that preserves the exact
+   bytes the writer produced, and should replay at normal speed).
+- Archive updated to the frame-per-record file (30.3 MB) so boot restore is consistent with the
+  format the app can read.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
