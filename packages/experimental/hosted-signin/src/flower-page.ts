@@ -327,6 +327,20 @@ let litSkill = '';
 const ARRIVING = params.get('arrive') === '1' || ORB;
 let arriveUntil = 0;
 
+// The vocabulary. A spark is not just "something happened": what happened decides the
+// colour, the shape and how long it lasts.
+//   tool      gold     the ordinary work
+//   fail      crimson  a failure or a retry — the route that did not work
+//   learn     green    something learned, a skill taking hold
+//   epiphany  white    a bright, wide arc and a shockwave
+//   build     amber    a finished thing
+const SPARK_KINDS = {
+  tool: { colour: '255,246,226', weight: 6, life: 2200, amplitude: 1, halo: 1, ripple: 0 },
+  fail: { colour: '255,86,64', weight: 1, life: 1500, amplitude: 1.7, halo: 1.5, ripple: 0 },
+  learn: { colour: '150,255,196', weight: 1.1, life: 2600, amplitude: 0.9, halo: 1.2, ripple: 0.5 },
+  epiphany: { colour: '255,255,246', weight: 0.35, life: 3400, amplitude: 1.2, halo: 2.6, ripple: 1 },
+  build: { colour: '255,214,150', weight: 1.2, life: 3000, amplitude: 0.8, halo: 1.3, ripple: 0.4 }
+};
 const SPARK_RATE = [0, 9000, 4500, 2200];
 let sparkLevel = (function () {
   try {
@@ -341,6 +355,8 @@ let sparkLevel = (function () {
 })();
 let sparkNext = 0;
 const sparks = [];
+// How many of each kind the feed last reported (aggregate only).
+let kindCounts = {};
 // The lattice itself, switchable: L toggles it, ?lines=0 starts with it off.
 let linesOn = params.get('lines') !== '0';
 
@@ -1205,6 +1221,39 @@ function rippleFrom(index) {
 }
 
 /**
+ * Which kind a unit of real work should mark the body as.
+ * @param skill - the capability that did the work.
+ * @returns the kind of mark.
+ */
+function kindOfSkill(skill) {
+  if (skill === 'testing' || skill === 'docs') return 'learn';
+  if (skill.indexOf('scan') >= 0) return 'tool';
+  return 'build';
+}
+
+/**
+ * Pick a kind of moment, biased by what has actually been happening.
+ * @returns one of the five kinds.
+ */
+function pickKind() {
+  let total = 0;
+  const weights = {};
+  for (const key of Object.keys(SPARK_KINDS)) {
+    const live = kindCounts[key] ?? 0;
+    const weight = live > 0 ? live : SPARK_KINDS[key].weight * 0.5;
+    weights[key] = weight;
+    total += weight;
+  }
+  if (total <= 0) return 'tool';
+  let roll = Math.random() * total;
+  for (const key of Object.keys(weights)) {
+    roll -= weights[key];
+    if (roll <= 0) return key;
+  }
+  return 'tool';
+}
+
+/**
  * Light a link between two nearby stars.
  * @param now - current epoch ms.
  * @returns nothing.
@@ -1235,7 +1284,8 @@ function spawnSpark(now) {
     if (score > bestScore) { bestScore = score; best = candidate; }
   }
   if (best < 0) return;
-  sparks.push({ a: a, b: best, t0: now });
+  const kind = pickKind();
+  sparks.push({ a: a, b: best, t0: now, kind });
   if (sparks.length > 14) sparks.shift();
 }
 
@@ -1261,7 +1311,7 @@ function spawnSparkAt(index) {
     if (score > bestScore) { bestScore = score; best = candidate; }
   }
   if (best < 0) return;
-  sparks.push({ a: index, b: best, t0: performance.now() });
+  sparks.push({ a: index, b: best, t0: performance.now(), kind: 'build' });
   if (sparks.length > 14) sparks.shift();
 }
 
@@ -1278,9 +1328,15 @@ function drawSparks(now) {
   ctx.globalCompositeOperation = 'lighter';
   for (let i = sparks.length - 1; i >= 0; i -= 1) {
     const spark = sparks[i];
+    const spec = SPARK_KINDS[spark.kind] ?? SPARK_KINDS.tool;
     const age = now - spark.t0;
-    const life01 = 1 - age / 2200;
+    const life01 = 1 - age / spec.life;
     if (life01 <= 0) { sparks.splice(i, 1); continue; }
+    if (spark.rippled !== true && spec.ripple > 0 && life01 > 0.85) {
+      // an epiphany shakes the whole body, once
+      spark.rippled = true;
+      ripples.push({ t0: now, strength: spec.ripple });
+    }
     const a = nodes[spark.a].p;
     const b = nodes[spark.b].p;
     const arc = arcBetween(a, b, 26);
@@ -1312,7 +1368,7 @@ function drawSparks(now) {
       const wave = Math.sin(u * 9 + now * 0.004 + seed) * 0.65
         + Math.sin(u * 21 - now * 0.011 + seed * 1.7) * 0.35
         + Math.sin(now * 0.02 + n * 1.9 + seed) * 0.18;
-      const amplitude = Math.min(24, 6 + total * 0.04) * belly;
+      const amplitude = Math.min(38, (6 + total * 0.04) * spec.amplitude) * belly;
       live.push({
         x: here.x + (-dy / length) * wave * amplitude,
         y: here.y + (dx / length) * wave * amplitude,
@@ -1337,14 +1393,14 @@ function drawSparks(now) {
         lx = point.x;
         ly = point.y;
       }
-      ctx.strokeStyle = 'rgba(255,246,226,' + Math.max(0, Math.min(1, alpha * glow)).toFixed(3) + ')';
+      ctx.strokeStyle = 'rgba(' + spec.colour + ',' + Math.max(0, Math.min(1, alpha * glow)).toFixed(3) + ')';
       ctx.lineWidth = width;
       ctx.stroke();
     };
 
     // halo, body, core — the layers are what make it read as plasma rather than a pen
-    stroke(9 + 5 * life01, 0.10);
-    stroke(3.6 + 2.2 * life01, 0.26);
+    stroke((9 + 5 * life01) * spec.halo, 0.10 * spec.halo);
+    stroke((3.6 + 2.2 * life01) * spec.halo, 0.26);
     stroke(1.1 + 0.5 * life01, 0.9);
 
     // a branch, now and then: plasma forks
@@ -1361,14 +1417,14 @@ function drawSparks(now) {
           py += Math.cos(now * 0.015 + n * 1.7 + seed) * 5 - 3;
           ctx.lineTo(px, py);
         }
-        ctx.strokeStyle = 'rgba(255,240,214,' + Math.max(0, Math.min(1, 0.5 * glow)).toFixed(3) + ')';
+        ctx.strokeStyle = 'rgba(' + spec.colour + ',' + Math.max(0, Math.min(1, 0.5 * glow)).toFixed(3) + ')';
         ctx.lineWidth = 1.1;
         ctx.stroke();
       }
     }
 
     // both ends flash, so the link reads as a conversation rather than a line
-    const sprite = glowSprite('255,244,224');
+    const sprite = glowSprite(spec.colour);
     for (const node of [a, b]) {
       const p = project(node[0], node[1], node[2]);
       if (p.z <= -0.2 || p.behind === true) continue;
@@ -1389,7 +1445,7 @@ function drawLit(now) {
     const age = monotonic - entry.t0;
     if (age > LIT_MS) { lit.delete(index); continue; }
     const life01 = 1 - age / LIT_MS;
-    entries.push({ index: index, life: life01, skill: entry.skill });
+    entries.push({ index: index, life: life01, skill: entry.skill, kind: entry.kind ?? 'tool' });
   }
   if (entries.length === 0) return;
   entries.sort(function (a, b) { return a.life - b.life; });
@@ -1414,8 +1470,8 @@ function drawLit(now) {
   ctx.lineWidth = 0.9;
   ctx.stroke();
   // and the stars themselves
-  const sprite = glowSprite('255,236,200');
   for (const entry of entries) {
+    const sprite = glowSprite(SPARK_KINDS[entry.kind]?.colour ?? '255,236,200');
     const point = nodes[entry.index].p;
     const p = project(point[0], point[1], point[2]);
     if (p.z <= -0.2 || p.behind === true) continue;
@@ -1719,7 +1775,7 @@ function noteActivity(bySkill, total) {
     litSkill = skill;
     const base = Math.abs(SKILL_ORDER.indexOf(skill));
     const index = (base * 37 + Math.floor(Math.random() * nodes.length)) % nodes.length;
-    lit.set(index, { t0: performance.now(), skill: skill });
+    lit.set(index, { t0: performance.now(), skill: skill, kind: kindOfSkill(skill) });
     spawnSparkAt(index);
   }
   const now = performance.now();
@@ -1746,6 +1802,7 @@ async function poll() {
         return { skill: skill, at: now - index * 4000 };
       });
       simulated = trail.length === 0;
+      if (data.kinds !== null && typeof data.kinds === 'object') kindCounts = data.kinds;
       noteActivity(skills, data.skills && typeof data.skills.total === 'number' ? data.skills.total : -1);
       const badge = document.getElementById('simulated');
       if (badge) badge.style.opacity = simulated ? '0.7' : '0';
@@ -1764,6 +1821,17 @@ async function poll() {
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
     simulated = trail.length === 0;
+    {
+      // the owner's feed carries events, so count the kinds here
+      const tally = { tool: 0, fail: 0, learn: 0, epiphany: 0, build: 0 };
+      for (const event of (Array.isArray(data.events) ? data.events : [])) {
+        if (event && typeof event.kind === 'string' && tally[event.kind] !== undefined) tally[event.kind] += 1;
+      }
+      for (const step of (Array.isArray(data.trail) ? data.trail : [])) {
+        if (step && typeof step.kind === 'string' && tally[step.kind] !== undefined) tally[step.kind] += 1;
+      }
+      kindCounts = tally;
+    }
     noteActivity(
       (data.counts && data.counts.bySkill) || {},
       data.counts && typeof data.counts.total === 'number' ? data.counts.total : -1,

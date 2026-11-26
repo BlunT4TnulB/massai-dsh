@@ -13,6 +13,12 @@
  * @module @deepseek-ai/dsh-hosted-signin/activity
  */
 
+/**
+ * What kind of moment this was, so the mind can show it rather than merely glow:
+ * a tool call, a failure or retry, something learned, an epiphany, a finished build.
+ */
+export type ActivityKind = 'tool' | 'fail' | 'learn' | 'epiphany' | 'build'
+
 /** One piece of work the workshop is doing. */
 export interface ActivityEvent {
   /** A capability id, shared with the skill catalog, or 'general'. */
@@ -23,6 +29,8 @@ export interface ActivityEvent {
   readonly at: number
   /** Which session did it, when known: the "agent" the orbit draws. */
   readonly session?: string
+  /** The moment's kind: what the mind should draw for it. */
+  readonly kind: ActivityKind
 }
 
 /** How long an event stays warm. */
@@ -35,9 +43,21 @@ const CAPACITY = 120
 const events: ActivityEvent[] = []
 
 /** Record one piece of activity. */
-export function recordActivity(skill: string, label: string, session?: string): void {
-  events.push({ skill, label, at: Date.now(), ...(session === undefined || session === '' ? {} : { session }) })
+export function recordActivity(
+  skill: string,
+  label: string,
+  session?: string,
+  kind: ActivityKind = 'tool',
+): void {
+  events.push({ skill, label, at: Date.now(), kind, ...(session === undefined || session === '' ? {} : { session }) })
   while (events.length > CAPACITY) events.shift()
+}
+
+/** How many of each kind are warm right now — counts only, no content. */
+export function kindsOf(now = Date.now()): Record<ActivityKind, number> {
+  const totals: Record<ActivityKind, number> = { tool: 0, fail: 0, learn: 0, epiphany: 0, build: 0 }
+  for (const event of readActivity(now)) totals[event.kind] += 1
+  return totals
 }
 
 /** Drop stale entries and return the warm ones, freshest first. */

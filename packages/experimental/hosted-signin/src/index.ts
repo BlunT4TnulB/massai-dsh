@@ -26,7 +26,7 @@ import { applyKoFiEvent, parseKoFiBody } from './kofi.ts'
 import { aupPageHtml, privacyPageHtml, supportPageHtml, termsPageHtml } from './legal.ts'
 import { deepSeekBalance, lowBalanceUsd, publishBalance, refreshBalance } from './billing.ts'
 import { comfortCookie, comfortFromCookie, comfortPageHtml, isMaster, preset, type ComfortTier } from './comfort.ts'
-import { agentsOf, classifyToolCall, countsOf, focusOf, readActivity, recordActivity, trailOf } from './activity.ts'
+import { agentsOf, classifyToolCall, countsOf, focusOf, kindsOf, readActivity, recordActivity, trailOf } from './activity.ts'
 import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession } from './hive.ts'
 import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
@@ -995,6 +995,9 @@ export function apply(ctx: Context): void {
           live: events.length > 0,
           // counts by capability only: no labels, no sessions, no identities
           skills: counts,
+          // and the kinds of moment, so the mind can show failures red, learns green
+          // and epiphanies bright — aggregate counts, still no content
+          kinds: kindsOf(now),
           recent: events.length,
           focus: focus === undefined ? null : { skill: focus.skill },
           works,
@@ -1268,7 +1271,10 @@ export function apply(ctx: Context): void {
         // A session id is optional: real tool calls always carry one, and a tester
         // may supply one to exercise the agent view.
         const session = String(parsed['session'] ?? '')
-        recordActivity(skill, String(parsed['label'] ?? skill), session === '' ? undefined : session)
+        const kinds = ['tool', 'fail', 'learn', 'epiphany', 'build']
+        const rawKind = String(parsed['kind'] ?? 'tool')
+        const kind = (kinds.includes(rawKind) ? rawKind : 'tool') as 'tool' | 'fail' | 'learn' | 'epiphany' | 'build'
+        recordActivity(skill, String(parsed['label'] ?? skill), session === '' ? undefined : session, kind)
         respond(res, 200, { ok: true, focus: focusOf() ?? null })
       } catch (error) {
         respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
