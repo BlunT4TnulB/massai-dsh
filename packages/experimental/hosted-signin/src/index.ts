@@ -1220,12 +1220,30 @@ export function apply(ctx: Context): void {
         const { mkdirSync, createWriteStream } = await import('node:fs')
         const { join } = await import('node:path')
         const home = process.env.DSH_HOME ?? join('/', 'root', '.dsh')
-        // Same directory rule the harness uses: the project path, escaped, wrapped in dashes.
-        const project = '-' + cwd.split('/').map(function (part) {
-          return part.replace(/[^A-Za-z0-9_-]/g, function (ch) {
-            return '~' + ch.codePointAt(0)?.toString(16).padStart(4, '0')
-          })
-        }).join('-') + '-'
+        // Same directory rule the harness uses (session-persistence-jsonl projectKey):
+        // separators collapse to one dash, other unsafe units become ~XXXX, then the
+        // slug is wrapped in double dashes.
+        function projectKeyOf(path): string {
+          let readable = ''
+          let separatorRun = false
+          for (let index = 0; index < path.length; index += 1) {
+            const code = path.charCodeAt(index)
+            const ch = String.fromCharCode(code)
+            if (ch === '/' || ch === '\\' || ch === ':') {
+              if (!separatorRun) readable += '-'
+              separatorRun = true
+            } else if (ch !== '~' && /^[A-Za-z0-9._-]$/.test(ch)) {
+              readable += ch
+              separatorRun = false
+            } else {
+              readable += '~' + code.toString(16).toUpperCase().padStart(4, '0')
+              separatorRun = false
+            }
+          }
+          const slug = readable.replace(/^-+/, '') || 'root'
+          return '--' + slug.slice(0, 251) + '--'
+        }
+        const project = projectKeyOf(cwd)
         const dir = join(home, 'sessions', project, id)
         mkdirSync(dir, { recursive: true })
         const target = join(dir, 'session.v4.jsonl.zstd')
