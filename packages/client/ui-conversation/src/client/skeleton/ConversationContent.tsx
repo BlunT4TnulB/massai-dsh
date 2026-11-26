@@ -100,7 +100,18 @@ export function ConversationContent(props: ConversationContentProps) {
   // one message and the composer appears — before that, the mind IS the screen.
   // The door also hands over the thought you were near, so the workshop and the
   // mind share one sentence.
-  const [entered, setEntered] = useState(false)
+  const enteredKey = 'massai.entered'
+  const [entered, setEntered] = useState<boolean>(() => {
+    try { return window.sessionStorage.getItem(enteredKey) === '1' } catch { return false }
+  })
+  /**
+   * Open the workshop for the rest of the tab.
+   * @returns nothing.
+   */
+  const enter = useCallback((): void => {
+    setEntered(true)
+    try { window.sessionStorage.setItem(enteredKey, '1') } catch { /* private mode */ }
+  }, [])
   const [enteredThought, setEnteredThought] = useState<string | undefined>(undefined)
   // Nobody is ever trapped in the mind: after a while a quiet way in appears,
   // and Enter always works. The door is an invitation, not a lock.
@@ -235,7 +246,7 @@ export function ConversationContent(props: ConversationContentProps) {
     const receive = (event: MessageEvent): void => {
       const data = event.data as { type?: unknown } | null
       if (data !== null && typeof data === 'object' && data.type === 'massai:enter') {
-        setEntered(true)
+        enter()
         if (typeof (data as { thought?: unknown }).thought === 'string') {
           setEnteredThought((data as { thought: string }).thought)
         }
@@ -243,19 +254,34 @@ export function ConversationContent(props: ConversationContentProps) {
     }
     window.addEventListener('message', receive)
     return () => { window.removeEventListener('message', receive) }
-  }, [])
+  }, [enter])
   useEffect(() => {
     if (!hero || entered) return undefined
     const timer = window.setTimeout(() => { setNudged(true) }, 22000)
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) setEntered(true)
+      if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) enter()
     }
     window.addEventListener('keydown', onKey)
     return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey) }
-  }, [hero, entered])
+  }, [hero, entered, enter])
+
+  // Creating a workspace is an act of intent: the drawer offered it before the door was
+  // found, so making one now opens the workshop rather than leaving it shut.
+  const workspaceCount = workspaces.items.length
+  const firstWorkspaceCount = useRef<number | null>(null)
+  useEffect(() => {
+    if (workspaces.phase !== 'ready') return
+    if (firstWorkspaceCount.current === null) { firstWorkspaceCount.current = workspaceCount; return }
+    if (workspaceCount > firstWorkspaceCount.current) enter()
+  }, [workspaceCount, workspaces.phase, enter])
+
+  // Arriving at a session means the door is already behind them.
+  useEffect(() => {
+    if (sessionId !== undefined) enter()
+  }, [sessionId, enter])
 
   const wayIn = hero && !entered && nudged ? (
-    <button type="button" className={css.wayIn} onClick={() => { setEntered(true) }}>
+    <button type="button" className={css.wayIn} onClick={enter}>
       the ring is the door — or open the workshop
     </button>
   ) : null
