@@ -67,7 +67,7 @@ RUN printf '%s\n' \
     '  else' \
     '    API="${MASSAA_GIT_REPO}"' \
     '  fi' \
-    '  CLEAN="$(printf %s "${MASSAA_GIT_REPO}" | sed -e "s#/${MASSAA_GIT_PAT:-}#g")"' \
+    '  CLEAN="$(printf %s "${MASSAA_GIT_REPO}" | sed -e "s#https://[^@/]*@#https://#")"' \
     '  if [ -d "${DIR}/.git" ]; then' \
     '    git -C "${DIR}" remote set-url origin "${API}" || true' \
     '    git -C "${DIR}" fetch --depth 1 origin HEAD || true' \
@@ -76,7 +76,7 @@ RUN printf '%s\n' \
     '    mkdir -p "$(dirname "${DIR}")"' \
     '    git clone --depth 1 "${API}" "${DIR}" || echo "massai workspace: clone failed (non-fatal)"' \
     '  fi' \
-    '  git -C "${DIR}" remote set-url origin "${CLEAN}" || true' \
+    '  if [ -n "${CLEAN}" ]; then git -C "${DIR}" remote set-url origin "${CLEAN}" || true; fi' \
     '  echo "massai workspace: ready ($(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown))"' \
     'fi' \
     'PROJECTS_DIR="${MASSAA_PROJECTS_DIR:-/app/Projects}"' \
@@ -139,7 +139,7 @@ RUN printf '%s\n' \
     'fi' \
     '[ -d "${DIR}/.git" ] || { echo "massai-push: ${DIR} is not a repository"; exit 2; }' \
     'BRANCH="$(git -C "${DIR}" rev-parse --abbrev-ref HEAD)"' \
-    '[ "${BRANCH}" = "HEAD" ] && BRANCH=master' \
+    'if [ "${BRANCH}" = "HEAD" ]; then BRANCH=master; fi' \
     'git -C "${DIR}" push "https://x-access-token:${MASSAA_GIT_PAT}@github.com/${BASE}/${NAME}.git" "HEAD:${BRANCH}"' \
     > /usr/local/bin/massai-push \
     && chmod +x /usr/local/bin/massai-push
