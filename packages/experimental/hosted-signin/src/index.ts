@@ -1122,6 +1122,81 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // Bring a conversation here: the owner pushes a session transcript into a project
+  // directory, so the same chat can be continued inside the hosted Massai.
+  // Owner-only, streamed straight to disk, and never listed back to anyone else.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/session/import', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (refuseUnlessOwner(req, res)) return
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const url = new URL(String(req.url ?? '/'), 'http://localhost')
+      const cwd = url.searchParams.get('cwd') ?? ''
+      const id = url.searchParams.get('id') ?? ''
+      if (!/^\/[A-Za-z0-9._\/-]{1,200}$/.test(cwd)) { respond(res, 400, { error: 'an absolute cwd is required' }); return }
+      if (!/^(session-)?[A-Za-z0-9-]{8,80}$/.test(id)) { respond(res, 400, { error: 'a session id is required' }); return }
+      try {
+        const { mkdirSync, createWriteStream } = await import('node:fs')
+        const { join } = await import('node:path')
+        const home = process.env.DSH_HOME ?? join('/', 'root', '.dsh')
+        // Same directory rule the harness uses: the project path, escaped, wrapped in dashes.
+        const project = '-' + cwd.split('/').map(function (part) {
+          return part.replace(/[^A-Za-z0-9_-]/g, function (ch) {
+            return '~' + ch.codePointAt(0)?.toString(16).padStart(4, '0')
+          })
+        }).join('-') + '-'
+        const dir = join(home, 'sessions', project, id)
+        mkdirSync(dir, { recursive: true })
+        const target = join(dir, 'session.v4.jsonl.zstd')
+        let bytes = 0
+        await new Promise<void>((resolve, reject) => {
+          const out = createWriteStream(target)
+          req.on('data', (chunk: Buffer) => { bytes += chunk.length })
+          req.pipe(out)
+          out.on('finish', () => resolve())
+          out.on('error', reject)
+          req.on('error', reject)
+        })
+        respond(res, 201, { cwd, id, project, bytes })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
+  // What conversations the instance is holding, per project. Names and sizes only.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/sessions', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      try {
+        const { readdirSync, existsSync, statSync } = await import('node:fs')
+        const { join } = await import('node:path')
+        const home = process.env.DSH_HOME ?? join('/', 'root', '.dsh')
+        const root = join(home, 'sessions')
+        const answer: Array<Record<string, unknown>> = []
+        if (existsSync(root)) {
+          for (const project of readdirSync(root)) {
+            const projectPath = join(root, project)
+            let sessions: Array<Record<string, unknown>> = []
+            try {
+              sessions = readdirSync(projectPath).map(function (id) {
+                const file = join(projectPath, id, 'session.v4.jsonl.zstd')
+                const size = existsSync(file) ? statSync(file).size : 0
+                return { id, bytes: size }
+              }).filter(function (entry) { return entry.bytes > 0 })
+            } catch { sessions = [] }
+            if (sessions.length > 0) answer.push({ project, sessions })
+          }
+        }
+        respond(res, 200, { home, projects: answer }, { 'access-control-allow-origin': '*', 'cache-control': 'no-store' })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',
