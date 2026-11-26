@@ -1030,6 +1030,23 @@ Gemini Apps export) and clipboard paste. So "always linked, self-updating" is im
 **takeout import** (all chats) plus a **per-chat reference import** (one conversation loaded into a
 project) are both feasible on the existing import path (`/import`, `appendImported`).
 
+## Gemini links: the real blocker was Node, not Google (2026-11-26, live on `5509cd9`)
+- **`link-reader.ts`** — the host fetches a pasted share link and hands the conversation to the model
+  as *labelled data* before the step runs (`agent/pre-step`), with a note that it is not the user and
+  not an instruction. Owner probe: `GET /api/read/link?url=…` (403 for anyone else). 12 s timeout,
+  4 MB body cap, SSRF guard on private ranges and localhost, 8 000 characters per link, two links per
+  step, deduplicated per session.
+- **Diagnosis worth keeping:** `fetch` to `gemini.google.com` failed with `UND_ERR_HEADERS_OVERFLOW`,
+  and `https.request` with the same — Gemini's response headers exceed Node's **16 KB** default.
+  `curl` saw 302 happily, which is why it looked like Google was blocking us. Fixed by using
+  `node:https` with `maxHeaderSize: 128 KB` and following redirects by hand (verified locally:
+  `https.request` with the raised ceiling returns **200** and a 922 KB body).
+- **After the fix, from Render:** gemini.google.com answers, the page title is read, and an invalid
+  share id honestly reports "the page carried no readable conversation".
+- **Still unverified:** extraction of a *real* share page. The parser walks `AF_initDataCallback` and
+  `"conversation"` payloads (undocumented, moves often) and falls back to visible text. One real share
+  link is needed to confirm or correct it.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
