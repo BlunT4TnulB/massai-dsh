@@ -302,7 +302,7 @@ export function ConversationContent(props: ConversationContentProps) {
 
   const wayIn = hero && !entered && nudged ? (
     <button type="button" className={css.wayIn} onClick={enter}>
-      the ring is the door — or open the workshop
+      open the workshop
     </button>
   ) : null
 

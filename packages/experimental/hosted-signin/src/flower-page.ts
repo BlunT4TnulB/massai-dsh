@@ -502,6 +502,9 @@ const roleOf = function (index) { return ROLES[(index * 7 + 3) % ROLES.length]; 
 // this is the only one you can enter. It drifts with the day, not with the view.
 const REST_YAW = 0.4;
 const REST_PITCH = -0.35;
+// The door is real but hidden for now. One switch, so every place that used to draw
+// or answer to it agrees: no ring, no glow, no "touch it to enter", no tap target.
+const DOOR_VISIBLE = false;
 const PORTAL = (function () {
   // rotate the rest camera's forward axis back into the sphere: that direction is
   // what the viewer is looking at when the page settles.
@@ -969,7 +972,7 @@ function drawGalaxy(now) {
     const p = project(node.p[0], node.p[1], node.p[2]);
     return { node: node, index: index, p: p };
   }).filter(function (entry) {
-    return entry.index % stride === 0 || entry.index === PORTAL || entry.index === hoverNode;
+    return entry.index % stride === 0 || (DOOR_VISIBLE && entry.index === PORTAL) || entry.index === hoverNode;
   }).sort(function (a, b) { return a.p.depth - b.p.depth; });
   // Every star carries a wide, faint halo. Drawn additively, the haloes of a few
   // hundred stars accumulate into one cloud: no single star is bright, the sum of
@@ -981,7 +984,7 @@ function drawGalaxy(now) {
     const near = Math.max(0, Math.min(1, (p.k - 0.55) / 0.6));
     const hot = heat(now, entry.node.p[0], entry.node.p[1], entry.node.p[2]);
     const picked = entry.index === hoverNode || entry.index === diveNode;
-    const isDoor = entry.index === PORTAL;
+    const isDoor = DOOR_VISIBLE && entry.index === PORTAL;
     // thoughts sit a shade darker than the door and far lighter in weight
     const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
     const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1);
@@ -997,7 +1000,7 @@ function drawGalaxy(now) {
     // close enough to be looking, or when the pointer is already on it.
     // Under reduced motion there is no drift to reveal the ring, so it is simply
     // always there: the Easter egg still has to be reachable without hunting.
-    if (!VISUALIZER && entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
+    if (DOOR_VISIBLE && !VISUALIZER && entry.index === PORTAL && (reduce || zoom > 1.5 || hoverNode === PORTAL)) {
       const pulse = 8 + 3.5 * Math.sin(now * 0.0016);
       ctx.beginPath();
       ctx.arc(p.x, p.y, (pulse + 3) * p.k, 0, Math.PI * 2);
@@ -1671,7 +1674,7 @@ function frame(now) {
       } else {
         exploreNode = (exploreNode + 37 + Math.floor(Math.random() * 40)) % nodes.length;
         diveNode = exploreNode;
-        if (label) label.textContent = exploreNode === PORTAL ? 'the door' : roleOf(exploreNode);
+        if (label) label.textContent = (DOOR_VISIBLE && exploreNode === PORTAL) ? 'the door' : roleOf(exploreNode);
       }
       // Aim, never jump: the tour eases into its distance over about a second.
       rippleFrom(exploreNode);
@@ -1989,7 +1992,7 @@ function nodeAt(clientX, clientY) {
 
 function describe(index) {
   if (index < 0) return '';
-  if (index === PORTAL) return 'the door — touch it to enter';
+  if (DOOR_VISIBLE && index === PORTAL) return 'the door — touch it to enter';
   return roleOf(index);
 }
 
@@ -2025,6 +2028,7 @@ canvas.addEventListener('pointerdown', function (event) {
   goFullscreen();
   tapStart = { x: event.clientX, y: event.clientY };
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size === 3) { threeStart = pointerSpread(); threeFired = false; }
   if (pointers.size === 2) {
     // Two fingers own the camera: their spread sets the depth, their shared motion
     // slides the centre. One finger still turns the body, as before.
@@ -2047,6 +2051,15 @@ canvas.addEventListener('pointerdown', function (event) {
 canvas.addEventListener('pointermove', function (event) {
   wake();
   if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size >= 3) {
+    // three fingers, starting closed, ending open — the way in now that no door is drawn
+    const spread = pointerSpread();
+    if (!threeFired && threeStart > 6 && spread > threeStart * 1.5 && spread - threeStart > 30) {
+      threeFired = true;
+      openTheMind();
+    }
+    return;
+  }
   if (pointers.size === 2 && pinchStart > 0) {
     const two = [...pointers.values()];
     const spread = Math.hypot(two[0].x - two[1].x, two[0].y - two[1].y);
@@ -2113,6 +2126,7 @@ function resolveTaps() {
   tapCount = 0;
   if (n >= 3) {
     // Triple tap: the perfect fullscreen — no chrome, no bars, just the mind.
+    document.body.classList.toggle('screensaver');
     if (document.fullscreenElement === null) {
       const target = document.documentElement;
       const request = target.requestFullscreen ?? undefined;
@@ -2127,6 +2141,7 @@ function resolveTaps() {
       }
     } else {
       void document.exitFullscreen().catch(function () { /* already out */ });
+      document.body.classList.remove('screensaver');
       flashNote('the frame, back');
     }
     return;
@@ -2138,7 +2153,7 @@ function resolveTaps() {
   }
   // a single tap: the old behaviour, explore what is under it
   const picked = lastTapPick;
-  if (picked === PORTAL) {
+  if (DOOR_VISIBLE && picked === PORTAL) {
     const thought = describe(hoverNode >= 0 ? hoverNode : picked);
     flashNote('entering…');
     try {
@@ -2173,9 +2188,42 @@ function noteTap(x, y) {
   tapTimer = setTimeout(resolveTaps, 300);
 }
 
+// Three fingers opening from closed: the way in now that no door is drawn.
+let threeStart = 0;
+let threeFired = false;
+/**
+ * The average distance from the centroid, for whatever pointers are down.
+ * @returns the spread in CSS pixels.
+ */
+function pointerSpread() {
+  const points = [...pointers.values()];
+  if (points.length === 0) return 0;
+  let cx = 0;
+  let cy = 0;
+  for (const point of points) { cx += point.x; cy += point.y; }
+  cx /= points.length;
+  cy /= points.length;
+  let total = 0;
+  for (const point of points) total += Math.hypot(point.x - cx, point.y - cy);
+  return total / points.length;
+}
+
+/**
+ * Open the mind: the workshop inside the app, the way in when it is standalone.
+ * @returns nothing.
+ */
+function openTheMind() {
+  flashNote('opening…');
+  try {
+    if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter', thought: '' }, '*');
+    else setTimeout(function () { location.href = '/access'; }, 320);
+  } catch (error) { void error; }
+}
+
 canvas.addEventListener('pointerup', function (event) {
   pointers.delete(event.pointerId);
   if (pointers.size < 2) pinchStart = 0;
+  if (pointers.size < 3) { threeStart = 0; threeFired = false; }
   if (!dragging) return;
   dragging = false;
   canvas.style.cursor = 'grab';
@@ -2324,6 +2372,20 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
   html.viz .hint, html.viz .shapes, html.viz .settled, html.viz .sim,
   html.viz .node-name, html.viz .skip { display: none !important }
   html.viz body { background: #060504 }
+  /* Nothing but the mind: the idle screensaver and triple-tap both land here. */
+  body.screensaver .overlay, body.screensaver .caption, body.screensaver .hint,
+  body.screensaver .counter, body.screensaver .being, body.screensaver .confession,
+  body.screensaver .shapes, body.screensaver .settled, body.screensaver .sim,
+  body.screensaver .node-name, body.screensaver .skip, body.screensaver .back {
+    display: none !important }
+  body.screensaver { background: #060504; cursor: none }
+  /* Screensaver: nothing but the mind. Triple tap brings it, triple tap leaves it. */
+  body.screensaver .overlay, body.screensaver .caption, body.screensaver .hint,
+  body.screensaver .counter, body.screensaver .being, body.screensaver .confession,
+  body.screensaver .shapes, body.screensaver .settled, body.screensaver .sim,
+  body.screensaver .node-name, body.screensaver .skip, body.screensaver .back {
+    display: none !important }
+  body.screensaver { background: #060504; cursor: none }
 </style></head><body${embed ? ' class="embed"' : ''}>
 <canvas id="flower" aria-label="The Massai flower of life, rotatable" role="img"></canvas>
 <div class="overlay">
@@ -2338,7 +2400,7 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>double tap</b> stirs it · one star is a door</p>
+<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>two taps</b> stirs it · <b>three taps</b> is the whole screen · <b>three fingers opening</b> lets you in</p>
 <!-- the simulator lives on the glass now: double tap stirs it, triple tap calms it -->
   <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
