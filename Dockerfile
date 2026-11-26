@@ -176,7 +176,23 @@ RUN mkdir -p /usr/local/lib && printf '%s\n' \
     '  data.tables.workspaces[id] = { path, title: path.split("/").filter(Boolean).pop() ?? path, sessionIds: [], createdAt: now, updatedAt: now }' \
     '  data.global.workspaceIds.push(id); known.add(path); added += 1 }' \
     'if (added > 0) { const tmp = file + ".tmp"; writeFileSync(tmp, JSON.stringify(data, null, 2)); renameSync(tmp, file) }' \
-    'console.log(`massai workspaces: ${added} added, ${Object.keys(data.tables.workspaces).length} total`)' \
+    'const projectKey = (cwd) => { let readable = ""; let run = false' \
+    '  for (let i = 0; i < cwd.length; i += 1) { const ch = cwd[i]' \
+    '    if (ch === "/" || ch === "\\\\" || ch === ":") { if (!run) readable += "-"; run = true }' \
+    '    else if (/^[A-Za-z0-9._-]$/.test(ch)) { readable += ch; run = false }' \
+    '    else { readable += "~" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0"); run = false } }' \
+    '  return "--" + (readable.replace(/^-+/, "") || "root").slice(0, 251) + "--" }' \
+    'const sessionsRoot = join(home, "sessions")' \
+    'let attached = 0' \
+    'if (existsSync(sessionsRoot)) { const byProject = new Map()' \
+    '  for (const project of readdirSync(sessionsRoot)) { try { byProject.set(project, readdirSync(join(sessionsRoot, project))) } catch { /* skip */ } }' \
+    '  for (const workspace of Object.values(data.tables.workspaces)) {' \
+    '    const ids = byProject.get(projectKey(workspace.path)) ?? []' \
+    '    workspace.sessionIds ??= []' \
+    '    for (const id of ids) { if (!workspace.sessionIds.includes(id)) { workspace.sessionIds.push(id); attached += 1 } }' \
+    '    if (ids.length > 0) workspace.updatedAt = new Date().toISOString() } }' \
+    'if (attached > 0) { const tmp = file + ".tmp"; writeFileSync(tmp, JSON.stringify(data, null, 2)); renameSync(tmp, file) }' \
+    'console.log(`massai workspaces: ${added} added, ${attached} sessions attached, ${Object.keys(data.tables.workspaces).length} total`)' \
     > /usr/local/lib/massai-seed-workspaces.mjs
 
 ENTRYPOINT ["/usr/local/bin/massai-boot"]
