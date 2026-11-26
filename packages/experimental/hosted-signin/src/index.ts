@@ -1064,6 +1064,64 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // The owner's projects, one folder each, and a way to pull any one of them on demand.
+  // Read is public-safe (names and commits only); cloning is the owner's alone.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/projects', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const dir = process.env.MASSAA_PROJECTS_DIR ?? '/app/Projects'
+      const answer: { dir: string; projects: Array<Record<string, unknown>> } = { dir, projects: [] }
+      try {
+        const { readdirSync, existsSync } = await import('node:fs')
+        const { execFileSync } = await import('node:child_process')
+        if (!existsSync(dir)) { respond(res, 200, answer); return }
+        for (const name of readdirSync(dir).sort()) {
+          const path = dir + '/' + name
+          const run = (args: string[]): string => {
+            try {
+              return execFileSync('git', ['-C', path, ...args], { timeout: 4000, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim()
+            } catch { return '' }
+          }
+          const cloned = existsSync(path + '/.git')
+          answer.projects.push({
+            name,
+            cloned,
+            head: cloned ? run(['rev-parse', '--short', 'HEAD']) : '',
+            subject: cloned ? run(['log', '-1', '--format=%s']) : '',
+            files: cloned ? run(['ls-files']).split('\n').filter(Boolean).length : 0,
+          })
+        }
+      } catch (error) {
+        answer['error'] = error instanceof Error ? error.message : String(error)
+      }
+      respond(res, 200, answer, { 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=10' })
+    },
+  })
+
+  // Pull one project. Owner only: this writes to the container's disk.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/projects/clone', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (refuseUnlessOwner(req, res)) return
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      let name = ''
+      try {
+        const body = JSON.parse(await readBody(req)) as Record<string, unknown>
+        name = String(body['name'] ?? '')
+      } catch { name = '' }
+      if (!/^[A-Za-z0-9._-]{1,80}$/.test(name)) { respond(res, 400, { error: 'a repository name is required' }); return }
+      try {
+        const { execFile } = await import('node:child_process')
+        execFile('/usr/local/bin/massai-clone', [name], { timeout: 240000 }, () => undefined)
+        respond(res, 202, { started: name })
+      } catch (error) {
+        respond(res, 500, { error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',

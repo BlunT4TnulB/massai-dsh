@@ -54,6 +54,7 @@ EXPOSE 10000
 # configured, the container clones the project here at boot — so Massai has the
 # whole codebase to read, change and push, and the clone refreshes on every deploy.
 ENV MASSAA_WORKSPACE_DIR=/app/Massai
+ENV MASSAA_PROJECTS_DIR=/app/Projects
 
 RUN printf '%s\n' \
     '#!/bin/sh' \
@@ -77,9 +78,48 @@ RUN printf '%s\n' \
     '  fi' \
     '  echo "massai workspace: ready ($(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown))"' \
     'fi' \
+    'PROJECTS_DIR="${MASSAA_PROJECTS_DIR:-/app/Projects}"' \
+    'mkdir -p "${PROJECTS_DIR}"' \
+    'if [ -n "${MASSAA_PROJECTS:-}" ]; then' \
+    '  OLD_IFS="$IFS"; IFS=","' \
+    '  for name in ${MASSAA_PROJECTS}; do' \
+    '    IFS="$OLD_IFS"' \
+    '    [ -n "${name}" ] || continue' \
+    '    massai-clone "${name}" >/dev/null 2>&1 || echo "massai project: ${name} not cloned"' \
+    '    IFS=","' \
+    '  done' \
+    '  IFS="$OLD_IFS"' \
+    '  echo "massai projects: $(ls -1 "${PROJECTS_DIR}" | wc -l) folders in ${PROJECTS_DIR}"' \
+    'fi' \
     'exec "$@"' \
     > /usr/local/bin/massai-boot \
     && chmod +x /usr/local/bin/massai-boot
+
+# Clone one project on demand: massai-clone <name> [dir]
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    'name="${1:-}"' \
+    '[ -n "${name}" ] || { echo "usage: massai-clone <repo-name>"; exit 2; }' \
+    'DIR="${2:-${MASSAA_PROJECTS_DIR:-/app/Projects}/${name}}"' \
+    'BASE="${MASSAA_GIT_OWNER:-BlunT4TnulB}"' \
+    'if [ -n "${MASSAA_GIT_PAT:-}" ]; then' \
+    '  API="https://x-access-token:${MASSAA_GIT_PAT}@github.com/${BASE}/${name}.git"' \
+    'else' \
+    '  API="https://github.com/${BASE}/${name}.git"' \
+    'fi' \
+    'mkdir -p "$(dirname "${DIR}")"' \
+    'if [ -d "${DIR}/.git" ]; then' \
+    '  git -C "${DIR}" remote set-url origin "${API}"' \
+    '  git -C "${DIR}" fetch --depth 1 origin HEAD' \
+    '  git -C "${DIR}" reset --hard FETCH_HEAD' \
+    'else' \
+    '  rmdir "${DIR}" 2>/dev/null || true' \
+    '  git clone --depth 1 "${API}" "${DIR}"' \
+    'fi' \
+    'echo "${name}: $(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown)"' \
+    > /usr/local/bin/massai-clone \
+    && chmod +x /usr/local/bin/massai-clone
 
 ENTRYPOINT ["/usr/local/bin/massai-boot"]
 CMD ["sh", "-c", "echo massai booting on 10000 && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000"]
