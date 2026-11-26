@@ -1072,7 +1072,7 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
       const dir = process.env.MASSAA_PROJECTS_DIR ?? '/app/Projects'
-      const answer: { dir: string; projects: Array<Record<string, unknown>> } = { dir, projects: [] }
+      const answer: { dir: string; projects: Array<Record<string, unknown>>; error?: string } = { dir, projects: [] }
       try {
         const { readdirSync, existsSync } = await import('node:fs')
         const { execFileSync } = await import('node:child_process')
