@@ -92,6 +92,9 @@ RUN printf '%s\n' \
     '  IFS="$OLD_IFS"' \
     '  echo "massai projects: $(ls -1 "${PROJECTS_DIR}" | wc -l) folders in ${PROJECTS_DIR}"' \
     'fi' \
+    'if [ "${MASSAA_SEED_WORKSPACES:-1}" != "0" ]; then' \
+    '  node /usr/local/lib/massai-seed-workspaces.mjs || echo "massai: workspace seeding skipped"' \
+    'fi' \
     'exec "$@"' \
     > /usr/local/bin/massai-boot \
     && chmod +x /usr/local/bin/massai-boot
@@ -143,6 +146,38 @@ RUN printf '%s\n' \
     'git -C "${DIR}" push "https://x-access-token:${MASSAA_GIT_PAT}@github.com/${BASE}/${NAME}.git" "HEAD:${BRANCH}"' \
     > /usr/local/bin/massai-push \
     && chmod +x /usr/local/bin/massai-push
+
+# Seed the workspace list from the folders on disk, so every project and the main
+# checkout are already workspaces on first boot instead of one dialog at a time.
+RUN mkdir -p /usr/local/lib && printf '%s\n' \
+    'import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, renameSync } from "node:fs"' \
+    'import { join } from "node:path"' \
+    'import { homedir } from "node:os"' \
+    'import { randomUUID } from "node:crypto"' \
+    'const home = process.env.DSH_HOME ?? join(homedir(), ".dsh")' \
+    'const dir = join(home, "storages")' \
+    'const file = join(dir, "workspace.json")' \
+    'mkdirSync(dir, { recursive: true })' \
+    'let data = { unit: { name: "workspace", version: 2 }, global: { initialized: true, workspaceIds: [], archivedSessionIds: [], pinnedSessionIds: [] }, tables: { workspaces: {} } }' \
+    'if (existsSync(file)) { try { data = JSON.parse(readFileSync(file, "utf8")) } catch { /* keep the fresh shape */ } }' \
+    'data.global ??= { initialized: true, workspaceIds: [], archivedSessionIds: [], pinnedSessionIds: [] }' \
+    'data.global.workspaceIds ??= []' \
+    'data.tables ??= { workspaces: {} }' \
+    'data.tables.workspaces ??= {}' \
+    'const known = new Set(Object.values(data.tables.workspaces).map(w => w.path))' \
+    'const candidates = []' \
+    'const main = process.env.MASSAA_WORKSPACE_DIR ?? "/app/Massai"' \
+    'if (existsSync(main)) candidates.push(main)' \
+    'const projects = process.env.MASSAA_PROJECTS_DIR ?? "/app/Projects"' \
+    'if (existsSync(projects)) for (const name of readdirSync(projects)) candidates.push(join(projects, name))' \
+    'let added = 0' \
+    'for (const path of candidates) { if (known.has(path)) continue' \
+    '  const id = randomUUID(); const now = new Date().toISOString()' \
+    '  data.tables.workspaces[id] = { path, title: path.split("/").filter(Boolean).pop() ?? path, sessionIds: [], createdAt: now, updatedAt: now }' \
+    '  data.global.workspaceIds.push(id); known.add(path); added += 1 }' \
+    'if (added > 0) { const tmp = file + ".tmp"; writeFileSync(tmp, JSON.stringify(data, null, 2)); renameSync(tmp, file) }' \
+    'console.log(`massai workspaces: ${added} added, ${Object.keys(data.tables.workspaces).length} total`)' \
+    > /usr/local/lib/massai-seed-workspaces.mjs
 
 ENTRYPOINT ["/usr/local/bin/massai-boot"]
 CMD ["sh", "-c", "echo massai booting on 10000 && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000"]
