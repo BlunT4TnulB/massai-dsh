@@ -12,9 +12,20 @@
    unportaled Conversation popovers still rise above AppFrame chrome that floats over the column. */
 .root[data-phase='hero'] {
   isolation: isolate;
+  /* Clicks in empty space belong to the mind behind (the door, the drag); real
+     controls below opt back in. Without this the column swallowed them all. */
+  pointer-events: none;
   /* The galaxy is fixed behind the whole viewport; the conversation column has to
      stop painting over it, or the "entire screen" is really a panel. */
   background: transparent;
+}
+
+.root[data-phase='hero'] .composerStack,
+.root[data-phase='hero'] .header,
+.root[data-phase='hero'] .corner,
+.root[data-phase='hero'] .wayIn,
+.root[data-phase='hero'] .drawerWrap {
+  pointer-events: auto;
 }
 
 /* and the header/mode strip goes with it: the mind is the frame, not the chrome */

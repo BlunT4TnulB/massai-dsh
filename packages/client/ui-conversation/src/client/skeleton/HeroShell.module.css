@@ -254,7 +254,9 @@
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  z-index: 0;
+  /* Behind the conversation column: the hero root is `isolation: isolate`, so a
+     body-level layer at 0 or above painted over the composer and hid it entirely. */
+  z-index: -1;
   pointer-events: none;
   transform: none;
   margin: 0;
