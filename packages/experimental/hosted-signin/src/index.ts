@@ -1031,6 +1031,39 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // What the mind has in front of it. Reports that the project is present and which
+  // commit it is — names and counts only, never file contents.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/project', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const dir = process.env.MASSAA_WORKSPACE_DIR ?? '/app/Massai'
+      const answer: Record<string, unknown> = { dir, present: false }
+      try {
+        const { statSync, existsSync } = await import('node:fs')
+        answer['present'] = existsSync(dir)
+        answer['git'] = existsSync(dir + '/.git')
+        if (answer['git'] === true) {
+          const { execFileSync } = await import('node:child_process')
+          const run = (args: string[]): string => {
+            try {
+              return execFileSync('git', ['-C', dir, ...args], { timeout: 4000, encoding: 'utf8' }).trim()
+            } catch { return '' }
+          }
+          answer['head'] = run(['rev-parse', '--short', 'HEAD'])
+          answer['subject'] = run(['log', '-1', '--format=%s'])
+          answer['remote'] = (run(['remote', 'get-url', 'origin']) || '').replace(/x-access-token:[^@]+@/, 'x-access-token:***@')
+          answer['tracked'] = run(['ls-files']).split('\n').filter(Boolean).length
+        }
+        void statSync
+      } catch (error) {
+        answer['error'] = error instanceof Error ? error.message : String(error)
+      }
+      respond(res, 200, answer, { 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=10' })
+    },
+  })
+
   // The hive: who is working, readable by anyone, and steerable only by the owner.
   ctx.webServer.register({
     kind: 'exact', path: '/api/hive', auth: 'anonymous',
