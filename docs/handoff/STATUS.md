@@ -1005,6 +1005,31 @@ file), which means it can be seeded rather than tapped in one dialog at a time.
 - **Ephemerality, stated plainly**: the transcript survives restarts (the seeder reattaches it) but not
   deploys. Persisting it needs an archive restored at boot — a private repository or a Render disk.
 
+## History now outlives a deploy (2026-11-26, live on `9ca9596`)
+- New private repo: **`BlunT4TnulB/massai-sessions`** — `manifest.json` + `sessions/<id>.zstd`.
+- Boot restores before it seeds: clone the archive (token spent then stripped from the remote), read
+  `manifest.json`, and copy each transcript into
+  `$DSH_HOME/sessions/--<project-key-of-cwd>--/<id>/session.v4.jsonl.zstd`, then attach it to the
+  workspace whose path owns it.
+- **Proven on a fresh container**: after the deploy that introduced the restore, `GET /api/mind/sessions`
+  reported `'--app-Massai--' → session-5da38d81-…` with no manual import. The conversation is now
+  durable across deploys.
+
+### The remaining gap, stated plainly
+The app still does **not** list the restored session: `Search sessions` answers "No matching sessions"
+and the workspace row does not expand a session. The file is in the right place and the harness's own
+scanner (`listSessionDirs`) would enumerate the directory, so the likely cause is the *listing
+metadata* a session normally carries (title/index/`.l2s` long-term state) rather than the transcript.
+Next step: write whatever index the sidebar reads — inspect a locally created session's directory for
+sidecar files and reproduce them.
+
+### Queued, at the owner's request (not today's mission)
+**Gemini history for a real account.** There is no API for a consumer's Gemini chat history — Google
+exposes Gemini *models*, not conversations. The real routes are **Google Takeout** (My Activity →
+Gemini Apps export) and clipboard paste. So "always linked, self-updating" is impossible today; a
+**takeout import** (all chats) plus a **per-chat reference import** (one conversation loaded into a
+project) are both feasible on the existing import path (`/import`, `appendImported`).
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
