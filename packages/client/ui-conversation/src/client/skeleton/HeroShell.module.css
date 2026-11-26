@@ -254,9 +254,9 @@
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  /* Behind the conversation column: the hero root is `isolation: isolate`, so a
-     body-level layer at 0 or above painted over the composer and hid it entirely. */
-  z-index: -1;
+  /* Above the page background, below the hero column (which lifts itself in the hero
+     phase). At 0 the portaled frame painted over the whole app. */
+  z-index: 0;
   pointer-events: none;
   transform: none;
   margin: 0;
