@@ -50,4 +50,36 @@ EXPOSE 10000
 # hundreds of plugins at boot, which exceeds Render's startup timeout.
 # Port 10000 is hardcoded to match EXPOSE (Render's image-service port scan reads
 # EXPOSE, not $PORT — the leftover $PORT=3080 was the mismatch).
-CMD echo "massai booting on 10000" && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000
+# The workspace the hosted mind works in. When a repository and a token are
+# configured, the container clones the project here at boot — so Massai has the
+# whole codebase to read, change and push, and the clone refreshes on every deploy.
+ENV MASSAA_WORKSPACE_DIR=/app/Massai
+
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    'if [ -n "${MASSAA_GIT_REPO:-}" ]; then' \
+    '  DIR="${MASSAA_WORKSPACE_DIR:-/app/Massai}"' \
+    '  echo "massai workspace: ${DIR} from ${MASSAA_GIT_REPO}"' \
+    '  if [ -n "${MASSAA_GIT_PAT:-}" ]; then' \
+    '    API="$(printf %s "${MASSAA_GIT_REPO}" | sed -e "s#https://github.com/#https://x-access-token:${MASSAA_GIT_PAT}@github.com/#")"' \
+    '  else' \
+    '    API="${MASSAA_GIT_REPO}"' \
+    '  fi' \
+    '  if [ -d "${DIR}/.git" ]; then' \
+    '    git -C "${DIR}" remote set-url origin "${API}" || true' \
+    '    git -C "${DIR}" fetch --depth 1 origin HEAD || true' \
+    '    git -C "${DIR}" reset --hard FETCH_HEAD || true' \
+    '  else' \
+    '    mkdir -p "$(dirname "${DIR}")"' \
+    '    git clone --depth 1 "${API}" "${DIR}" || echo "massai workspace: clone failed (non-fatal)"' \
+    '    git -C "${DIR}" remote set-url origin "${API}" || true' \
+    '  fi' \
+    '  echo "massai workspace: ready ($(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown))"' \
+    'fi' \
+    'exec "$@"' \
+    > /usr/local/bin/massai-boot \
+    && chmod +x /usr/local/bin/massai-boot
+
+ENTRYPOINT ["/usr/local/bin/massai-boot"]
+CMD ["sh", "-c", "echo massai booting on 10000 && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000"]
