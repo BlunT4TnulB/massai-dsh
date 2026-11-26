@@ -968,6 +968,24 @@ failed route draws crimson (committed today, `ce1194b4`).
 - One-turn builder quality (68% → 85%) — the item that decides whether anyone comes back.
 - `learn` kinds: emit from the lesson recorder so green sparks are real, not simulated.
 
+## Free has a shape, and the conversation travelled (2026-11-26, live on `dc16bea3`)
+- **Allowance meter**: `GET /api/me?userId=…` now answers what is *left* —
+  `ceilingUsd`, `remainingUsd`, `ratio` — not just what was spent. `/me` shows "Left this month"
+  with a bar, so the free tier has a visible shape instead of being a rule you discover by hitting it.
+- **Pace limit**: `DSH_USER_TURNS_PER_MIN` (default 12) is enforced in `agent/pre-step` before the
+  model call, with one courtesy sentence then a refusal. A loop can no longer spend a month's
+  allowance in a minute.
+- **Failures are crimson, for real**: `agent/error` and `agent/request-error` record a `fail` kind.
+- **The conversation ported**: this session's transcript was trimmed (tool payloads and attachments
+  cut to `CAP` characters, structure preserved, header cwd rewritten to `/app/Massai`), compressed
+  from 25.6 MB to **3.7 MB**, and imported with the owner-only endpoint. Verified sitting exactly
+  where the harness looks: `~/.dsh/sessions/--app-Massai--/session-5da38d81-…/session.v4.jsonl.zstd`.
+  The import endpoint learned the harness's real `projectKey()` rule (the first attempt was one dash
+  short and landed in `--app-Massai-`, which the app would never look at).
+- **Caveat, honestly**: it is not visible in the sidebar until a workspace at `/app/Massai` exists —
+  the workspace list is browser state, and adding one goes through a directory-picker dialog. That is
+  two taps for the owner, and I could not do them for them.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
