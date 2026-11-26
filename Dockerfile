@@ -67,6 +67,7 @@ RUN printf '%s\n' \
     '  else' \
     '    API="${MASSAA_GIT_REPO}"' \
     '  fi' \
+    '  CLEAN="$(printf %s "${MASSAA_GIT_REPO}" | sed -e "s#/${MASSAA_GIT_PAT:-}#g")"' \
     '  if [ -d "${DIR}/.git" ]; then' \
     '    git -C "${DIR}" remote set-url origin "${API}" || true' \
     '    git -C "${DIR}" fetch --depth 1 origin HEAD || true' \
@@ -74,8 +75,8 @@ RUN printf '%s\n' \
     '  else' \
     '    mkdir -p "$(dirname "${DIR}")"' \
     '    git clone --depth 1 "${API}" "${DIR}" || echo "massai workspace: clone failed (non-fatal)"' \
-    '    git -C "${DIR}" remote set-url origin "${API}" || true' \
     '  fi' \
+    '  git -C "${DIR}" remote set-url origin "${CLEAN}" || true' \
     '  echo "massai workspace: ready ($(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown))"' \
     'fi' \
     'PROJECTS_DIR="${MASSAA_PROJECTS_DIR:-/app/Projects}"' \
@@ -117,9 +118,31 @@ RUN printf '%s\n' \
     '  rmdir "${DIR}" 2>/dev/null || true' \
     '  git clone --depth 1 "${API}" "${DIR}"' \
     'fi' \
+    '  git -C "${DIR}" remote set-url origin "https://github.com/${BASE}/${name}.git" || true' \
     'echo "${name}: $(git -C "${DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown)"' \
     > /usr/local/bin/massai-clone \
     && chmod +x /usr/local/bin/massai-clone
+
+# Push deliberately: massai-push [repo-name]. The token is spent on this one command
+# and is not written into any git config.
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'set -eu' \
+    '[ -n "${MASSAA_GIT_PAT:-}" ] || { echo "massai-push: MASSAA_GIT_PAT is not set"; exit 2; }' \
+    'BASE="${MASSAA_GIT_OWNER:-BlunT4TnulB}"' \
+    'NAME="${1:-}"' \
+    'if [ -n "${NAME}" ]; then' \
+    '  DIR="${MASSAA_PROJECTS_DIR:-/app/Projects}/${NAME}"' \
+    'else' \
+    '  DIR="$(git rev-parse --show-toplevel)"' \
+    '  NAME="$(basename "${DIR}")"' \
+    'fi' \
+    '[ -d "${DIR}/.git" ] || { echo "massai-push: ${DIR} is not a repository"; exit 2; }' \
+    'BRANCH="$(git -C "${DIR}" rev-parse --abbrev-ref HEAD)"' \
+    '[ "${BRANCH}" = "HEAD" ] && BRANCH=master' \
+    'git -C "${DIR}" push "https://x-access-token:${MASSAA_GIT_PAT}@github.com/${BASE}/${NAME}.git" "HEAD:${BRANCH}"' \
+    > /usr/local/bin/massai-push \
+    && chmod +x /usr/local/bin/massai-push
 
 ENTRYPOINT ["/usr/local/bin/massai-boot"]
 CMD ["sh", "-c", "echo massai booting on 10000 && exec node apps/cli/lib/bin.js web --no-open --host 0.0.0.0 --port 10000"]
