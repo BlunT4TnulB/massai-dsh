@@ -1,0 +1,67 @@
+name: Build APK
+
+on:
+  # Deliberately manual: the Android wrapper must never slow a normal push.
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Materialise the keystore (if configured)
+        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+          ls -l android.keystore
+
+      - name: Scaffold the app from the live manifest
+        run: |
+          yes | bubblewrap init --manifest https://massai-itu.ca/mind.webmanifest || true
+          # keep the package id and paths this repo decided on
+          cp android/twa-manifest.json app/twa-manifest.json 2>/dev/null || true
+
+      - name: Build (signed if a keystore is present, unsigned otherwise)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          cd app
+          if [ -f ../android.keystore ]; then
+            echo "signing with the configured keystore"
+            bubblewrap build --skipPwaValidation \
+              --signingKeyPath ../android.keystore \
+              --signingKeyAlias android \
+              --signingKeyPassword "$KEYSTORE_PASSWORD" \
+              --keyPassword "$KEY_PASSWORD"
+          else
+            echo "no keystore configured — producing an unsigned build for sideload testing"
+            bubblewrap build --skipPwaValidation || true
+          fi
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out
+          cp app/*.apk app/*.aab out/ 2>/dev/null || true
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: massai-mind-android
+          path: out/*
+          if-no-files-found: warn

@@ -1048,7 +1048,7 @@ export function apply(ctx: Context): void {
           const { execFileSync } = await import('node:child_process')
           const run = (args: string[]): string => {
             try {
-              return execFileSync('git', ['-C', dir, ...args], { timeout: 4000, encoding: 'utf8' }).trim()
+              return execFileSync('git', ['-C', dir, ...args], { timeout: 8000, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).trim()
             } catch { return '' }
           }
           answer['head'] = run(['rev-parse', '--short', 'HEAD'])
