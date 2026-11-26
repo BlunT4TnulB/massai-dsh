@@ -13,6 +13,9 @@
  * @module @deepseek-ai/dsh-hosted-signin/link-reader
  */
 
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
+
 /** One extracted conversation turn. */
 export interface ReadTurn {
   /** Who spoke. */
@@ -53,6 +56,9 @@ export const LINK_TEXT_LIMIT = 8000
 
 /** Fetch budget for a link: a share page is small, so this is generous but bounded. */
 const FETCH_TIMEOUT_MS = 12_000
+
+/** Gemini answers with headers far past Node's 16 KB default; give it room. */
+const MAX_HEADER_BYTES = 128 * 1024
 
 /** Bytes of HTML we are willing to hold. */
 const MAX_BYTES = 4_000_000
@@ -177,6 +183,62 @@ function embeddedTurns(html: string): ReadTurn[] {
 }
 
 /**
+ * One HTML GET, with the header ceiling raised and redirects followed by hand.
+ * @param url - the target.
+ * @param redirectsLeft - how many hops remain.
+ * @returns status, final URL, and the body text.
+ */
+async function getPage(url: URL, redirectsLeft = 5): Promise<{ status: number; url: string; body: string }> {
+  if (isBlockedHost(url.hostname)) throw new Error('that host is not readable from the server')
+  const requester = url.protocol === 'http:' ? httpRequest : httpsRequest
+  return await new Promise((resolve, reject) => {
+    const request = requester({
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port === '' ? undefined : Number(url.port),
+      path: `${url.pathname}${url.search}`,
+      method: 'GET',
+      maxHeaderSize: MAX_HEADER_BYTES,
+      headers: {
+        // A browser-ish identity: share pages answer plain fetchers with a shell.
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml',
+        'accept-language': 'en',
+        'accept-encoding': 'identity',
+      },
+    }, response => {
+      const status = response.statusCode ?? 0
+      const location = response.headers.location
+      if (status >= 300 && status < 400 && typeof location === 'string' && redirectsLeft > 0) {
+        response.resume()
+        let next: URL
+        try { next = new URL(location, url) } catch { resolve({ status, url: url.href, body: '' }); return }
+        void getPage(next, redirectsLeft - 1).then(resolve, reject)
+        return
+      }
+      const declared = Number(response.headers['content-length'] ?? '0')
+      if (declared > MAX_BYTES) {
+        response.resume()
+        resolve({ status, url: url.href, body: '' })
+        return
+      }
+      const chunks: Buffer[] = []
+      let size = 0
+      response.on('data', (chunk: Buffer) => {
+        size += chunk.length
+        if (size > MAX_BYTES) { response.destroy(); return }
+        chunks.push(chunk)
+      })
+      response.on('end', () => resolve({ status, url: url.href, body: Buffer.concat(chunks).toString('utf8') }))
+      response.on('error', reject)
+    })
+    request.setTimeout(FETCH_TIMEOUT_MS, () => { request.destroy(new Error('the page took too long')) })
+    request.on('error', reject)
+    request.end()
+  })
+}
+
+/**
  * Fetch a link and read it.
  * @param url - an http(s) URL.
  * @returns what could be read, and whether it is usable.
@@ -195,24 +257,11 @@ export async function readLink(url: string): Promise<ReadLink> {
     return { url, title: '', turns: [], text: '', readable: false, reason: 'that host is not readable from the server' }
   }
   try {
-    const response = await fetch(parsed, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: {
-        // A browser-ish identity: share pages answer plain fetchers with a shell.
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
-        'accept': 'text/html,application/xhtml+xml',
-        'accept-language': 'en',
-      },
-    })
-    if (!response.ok) {
-      return { url, title: '', turns: [], text: '', readable: false, reason: `the page answered ${response.status}` }
+    const page = await getPage(parsed)
+    if (page.status < 200 || page.status >= 300) {
+      return { url, title: '', turns: [], text: '', readable: false, reason: `the page answered ${page.status}` }
     }
-    const length = Number(response.headers.get('content-length') ?? '0')
-    if (length > MAX_BYTES) {
-      return { url, title: '', turns: [], text: '', readable: false, reason: 'the page is too large to read' }
-    }
-    const html = (await response.text()).slice(0, MAX_BYTES)
+    const html = page.body.slice(0, MAX_BYTES)
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.replace(/\s+/g, ' ').trim() ?? ''
     const turns = embeddedTurns(html)
     const text = turns.length > 0
@@ -220,7 +269,7 @@ export async function readLink(url: string): Promise<ReadLink> {
       : visibleText(html).slice(0, LINK_TEXT_LIMIT)
     const readable = text.length >= 120
     return {
-      url: response.url || url,
+      url: page.url,
       title,
       turns,
       text,
