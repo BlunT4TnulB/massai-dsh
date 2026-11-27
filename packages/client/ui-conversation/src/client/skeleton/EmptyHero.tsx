@@ -276,6 +276,25 @@ function StarterShelf(): ReactNode {
   )
 }
 
+/** The first instruction, which changes so the screen feels attended rather than printed. */
+function HeroHint({ t }: { t: HeroTranslate }): ReactNode {
+  const lines = [
+    t('hero.diveToBegin'),
+    'touch a star, then ask it anything',
+    'press T and say what you need',
+    'hold still — it will speak first',
+    'five taps for the dials',
+  ]
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => { setIndex(current => (current + 1) % lines.length) }, 7000)
+    return () => { clearInterval(timer) }
+  }, [lines.length])
+  return (
+    <span className={css.immersionHint} style={{ transition: 'opacity .6s ease' }}>{lines[index]}</span>
+  )
+}
+
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
   const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : stageFits()))
   useEffect(() => {
@@ -295,7 +314,7 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
           ? (
             <div className={css.immersion}>
               <StarterShelf />
-              <span className={css.immersionHint}>{t('hero.diveToBegin')}</span>
+              <HeroHint t={t} />
             </div>
           )
           : (
