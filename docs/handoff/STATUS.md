@@ -1213,6 +1213,41 @@ frozen (no guest sessions exist to look up). The long-absence wording also did n
 — the visit clock appears to be overwritten earlier than intended, so that branch needs a fix before it
 can be claimed.
 
+## Talking to the mind, and two reported bugs (2026-11-27, `94eef09`)
+
+### Bug 1 — the settings panel would not scroll (owner's friend)
+The panel had no height cap. It is now `max-height: calc(100dvh - 20px)` with
+`overflow-y: auto`, momentum scrolling and a safe-area bottom inset. Verified on a 430×932
+viewport: 910 px visible of 1141 px content, `overflowY: auto`.
+
+### Bug 2 — "my settings never stuck" (owner's friend)
+**Not a sign-in issue, and it is not reproduced.** Tested live: a breath change and the cathedral
+preset both survived a reload (`breath: 1.6`, `linesFar: 1.4`), and the embedded
+`/flower?embed=1` frame in the app shares the same `localStorage`. Settings are stored **per
+browser**, deliberately: guests and the operator are treated identically, and signing in changes
+nothing. The likely causes for a person are private/incognito browsing, a browser that clears site
+data on exit, or a locked-down Safari. **The real gap to name:** settings do not follow a person
+across devices, and never will while they live only in `localStorage`. Per-account persistence is a
+server-side feature, not a bug fix.
+
+### The vocabulary it now obeys (gated by `/api/mind/who`)
+```
+settings / dials            opens the panel                       anyone
+starters / examples         /starters                             anyone
+limits / cost               /limits                               anyone
+expand / idea               /expand                               anyone
+map / guide / library       those rooms                           anyone
+workshop / chat / the door  the workshop                          signed-in only
+projects / what i built     /projects                             signed-in only
+open <star>                 dives to the matching star            anyone
+deeper / out / back         zoom                                  anyone
+where / quiet / speak / sleep / <world>                           anyone
+who is looking              answers by standing                   anyone
+```
+Room verbs are matched **before** star names, so "open the workshop" is a room request rather than a
+search for a star called workshop. Verified: stranger asking for the workshop → "that door is not
+yours yet"; "show me the settings" → panel opens and it says "the dials".
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
