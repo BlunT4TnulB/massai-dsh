@@ -336,7 +336,7 @@ export function intoTheUnknownPage(): string {
 
     /** Let them in. */
     function open() {
-      location.href = '/flower';
+      location.href = '/mind';
     }
 
     /** Distance between the two fingers currently down. */

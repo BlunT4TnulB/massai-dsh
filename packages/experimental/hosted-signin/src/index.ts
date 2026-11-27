@@ -897,7 +897,16 @@ export function apply(ctx: Context): void {
     kind: 'exact', path: '/flower', auth: 'anonymous',
     handler: (req, res) => {
       const url = new URL(req.url ?? '/', 'https://placeholder')
-      const html = Buffer.from(flowerPageHtml(url.searchParams.get('embed') === '1'))
+      // /flower is the embedding surface, not a public address: the mind's address is
+      // /mind. Anyone who lands here in a top-level window is sent to the real one,
+      // while every iframe (embed=1) keeps the frame it asked for.
+      const embedded = url.searchParams.get('embed') === '1'
+      if (!embedded && (req.headers['sec-fetch-dest'] ?? '') !== 'iframe') {
+        res.writeHead(307, { location: '/mind', 'cache-control': 'no-store' })
+        res.end()
+        return
+      }
+      const html = Buffer.from(flowerPageHtml(embedded))
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-length': String(html.byteLength),
