@@ -653,10 +653,11 @@ function heat(now, x, y, z) {
 // the lattice so the stars sit in front of them, and their offset follows yaw at a
 // fraction of the rate, which is what gives the dark a sense of distance.
 const NEBULA_SEEDS = [
-  { x: 0.24, y: 0.30, r: 1.15, hue: 22, drift: 0.000016, alpha: 0.055 },
-  { x: 0.72, y: 0.62, r: 0.95, hue: 268, drift: -0.000013, alpha: 0.05 },
-  { x: 0.55, y: 0.18, r: 0.75, hue: 196, drift: 0.000011, alpha: 0.042 },
-  { x: 0.38, y: 0.78, r: 0.85, hue: 8, drift: -0.000009, alpha: 0.038 }
+  { x: 0.24, y: 0.30, r: 1.25, hue: 22, drift: 0.000016, alpha: 0.16 },
+  { x: 0.72, y: 0.62, r: 1.05, hue: 268, drift: -0.000013, alpha: 0.15 },
+  { x: 0.55, y: 0.18, r: 0.85, hue: 196, drift: 0.000011, alpha: 0.12 },
+  { x: 0.38, y: 0.78, r: 0.95, hue: 8, drift: -0.000009, alpha: 0.1 },
+  { x: 0.12, y: 0.86, r: 0.7, hue: 46, drift: 0.000012, alpha: 0.09 }
 ];
 
 /** The coloured clouds behind the mind. */
@@ -676,8 +677,8 @@ function drawNebula(now) {
     const radius = base * seed.r * (0.85 + 0.15 * Math.sin(now * 0.00007 + index));
     const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
     const alpha = seed.alpha * depth;
-    gradient.addColorStop(0, 'hsla(' + seed.hue + ',72%,58%,' + alpha.toFixed(3) + ')');
-    gradient.addColorStop(0.45, 'hsla(' + seed.hue + ',64%,40%,' + (alpha * 0.45).toFixed(3) + ')');
+    gradient.addColorStop(0, 'hsla(' + seed.hue + ',78%,66%,' + alpha.toFixed(3) + ')');
+    gradient.addColorStop(0.5, 'hsla(' + seed.hue + ',70%,46%,' + (alpha * 0.5).toFixed(3) + ')');
     gradient.addColorStop(1, 'hsla(' + seed.hue + ',60%,24%,0)');
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -713,10 +714,10 @@ function drawDust(now) {
     const px = ((point.x + move * point.z) % 1 + 1) % 1;
     const py = ((point.y + Math.sin(now * 0.00002 + point.twinkle) * 0.004) % 1 + 1) % 1;
     const twinkle = 0.55 + 0.45 * Math.sin(now * 0.0012 * point.z + point.twinkle);
-    ctx.globalAlpha = Math.min(0.9, density * 0.55 * twinkle) * point.z;
+    ctx.globalAlpha = Math.min(1, density * 0.95 * twinkle) * point.z;
     ctx.fillStyle = '#f6ead6';
     ctx.beginPath();
-    ctx.arc(px * w, py * h, point.size * (0.6 + point.z * 0.7), 0, Math.PI * 2);
+    ctx.arc(px * w, py * h, point.size * (0.8 + point.z * 0.9), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
