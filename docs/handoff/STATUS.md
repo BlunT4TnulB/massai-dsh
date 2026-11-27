@@ -1129,6 +1129,24 @@ list, invoice), embedded in the deployment from `packages/experimental/one-turn/
 curated by the owner, never generated from a visitor's prompt, and cost nothing to open. This is the
 public list; the owner's own projects stay behind the door.
 
+## The mind, as it stands (2026-11-27)
+
+A living visualiser, not a screensaver. Everything below is verified live on `d143524`.
+
+| trait | how it works |
+|---|---|
+| **breathes** | the whole body swells ±4.5 % on an ~8 s rhythm, applied to the **projection scale**, so it is independent of zoom and rotation; a second slower wave means no two breaths match; readout at `document.documentElement.dataset.breath` |
+| **heartbeat** | real activity from `/api/mind/feed` raises `activityHeat`, which quickens and deepens the breath and adds a pulse — the body shows the work |
+| **speaks** | one pre-written line at a time, typed letter by letter, rings from the core, optional quiet tone; each letter pushes the breath so it visibly talks |
+| **speech knows context** | four line pools: working (`SPEECH_WORK`), night/screensaver, holding a star, and idle |
+| **remembers** | touching a star stores `massai_looked_at`; the next visit greets "you were here. you were looking at …"; returning after 90 s hidden says "you came back." |
+| **notices** | the view eases toward the pointer, then loses interest after six still seconds |
+| **weather** | five nebula clouds with parallax, 260 dust points with twinkle; `meteors` for rare shooting stars; `vignette` darkens the edges for depth |
+| **presets** | voyage · still · storm · bare · nebula · deepfield · cathedral · ember · void · reset — each with its own breath |
+| **five taps** | opens the dials, including out of the screensaver |
+
+Public address is **/mind**; `/flower` is the embedding surface and redirects a top-level visit.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
