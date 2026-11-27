@@ -868,6 +868,10 @@ function listenOnce() {
 
 /** Who the server says is looking: 'owner' | 'signed' | 'stranger'. */
 let VIEWER = 'stranger';
+/** The coarse label: operator, guest, member, stranger. */
+let VIEWER_LABEL = 'stranger';
+/** The project they were last in, when the server can say. */
+let VIEWER_PROJECT = '';
 /** How long since the last visit, in ms, or -1 when unknown. */
 let awayFor = -1;
 
@@ -880,7 +884,12 @@ function identify() {
   } catch (error) { void error; }
   fetch('/api/mind/who', { headers: { accept: 'application/json' } })
     .then(function (response) { return response.ok ? response.json() : null })
-    .then(function (body) { if (body !== null && typeof body.view === 'string') VIEWER = body.view })
+    .then(function (body) {
+      if (body === null) return;
+      if (typeof body.view === 'string') VIEWER = body.view;
+      if (typeof body.label === 'string') VIEWER_LABEL = body.label;
+      if (typeof body.project === 'string') VIEWER_PROJECT = body.project;
+    })
     .catch(function () { /* a stranger until proven otherwise */ });
 }
 
@@ -2664,16 +2673,19 @@ function greeting() {
   const gap = awayFor;
   const longGone = gap > 6 * 60 * 60 * 1000;
   const someGone = gap > 45 * 60 * 1000;
-  const subject = looked === '' ? '' : ' you were looking at ' + looked + '.';
+  const project = VIEWER_PROJECT === '' ? '' : ' ' + VIEWER_PROJECT + ', still.';
+  const subject = looked === '' ? project : ' you were looking at ' + looked + '.';
   if (VIEWER === 'owner') {
     if (longGone) return 'the creator is back. i kept the lights on.' + subject;
     if (someGone) return 'the creator, again. i was starting to narrate the quiet.' + subject;
     return 'the creator is here. get on with it.' + subject;
   }
   if (VIEWER === 'signed') {
-    if (longGone) return 'you again. i was beginning to think you had a life.' + subject;
-    if (someGone) return 'back so soon. i noticed.' + subject;
-    return 'hello again.' + subject;
+    // A guest is called a guest: it is true, and the mind is allowed to be pleased about it.
+    const stillGuest = VIEWER_LABEL === 'guest' ? ' still a guest, mind.' : '';
+    if (longGone) return 'you again.' + stillGuest + ' i was beginning to think you had a life.' + subject;
+    if (someGone) return 'back so soon.' + stillGuest + ' i noticed.' + subject;
+    return 'hello again.' + stillGuest + subject;
   }
   if (longGone) return 'a new face, after a long dark. stay a while.' + subject;
   if (someGone) return 'you came back.' + subject;

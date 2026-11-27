@@ -31,6 +31,7 @@ import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession 
 import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
+import { labelOf, projectOf } from './viewer.ts'
 import { mePageHtml } from './me-page.ts'
 import { isConversationHost, LINK_TEXT_LIMIT, readLink, urlsIn } from './link-reader.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -1091,10 +1092,22 @@ export function apply(ctx: Context): void {
   ctx.webServer.register({
     kind: 'exact', path: '/api/mind/who', auth: 'anonymous',
     handler: (req, res) => {
-      const signed = String(req.headers.cookie ?? '').includes('dsh-auth-')
       const own = isOwnerRequest(req)
+      // A verified cookie, never a claim from the page. When the session service is not
+      // present, a signed-looking cookie is still only a stranger.
+      const auth = ctx.get('browserAuth') as
+        | { sessionUserId(request: { headers: Record<string, string | string[] | undefined> }): string | undefined }
+        | undefined
+      let userId: string | undefined
+      try {
+        userId = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> })
+      } catch { userId = undefined }
+      const label = own ? 'operator' : labelOf(userId)
+      const project = userId === undefined || own ? undefined : projectOf(userId)
       respond(res, 200, {
-        view: own ? 'owner' : signed ? 'signed' : 'stranger',
+        view: own ? 'owner' : userId === undefined ? 'stranger' : 'signed',
+        label,
+        ...(project === undefined ? {} : { project }),
       }, { 'cache-control': 'no-store' })
     },
   })
