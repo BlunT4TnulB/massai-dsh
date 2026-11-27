@@ -1100,6 +1100,34 @@ Full pass over everything built. Three faults mattered, and one of them was taki
 - Multi-agent panel, Nous wiring, APK secrets, and `/limits` disclosure of the link reader and session
   port are all still open.
 
+## OPEN STEERS — never lose these (as at 2026-11-27)
+A running list, because the conversation is long and the asks keep coming.
+
+### Waiting on the owner
+1. **Oracle VM** — the user is creating the account + ARM instance. Needs: the VM's **public IP** and
+   region. Then: SSH with `/root/.ssh/massai_oracle`, install Node+pnpm+git+cloudflared, build natively
+   (the published image is **amd64 only**, Oracle free tier is **ARM** — do not try to pull it), run as
+   systemd, attach the Cloudflare tunnel `massai-home`, verify `local.massai-itu.ca`, then switch the apex.
+2. **$7 Render decision** — alternative to Oracle: one-click Starter, no migration, 2 GB, no sleeping.
+3. **Ported conversation** — held in `BlunT4TnulB/massai-sessions`, restore disabled because 512 MB
+   cannot replay a 30 MB log (three OOM kills on 2026-11-26). Restore only on a ≥2 GB instance.
+4. **APK** — keystore, fingerprint, three repo secrets, `ANDROID_ASSETLINKS` env.
+5. **Nous Portal key** — optional cheaper provider; config insert ready, not wired.
+6. **Buddy's line-dial numbers** — `[` and `]` in the mind write to localStorage; report the two values
+   and they get baked into the defaults.
+
+### Waiting on me (unblocked, no owner input needed)
+7. **Measure the repair pass** — running the golden set 3× now (~$0.10). Baseline: **68% ± 16** on
+   19 tasks, failures concentrated in `requirements-traced` (4) and `no-placeholders` (2) — precisely
+   what the repair pass fixes.
+8. **`learn` / `epiphany` emitters** — `fail` is real (harness error events); the other two kinds have
+   no source yet.
+9. **Idea Expander phase 2** — model-driven idea generation and Massai's own recommendations (currently
+   deterministic insights), plus building straight from the sealed prompt.
+10. **Multi-agent panel** — "second voices" beside the composer; specified, not built.
+11. **Gemini link extraction** — needs one real share link to verify the parser.
+12. **`/limits` disclosure** — the link reader and the session port are not yet on the honest limits page.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
