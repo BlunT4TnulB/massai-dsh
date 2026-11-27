@@ -148,6 +148,8 @@ is never a trick: the way in is a gesture, a keypress, or patience — not a men
   <tr><td>who can use it?</td><td>The operator and anyone signed in. A stranger gets a sentence instead of an answer — the mind is a public place, but the thinking is for people who came in.</td></tr>
   <tr><td>what does it cost?</td><td>About <b>six hundredths of a cent</b> a question (measured: $0.000057 for a two-sentence answer). A dollar is roughly sixteen thousand questions.</td></tr>
   <tr><td>how often</td><td>One question every 3.5 seconds for the operator, every 8 seconds for a guest, 300 or 60 a day respectively, and the whole thing stops when the month's cap is reached.</td></tr>
+  <tr><td>does it look things up?</td><td><b>Yes, when "looks things up first" is on.</b> It consults one public reference — Wikipedia — and names the article it used. That is a source, not a search engine: no news, no local listings, no shopping, and it will say when the reference did not answer the question.</td></tr>
+  <tr><td>how much detail</td><td>Three styles: <b>brief</b> (one sentence), <b>balanced</b> (answer plus one useful line), <b>deep</b> (two short paragraphs).</td></tr>
   <tr><td>is it free like the others?</td><td>There is no advertising and no selling: the operator pays, out of pocket, which is why the caps exist and why they are printed here.</td></tr>
 </table>
 

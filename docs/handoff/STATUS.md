@@ -1248,6 +1248,25 @@ Room verbs are matched **before** star names, so "open the workshop" is a room r
 search for a star called workshop. Verified: stranger asking for the workshop → "that door is not
 yours yet"; "show me the settings" → panel opens and it says "the dials".
 
+## It answers, with a source (2026-11-27, `dcf9ec3`)
+
+`POST /api/mind/ask` now does what a person expects an everyday assistant to do:
+
+- **style** — `brief` (one sentence) · `balanced` (answer + one useful line) · `deep` (two short paragraphs)
+- **lookup** — when on, it consults **one public reference (Wikipedia REST)** before answering, and
+  names the article. Two fetches, 4 s timeout, five-minute cache, `user-agent` set, no key, no tracking.
+- **memory** — the last six exchanges ride with the question, so "and if it's five days old?" lands.
+- **source** — returned to the client and spoken as "(via <article>)", so an answer can be checked.
+
+Measured cost with a lookup: **$0.00009** a question (without: $0.000057). Known limitation: the
+reference is a *lookup*, not a search engine — a specific event ("last Stampede attendance") may match
+the parent article, in which case it says plainly that it could not verify. A real search provider
+(Brave/Tavily, free tiers exist) is the next step if that matters.
+
+Verified live: "what is the capital of australia" (`brief`) → "Canberra … according to Wikipedia",
+source `Australian Capital Territory`; a Stampede question → honest refusal plus what the reference did
+say, source `Calgary`.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
