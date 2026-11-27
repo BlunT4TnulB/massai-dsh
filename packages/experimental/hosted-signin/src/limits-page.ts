@@ -140,6 +140,17 @@ open to everyone as a substitute: real, finished builds you can open without an 
 <p>The door in the mind is not drawn, but it still opens. That is an Easter egg, and it is stated here so it
 is never a trick: the way in is a gesture, a keypress, or patience — not a menu.</p>
 
+<h2>Talking to the mind</h2>
+<table>
+  <tr><th>thing</th><th>the honest answer</th></tr>
+  <tr><td>can I just ask it things?</td><td>Yes, if you are signed in. Press <code>T</code> in the mind, or tap "listen once" and speak. Everyday questions work; it answers in one to three sentences.</td></tr>
+  <tr><td>does it remember?</td><td>The last six exchanges, kept in your browser. "Forget the conversation" in the panel clears them.</td></tr>
+  <tr><td>who can use it?</td><td>The operator and anyone signed in. A stranger gets a sentence instead of an answer — the mind is a public place, but the thinking is for people who came in.</td></tr>
+  <tr><td>what does it cost?</td><td>About <b>six hundredths of a cent</b> a question (measured: $0.000057 for a two-sentence answer). A dollar is roughly sixteen thousand questions.</td></tr>
+  <tr><td>how often</td><td>One question every 3.5 seconds for the operator, every 8 seconds for a guest, 300 or 60 a day respectively, and the whole thing stops when the month's cap is reached.</td></tr>
+  <tr><td>is it free like the others?</td><td>There is no advertising and no selling: the operator pays, out of pocket, which is why the caps exist and why they are printed here.</td></tr>
+</table>
+
 ${showTips ? `<h2>Tips that save you money and time</h2>
 <ul>
   <li><b>Be specific.</b> One clear paragraph beats five vague ones — fewer messages, better results.</li>
