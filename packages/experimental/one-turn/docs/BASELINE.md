@@ -137,3 +137,34 @@ It is now effectively gone.
 
 Three full runs, plus the attribution runs: **$0.24 total**. The whole experiment — finding the
 lever, proving it, and instrumenting the repair pass — cost less than a third of one Render month.
+
+
+---
+
+# Third measurement: repair pass earns its place (2026-11-27, later)
+
+Same 20-task set, same checks, after two changes: the mask now names the four forbidden strings and the
+repair turn carries per-check remedies.
+
+| Metric | Baseline | Second run | Now |
+|---|---|---|---|
+| one-turn rate | 68% ±16 | 98% (95·100·100) | **98% (100·100·95)** |
+| **repairs attempted** | — | 1 | **3** |
+| **repairs that won** | — | **0** | **2** |
+
+## What this says
+
+1. **The repair pass is now real.** Two of three runs reached 100% *because* a deterministic failure was
+   fixed by a second, targeted call. The remedy text ("a requirement is satisfied but invisible — add it
+   in words the brief used") is what changed it, not the retry itself.
+2. **The forbidden-strings section did not move the rate.** `no-placeholders` still fails about once in
+   three runs, and in the one failure the repair did not win. Naming the strings is not enough; the next
+   attempt should attack it at the source (e.g. make the report field print the four strings it searched
+   for, so the check and the model share one definition).
+3. **Do not claim 100%.** The remaining failure is intermittent and the set is partly tuned. The honest
+   statement is: **≈98% on this set, with one known intermittent defect.**
+
+## Cost
+
+Nine full runs across the three measurements: **≈$0.34**. Every claim above is reproducible with
+`scripts/run-golden.mjs`; the results files are committed beside this document.
