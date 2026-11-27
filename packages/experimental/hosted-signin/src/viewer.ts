@@ -15,7 +15,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
-import { zlib } from 'node:zlib'
+import * as zlib from 'node:zlib'
 
 /** The coarse label the mind shows, never the raw id. */
 export type ViewerLabel = 'operator' | 'guest' | 'member' | 'stranger'
