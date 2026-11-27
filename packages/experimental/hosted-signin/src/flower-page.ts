@@ -416,6 +416,8 @@ const MIND_DEFAULTS = {
   // atmosphere
   fog: 1,            // the volume of dust and fog
   nebula: 0.6,       // depth of the coloured clouds behind everything
+  breath: 1,         // how deeply the whole mind breathes (0 = perfectly still)
+  breathe: true,     // breathe at all
   dust: 0.55,        // the fine star dust that gives parallax to the dark
   wash: true,        // the slow hour-of-day tint
   // the mind's voice
@@ -477,23 +479,23 @@ async function keepAwake(on) {
 
 const PRESETS = {
   // the mind as designed
-  voyage: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 2, arcJitter: 1, arcLife: 1, aura: 1, marks: 1, marksOn: true, arcsOn: true, linesFar: 0.85, linesNear: 0.4, lines: true, paths: true, fog: 1, wash: true, feed: 'auto' },
+  voyage: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 2, arcJitter: 1, arcLife: 1, aura: 1, marks: 1, marksOn: true, arcsOn: true, linesFar: 0.85, linesNear: 0.4, lines: true, paths: true, fog: 1, wash: true, feed: 'auto', breath: 1, breathe: true},
   // slow, quiet, no weather
-  still: { swing: 0.15, speed: 0.35, tilt: 0.2, roll: 0.3, spark: 0, arcJitter: 0.5, arcLife: 1.4, aura: 0.8, marks: 0.6, marksOn: true, arcsOn: false, linesFar: 0.6, linesNear: 0.25, lines: true, paths: false, fog: 1.3, wash: true, feed: 'auto' },
+  still: { swing: 0.15, speed: 0.35, tilt: 0.2, roll: 0.3, spark: 0, arcJitter: 0.5, arcLife: 1.4, aura: 0.8, marks: 0.6, marksOn: true, arcsOn: false, linesFar: 0.6, linesNear: 0.25, lines: true, paths: false, fog: 1.3, wash: true, feed: 'auto', breath: 1.2, breathe: true},
   // restless: more sparks, more wander
-  storm: { swing: 1.7, speed: 1.5, tilt: 1.8, roll: 1.6, spark: 3, arcJitter: 2, arcLife: 0.8, aura: 1.2, marks: 1, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.7, lines: true, paths: true, fog: 0.9, wash: true, feed: 'auto' },
+  storm: { swing: 1.7, speed: 1.5, tilt: 1.8, roll: 1.6, spark: 3, arcJitter: 2, arcLife: 0.8, aura: 1.2, marks: 1, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.7, lines: true, paths: true, fog: 0.9, wash: true, feed: 'auto', breath: 1.5, breathe: true},
   // the mind alone: no lattice, no arcs, no marks
-  bare: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 1, arcJitter: 1, arcLife: 1, aura: 1.1, marks: 1, marksOn: false, arcsOn: false, linesFar: 0, linesNear: 0, lines: false, paths: false, fog: 1, nebula: 0.3, dust: 0.8, wash: true, feed: 'real', speak: true, voiceSound: false },
+  bare: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 1, arcJitter: 1, arcLife: 1, aura: 1.1, marks: 1, marksOn: false, arcsOn: false, linesFar: 0, linesNear: 0, lines: false, paths: false, fog: 1, nebula: 0.3, dust: 0.8, wash: true, feed: 'real', speak: true, voiceSound: false, breath: 1, breathe: true},
   // a nebula: heavy colour, soft lattice, drifting dust
-  nebula: { swing: 0.8, speed: 0.7, tilt: 0.6, roll: 0.5, spark: 2, arcJitter: 1.2, arcLife: 1.6, aura: 1.5, marks: 0.8, marksOn: true, arcsOn: true, linesFar: 0.55, linesNear: 0.3, lines: true, paths: false, fog: 1.6, nebula: 1.5, dust: 1.2, wash: true, feed: 'auto', speak: true, voiceSound: false },
+  nebula: { swing: 0.8, speed: 0.7, tilt: 0.6, roll: 0.5, spark: 2, arcJitter: 1.2, arcLife: 1.6, aura: 1.5, marks: 0.8, marksOn: true, arcsOn: true, linesFar: 0.55, linesNear: 0.3, lines: true, paths: false, fog: 1.6, nebula: 1.5, dust: 1.2, wash: true, feed: 'auto', speak: true, voiceSound: false, breath: 1.3, breathe: true},
   // deep field: the voyage is the point — fast, huge, many stars
-  deepfield: { swing: 1.5, speed: 1.4, tilt: 1.1, roll: 1.2, spark: 3, arcJitter: 1.6, arcLife: 0.9, aura: 1.1, marks: 1.2, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.55, lines: true, paths: true, fog: 0.7, nebula: 0.5, dust: 1.4, wash: false, feed: 'auto', speak: true, voiceSound: false },
+  deepfield: { swing: 1.5, speed: 1.4, tilt: 1.1, roll: 1.2, spark: 3, arcJitter: 1.6, arcLife: 0.9, aura: 1.1, marks: 1.2, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.55, lines: true, paths: true, fog: 0.7, nebula: 0.5, dust: 1.4, wash: false, feed: 'auto', speak: true, voiceSound: false, breath: 1, breathe: true},
   // cathedral: still, vast, the lattice is the subject
-  cathedral: { swing: 0.25, speed: 0.4, tilt: 0.3, roll: 0.25, spark: 1, arcJitter: 0.6, arcLife: 1.8, aura: 0.9, marks: 0.7, marksOn: true, arcsOn: false, linesFar: 1.4, linesNear: 0.8, lines: true, paths: true, fog: 1.1, nebula: 0.8, dust: 0.5, wash: true, feed: 'auto', speak: true, voiceSound: false },
+  cathedral: { swing: 0.25, speed: 0.4, tilt: 0.3, roll: 0.25, spark: 1, arcJitter: 0.6, arcLife: 1.8, aura: 0.9, marks: 0.7, marksOn: true, arcsOn: false, linesFar: 1.4, linesNear: 0.8, lines: true, paths: true, fog: 1.1, nebula: 0.8, dust: 0.5, wash: true, feed: 'auto', speak: true, voiceSound: false, breath: 1.6, breathe: true},
   // ember: warm, close, alive
-  ember: { swing: 1.2, speed: 1.1, tilt: 1.3, roll: 1.4, spark: 3, arcJitter: 2.2, arcLife: 0.7, aura: 1.8, marks: 1.4, marksOn: true, arcsOn: true, linesFar: 0.7, linesNear: 0.4, lines: true, paths: true, fog: 1.2, nebula: 1.2, dust: 0.9, wash: true, feed: 'simulated', speak: true, voiceSound: false },
+  ember: { swing: 1.2, speed: 1.1, tilt: 1.3, roll: 1.4, spark: 3, arcJitter: 2.2, arcLife: 0.7, aura: 1.8, marks: 1.4, marksOn: true, arcsOn: true, linesFar: 0.7, linesNear: 0.4, lines: true, paths: true, fog: 1.2, nebula: 1.2, dust: 0.9, wash: true, feed: 'simulated', speak: true, voiceSound: false, breath: 1.7, breathe: true},
   // void: almost nothing, on purpose
-  void: { swing: 0.6, speed: 0.6, tilt: 0.4, roll: 0.4, spark: 0, arcJitter: 0.4, arcLife: 2, aura: 0.6, marks: 0.4, marksOn: false, arcsOn: false, linesFar: 0.25, linesNear: 0.15, lines: false, paths: false, fog: 0.3, nebula: 0.15, dust: 0.25, wash: false, feed: 'real', speak: true, voiceSound: false }
+  void: { swing: 0.6, speed: 0.6, tilt: 0.4, roll: 0.4, spark: 0, arcJitter: 0.4, arcLife: 2, aura: 0.6, marks: 0.4, marksOn: false, arcsOn: false, linesFar: 0.25, linesNear: 0.15, lines: false, paths: false, fog: 0.3, nebula: 0.15, dust: 0.25, wash: false, feed: 'real', speak: true, voiceSound: false, breath: 0.45, breathe: true }
 };
 
 /** The multiplier for the state the mind is in right now. */
@@ -600,6 +602,26 @@ if (typeof window.visualViewport !== 'undefined' && window.visualViewport !== nu
   window.visualViewport.addEventListener('scroll', resize);
 }
 
+// The breath: the whole body swells and settles on a slow rhythm that owes nothing to
+// the camera. It is applied to the projection scale, so every octave, every star and
+// every line breathes together — zoom and rotation stay exactly where the hand left
+// them, which is what makes it read as a living thing rather than a camera move.
+let breathScale = 1;
+/** Speech makes the breath unsteady: each letter is a small push. */
+let breathPulse = 0;
+/** How strongly the mind is speaking right now, 0..1, decaying. */
+let speechLevel = 0;
+
+/** Compute this frame's breath and advance the speech envelope. */
+function stepBreath(now) {
+  breathPulse *= 0.9;
+  speechLevel *= 0.9;
+  if (!MIND.breathe) { breathScale = 1; return }
+  const slow = Math.sin(now * 0.00092) * 0.6 + Math.sin(now * 0.00041 + 1.7) * 0.4;
+  const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.012;
+  breathScale = 1 + MIND.breath * (0.024 * slow) + breathPulse + speakingPart;
+}
+
 function project(x, y, z) {
   const ya = yaw + lookX;
   const pa = pitch + lookY;
@@ -617,7 +639,7 @@ function project(x, y, z) {
   const y3 = y1 * cp - z2 * sp;
   const z3 = y1 * sp + z2 * cp;
   const distance = 6.4;
-  const scale = octaveScale * zoom * Math.min(VW, VH) * FIT;
+  const scale = octaveScale * zoom * Math.min(VW, VH) * FIT * (MIND.breathe ? breathScale : 1);
   const near = distance + z3;
   // Beyond this the point is at (or behind) the camera plane and the projection blows
   // up; those are exactly the full-screen bars. Clamp, and flag the point so a polyline
@@ -774,6 +796,9 @@ function say(text) {
   const step = function () {
     speakCursor += 1;
     el.textContent = text.slice(0, speakCursor);
+    // Each letter nudges the body outward a little: the sphere visibly talks.
+    breathPulse += 0.006 + Math.random() * 0.004;
+    speechLevel = Math.min(1, speechLevel + 0.30);
     if (MIND.voiceSound) blip();
     if (speakCursor >= text.length) {
       clearInterval(speakTimer);
@@ -1218,7 +1243,7 @@ function drawGalaxy(now) {
     const isDoor = DOOR_SHOWN && entry.index === PORTAL;
     // thoughts sit a shade darker than the door and far lighter in weight
     const tint = hot > 0.1 ? GREEN : isDoor ? '255,246,224' : picked ? '255,236,205' : GOLD;
-    const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1) * MIND.aura;
+    const core = (0.6 + 1.9 * near) * (1 + hot * 1.4) * (picked ? 2.4 : isDoor ? 1.7 : 1) * MIND.aura * (1 + speechLevel * 0.55);
     const cloud = core * (isDoor ? 5.5 : 3.6);
     const strength = Math.min(1, (0.07 + 0.34 * near) * life + hot * 0.35 + (picked ? 0.4 : 0));
     const sprite = glowSprite(tint);
@@ -1916,6 +1941,7 @@ function frame(now) {
     diveNode = diveNode >= 0 && now > focusUntil && zoom > 4 ? -1 : diveNode;
   }
 
+  stepBreath(now);
   document.body.classList.toggle('deep', zoom > 2.2);
   drawNebula(now);
   drawDust(now);
@@ -2188,6 +2214,8 @@ function togglePanel() {
   html += slider('fog', 'fog', 0, 2, 0.05);
   html += slider('nebula', 'nebula', 0, 2, 0.05);
   html += slider('dust', 'star dust', 0, 2, 0.05);
+  html += slider('breath', 'breath', 0, 2.5, 0.05);
+  html += toggle('breathe', 'breathe');
   html += toggle('wash', 'hour wash');
   html += head('voice');
   html += toggle('speak', 'the mind speaks');
