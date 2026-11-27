@@ -1,9 +1,75 @@
 {
   "note": "Starter builds: small, finished, openable artifacts kept in the repository so a new visitor sees what Massai makes without spending a token. They are curated by the owner, never generated on request.",
   "starters": [
-    { "slug": "tip-splitter", "name": "Tip splitter", "shape": "single-file-app", "entry": "index.html", "what": "Splits a bill unevenly between people and shows each share." },
-    { "slug": "countdown", "name": "Countdown", "shape": "single-file-app", "entry": "index.html", "what": "Counts the days to a date you set, and keeps it." },
-    { "slug": "packing-list", "name": "Packing list", "shape": "single-file-app", "entry": "index.html", "what": "A trip list with categories, ticks that survive a reload." },
-    { "slug": "invoice", "name": "Invoice", "shape": "single-page-site", "entry": "index.html", "what": "Line items, tax, a total, and a print view." }
+    {
+      "slug": "budget",
+      "name": "Spend log",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "What the month is doing, kept in the browser."
+    },
+    {
+      "slug": "converter",
+      "name": "Converter",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Length, mass and volume, with a picker that cannot mix kinds."
+    },
+    {
+      "slug": "countdown",
+      "name": "Countdown",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Counts the days to a date you set, and keeps it."
+    },
+    {
+      "slug": "invoice",
+      "name": "Invoice",
+      "shape": "single-page-site",
+      "entry": "index.html",
+      "what": "Line items, tax, a total, and a print view."
+    },
+    {
+      "slug": "meal-planner",
+      "name": "Week of suppers",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Seven boxes with a surprise-me."
+    },
+    {
+      "slug": "meeting-notes",
+      "name": "Notes shaper",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Sorts raw notes into decided, to-do and open. No invented content."
+    },
+    {
+      "slug": "packing-list",
+      "name": "Packing list",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "A trip list with categories, ticks that survive a reload."
+    },
+    {
+      "slug": "quiz",
+      "name": "Quiz",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Five questions, scored, restartable."
+    },
+    {
+      "slug": "recipe",
+      "name": "Recipe card",
+      "shape": "single-page-site",
+      "entry": "index.html",
+      "what": "A printable recipe: needs, steps, notes."
+    },
+    {
+      "slug": "tip-splitter",
+      "name": "Tip splitter",
+      "shape": "single-file-app",
+      "entry": "index.html",
+      "what": "Splits a bill unevenly between people and shows each share."
+    }
   ]
 }

@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week of suppers</title>
+<style>
+body{margin:0;background:#0b0a09;color:#EDE7DA;font:16px/1.55 system-ui,sans-serif;padding:18px}
+main{width:min(34rem,100%);margin:0 auto}
+h1{font-size:1.2rem;margin:0 0 .2rem}p.h{color:#93887a;font-size:.83rem;margin:0 0 1.1rem}
+.week{display:grid;gap:.5rem}
+.day{display:grid;grid-template-columns:4.6rem 1fr;align-items:center;gap:.6rem;border:1px solid #241f1a;border-radius:10px;padding:.5rem .7rem;background:#12100e}
+.day b{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#9b8f78}
+input{background:transparent;border:0;border-bottom:1px dashed #322c24;color:#EDE7DA;font:inherit;padding:.2rem 0;width:100%}
+input:focus{outline:none;border-color:#c1440e}
+.roll{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+button{border:1px solid #3a332a;background:#1a1714;color:#EDE7DA;border-radius:9px;padding:.5rem .8rem;font:inherit;cursor:pointer}
+button:hover{border-color:#c1440e}
+</style></head><body><main>
+<h1>A week of suppers</h1><p class="h">Seven boxes, typed once. It remembers, so the hard part is only deciding.</p>
+<div class="week" id="week"></div>
+<div class="roll"><button id="shuffle">Surprise me</button><button id="clear">Clear</button></div>
+</main>
+<script>
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const IDEAS = ['pasta with garlic', 'rice and beans', 'soup and bread', 'roast chicken', 'tacos', 'stir fry', 'omelette', 'chili', 'pizza night', 'lentil curry']
+let plan = {}
+try { plan = JSON.parse(localStorage.getItem('meal-plan') ?? '{}') } catch { plan = {} }
+const week = document.getElementById('week')
+const save = () => localStorage.setItem('meal-plan', JSON.stringify(plan))
+DAYS.forEach(day => {
+  const row = document.createElement('div'); row.className = 'day'
+  const label = document.createElement('b'); label.textContent = day.slice(0, 3)
+  const input = document.createElement('input'); input.placeholder = 'what are we having'; input.value = plan[day] ?? ''
+  input.addEventListener('input', () => { plan[day] = input.value; save() })
+  row.append(label, input); week.append(row)
+})
+document.getElementById('shuffle').addEventListener('click', () => {
+  const pool = [...IDEAS].sort(() => Math.random() - 0.5)
+  DAYS.forEach((day, at) => { plan[day] = pool[at % pool.length]; const inputs = week.querySelectorAll('input'); if (inputs[at]) inputs[at].value = plan[day] })
+  save()
+})
+document.getElementById('clear').addEventListener('click', () => { plan = {}; week.querySelectorAll('input').forEach(input => { input.value = '' }); save() })
+</script></body></html>

@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Notes that become a summary</title>
+<style>
+body{margin:0;background:#0b0b0d;color:#E9E4D8;font:16px/1.55 system-ui,sans-serif;padding:20px}
+main{width:min(34rem,100%);margin:0 auto}
+h1{font-size:1.2rem;margin:0 0 .2rem}p.h{color:#93887a;font-size:.83rem;margin:0 0 1rem}
+textarea{width:100%;box-sizing:border-box;min-height:9rem;background:#131110;border:1px solid #322c24;border-radius:10px;color:#E9E4D8;padding:.7rem;font:15px/1.5 ui-monospace,monospace}
+button{border:1px solid #3a332a;background:#1a1714;color:#E9E4D8;border-radius:9px;padding:.55rem .85rem;font:inherit;cursor:pointer;margin-top:.6rem}
+button:hover{border-color:#c1440e}
+.box{margin-top:1rem;border:1px solid #322c24;border-radius:10px;padding:.9rem;background:#12100e;white-space:pre-wrap;font:15px/1.6 ui-monospace,monospace;color:#d9cfba}
+.box b{color:#ffd9a8}
+</style></head><body><main>
+<h1>Notes, then the shape of them</h1>
+<p class="h">Paste raw notes. It sorts decisions, actions and open questions without inventing any. No network.</p>
+<textarea id="raw" placeholder="- decide on the venue by Thursday&#10;- Sam is calling the caterer&#10;- budget still unclear: 400 or 600?"></textarea>
+<button id="shape">Shape it</button>
+<div class="box" id="out">—</div>
+</main>
+<script>
+const words = {
+  decided: ['decided', 'decision', 'we will', 'agreed', 'chose'],
+  question: ['?', 'unclear', 'tbd', 'maybe', 'not sure'],
+  action: ['call', 'email', 'send', 'book', 'prepare', 'check', 'ask', 'confirm', 'by ']
+}
+const classify = line => {
+  const lower = line.toLowerCase()
+  if (words.decided.some(w => lower.includes(w))) return 'decided'
+  if (words.question.some(w => lower.includes(w))) return 'open'
+  if (words.action.some(w => lower.includes(w))) return 'action'
+  return 'note'
+}
+document.getElementById('shape').addEventListener('click', () => {
+  const lines = document.getElementById('raw').value.split('\n').map(l => l.replace(/^[-*•\s]+/, '').trim()).filter(Boolean)
+  const groups = { decided: [], action: [], open: [], note: [] }
+  for (const line of lines) groups[classify(line)].push(line)
+  const section = (title, items) => items.length === 0 ? '' : '<b>' + title + '</b>\n' + items.map(i => '  · ' + i).join('\n') + '\n\n'
+  document.getElementById('out').innerHTML = (section('DECIDED', groups.decided) + section('TO DO', groups.action) + section('OPEN', groups.open) + section('ALSO NOTED', groups.note)).trim() || 'Nothing to shape yet.'
+})
+</script></body></html>

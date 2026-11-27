@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Budget</title>
+<style>
+body{margin:0;background:#0b0b0c;color:#E9E4D8;font:16px/1.55 system-ui,sans-serif;padding:20px}
+main{width:min(32rem,100%);margin:0 auto}
+h1{font-size:1.2rem;margin:0 0 .2rem}p.h{color:#93887a;font-size:.83rem;margin:0 0 1rem}
+.add{display:flex;gap:.5rem}input,select{background:#131110;border:1px solid #322c24;border-radius:9px;color:#E9E4D8;padding:.55rem .7rem;font:inherit}
+input[type=number]{width:6rem}
+button{border:1px solid #3a332a;background:#1a1714;color:#E9E4D8;border-radius:9px;padding:.55rem .85rem;font:inherit;cursor:pointer}
+ul{list-style:none;margin:1rem 0 0;padding:0}
+li{display:flex;justify-content:space-between;gap:.6rem;border-bottom:1px solid #201c17;padding:.5rem 0;font-variant-numeric:tabular-nums}
+li span.tag{color:#8f8474;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase}
+.total{margin-top:1rem;border-top:1px solid #322c24;padding-top:.6rem;display:flex;justify-content:space-between;color:#ffd9a8;font-weight:600}
+</style></head><body><main>
+<h1>What the month is doing</h1><p class="h">Add a spend, see where it goes. Kept in this browser.</p>
+<div class="add"><input id="what" placeholder="rent, food, bus pass…"><input id="amount" type="number" min="0" step="0.01" placeholder="0.00"><button id="add">Add</button></div>
+<ul id="list"></ul>
+<div class="total"><span>Total</span><span id="total">$0.00</span></div>
+</main>
+<script>
+let rows = []
+try { rows = JSON.parse(localStorage.getItem('budget-rows') ?? '[]') } catch { rows = [] }
+const money = n => '$' + Number(n).toFixed(2)
+const render = () => {
+  const list = document.getElementById('list')
+  list.innerHTML = ''
+  rows.forEach((row, at) => {
+    const li = document.createElement('li')
+    li.innerHTML = '<span>' + row.what.replace(/[<>&]/g, '') + '</span><span>' + money(row.amount) + '</span>'
+    const x = document.createElement('button'); x.textContent = '×'
+    x.addEventListener('click', () => { rows.splice(at, 1); save(); render() })
+    li.append(x)
+    list.append(li)
+  })
+  const total = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0)
+  document.getElementById('total').textContent = money(total)
+  localStorage.setItem('budget-rows', JSON.stringify(rows))
+}
+document.getElementById('add').addEventListener('click', () => {
+  const what = document.getElementById('what').value.trim()
+  const amount = Number(document.getElementById('amount').value)
+  if (what === '' || !Number.isFinite(amount) || amount <= 0) return
+  rows.push({ what, amount }); document.getElementById('what').value = ''; document.getElementById('amount').value = ''; render()
+})
+render()
+</script></body></html>

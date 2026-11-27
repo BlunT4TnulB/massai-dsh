@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Converter</title>
+<style>
+body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0a0a0c;color:#EDE7DA;font:16px/1.5 system-ui,sans-serif;padding:18px;background-image:radial-gradient(40rem 26rem at 50% 0%,rgba(193,68,14,.12),transparent 70%)}
+main{width:min(26rem,100%)}
+h1{font-size:1.1rem;margin:0 0 1rem;letter-spacing:.02em}
+.row{display:flex;gap:.5rem;margin:.4rem 0}
+input,select{background:#12100e;border:1px solid #322c24;border-radius:10px;color:#EDE7DA;padding:.7rem;font:inherit;width:100%;box-sizing:border-box}
+select{width:9rem;flex:none}
+.out{margin-top:1rem;border:1px solid #322c24;border-radius:12px;padding:1rem;text-align:center}
+.out b{display:block;font-size:2rem;color:#ffd9a8;font-variant-numeric:tabular-nums;line-height:1.2}
+.out span{color:#93887a;font-size:.85rem}
+</style></head><body><main>
+<h1>Convert one thing into another</h1>
+<div class="row"><input id="value" type="number" value="1" step="any"><select id="from"></select></div>
+<div class="row"><select id="to"></select></div>
+<div class="out"><b id="result">—</b><span id="detail"></span></div>
+</main>
+<script>
+const UNITS = {
+  length: { m: 1, km: 1000, cm: 0.01, in: 0.0254, ft: 0.3048, mi: 1609.344 },
+  mass: { g: 1, kg: 1000, lb: 453.592, oz: 28.3495 },
+  volume: { l: 1, ml: 0.001, cup: 0.236588, tbsp: 0.0147868, gal: 3.78541 }
+}
+const names = []
+for (const kind of Object.keys(UNITS)) for (const unit of Object.keys(UNITS[kind])) names.push(kind + ':' + unit)
+const from = document.getElementById('from')
+const to = document.getElementById('to')
+for (const name of names) {
+  for (const select of [from, to]) {
+    const option = document.createElement('option'); option.value = name; option.textContent = name.split(':')[1]
+    select.append(option)
+  }
+}
+from.value = 'length:km'; to.value = 'length:mi'
+const convert = () => {
+  const [fromKind, fromUnit] = from.value.split(':')
+  const [toKind, toUnit] = to.value.split(':')
+  const value = Number(document.getElementById('value').value)
+  const label = document.getElementById('detail')
+  if (fromKind !== toKind) { document.getElementById('result').textContent = '—'; label.textContent = 'pick two units of the same kind'; return }
+  const result = value * UNITS[fromKind][fromUnit] / UNITS[toKind][toUnit]
+  document.getElementById('result').textContent = Number(result.toPrecision(6)).toString()
+  label.textContent = value + ' ' + fromUnit + ' = ' + Number(result.toPrecision(6)) + ' ' + toUnit
+}
+for (const el of [from, to, document.getElementById('value')]) el.addEventListener('input', convert)
+convert()
+</script></body></html>
