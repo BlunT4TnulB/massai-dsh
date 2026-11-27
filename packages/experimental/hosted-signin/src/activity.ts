@@ -13,6 +13,9 @@
  * @module @deepseek-ai/dsh-hosted-signin/activity
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 /**
  * What kind of moment this was, so the mind can show it rather than merely glow:
  * a tool call, a failure or retry, something learned, an epiphany, a finished build.
