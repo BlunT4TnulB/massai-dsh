@@ -200,37 +200,46 @@ export function apply(ctx: Context): void {
     },
   })
 
-  // Serve a starter exactly as built: the files are embedded, so this cannot fall
-  // out of step with the manifest.
+  // Serve each starter twice: the gallery list, and one exact route per build.
+  // Exact routes are used deliberately — a prefix route here is caught by the app's
+  // authenticated catch-all, which turned a public shelf into a 401.
   ctx.webServer.register({
-    kind: 'prefix', path: '/starters/', auth: 'anonymous',
+    kind: 'exact', path: '/starters', auth: 'anonymous',
     handler: (req, res) => {
-      const url = new URL(req.url ?? '/', 'https://placeholder')
-      const rest = url.pathname.replace(/^\/starters\//, '')
-      const [slug = '', ...fileParts] = rest.split('/').filter(part => part !== '')
-      const starter = STARTERS.find(candidate => candidate.slug === slug)
-      if (starter === undefined) {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
-        res.end('no such starter')
-        return
-      }
-      const wanted = fileParts.length === 0 ? starter.entry : fileParts.join('/')
-      const content = starter.files[wanted]
-      if (content === undefined) {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
-        res.end('no such file in this starter')
-        return
-      }
-      const type = wanted.endsWith('.html') ? 'text/html; charset=utf-8'
-        : wanted.endsWith('.json') ? 'application/json; charset=utf-8'
-        : wanted.endsWith('.css') ? 'text/css; charset=utf-8'
-        : wanted.endsWith('.js') ? 'text/javascript; charset=utf-8'
-        : 'text/plain; charset=utf-8'
-      const body = Buffer.from(content)
-      res.writeHead(200, { 'content-type': type, 'content-length': String(body.byteLength), 'cache-control': 'public, max-age=300' })
-      res.end(req.method === 'HEAD' ? undefined : body)
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      const rows = STARTERS.map(starter => `<li><a href="/starters/${starter.slug}">${starter.name}</a>`
+        + `<span>${starter.what}</span><em>${starter.shape}</em></li>`).join('')
+      const html = Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Starter builds — Massai</title>
+<style>body{margin:0;background:#0b0b0d;color:#EDE7DA;font:16px/1.6 ui-sans-serif,system-ui,sans-serif;padding:2rem 1.2rem}
+main{max-width:42rem;margin:0 auto}h1{font-size:1.4rem;margin:0 0 .3rem}p{color:#a49a86;margin:0 0 1.4rem}
+ul{list-style:none;padding:0;margin:0}li{border-bottom:1px solid #26221d;padding:.8rem 0;display:grid;gap:.2rem}
+a{color:#ffd9a8;text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
+li span{color:#c6b9a2;font-size:.9rem}li em{color:#7d7159;font-size:.72rem;font-style:normal;letter-spacing:.14em;text-transform:uppercase}
+.back{display:inline-block;margin-top:1.4rem;color:#9b8f78;font-size:.85rem}</style></head><body><main>
+<h1>Starter builds</h1><p>Small, finished things the workshop publishes on purpose. Open any of them —
+they run from the file itself, with no accounts and no build step.</p><ul>${rows}</ul>
+<a class="back" href="/">← back to the mind</a></main></body></html>`)
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(html.byteLength), 'cache-control': 'no-store' })
+      res.end(req.method === 'HEAD' ? undefined : html)
     },
   })
+
+  for (const starter of STARTERS) {
+    ctx.webServer.register({
+      kind: 'exact', path: `/starters/${starter.slug}`, auth: 'anonymous',
+      handler: (req, res) => {
+        const content = starter.files[starter.entry] ?? ''
+        const body = Buffer.from(content)
+        res.writeHead(200, {
+          'content-type': starter.entry.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8',
+          'content-length': String(body.byteLength),
+          'cache-control': 'public, max-age=300',
+        })
+        res.end(req.method === 'HEAD' ? undefined : body)
+      },
+    })
+  }
 
   // The Idea Expander: the journey that produces a sealed, one-turn-ready prompt.
   // Free to walk; nothing is spent until the person decides to build.
