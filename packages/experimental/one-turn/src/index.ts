@@ -29,6 +29,8 @@ import {
   type ProjectFile, type ProjectStatus, type ProjectVisibility,
 } from './projects.ts'
 import { projectsPageHtml } from './projects-page.ts'
+import { appendFileSync, mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { expandPageHtml } from './expand-page.ts'
 import { STARTERS } from './starters.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
@@ -347,6 +349,16 @@ they run from the file itself, with no accounts and no build step.</p><ul>${rows
           return
         }
         const compiled = compile(normalised.spec)
+        /** One line per real moment, for the mind's feed. File-based on purpose: the
+         *  activity log lives in another package, and a shared file is a smaller
+         *  promise than a shared dependency. */
+        const recordMoment = (kind: string, label: string): void => {
+          try {
+            const dir = join(process.env.DSH_HOME ?? join(process.env.HOME ?? '/tmp', '.dsh'), 'one-turn')
+            mkdirSync(dir, { recursive: true })
+            appendFileSync(join(dir, 'moments.jsonl'), JSON.stringify({ kind, label, at: Date.now() }) + '\n', 'utf8')
+          } catch { /* a moment that cannot be recorded must not fail a build */ }
+        }
         const record = await runTrial({
           spec: normalised.spec,
           mask: compiled,
@@ -354,6 +366,13 @@ they run from the file itself, with no accounts and no build step.</p><ul>${rows
           model: str(parsed, 'model') === '' ? 'deepseek-chat' : str(parsed, 'model'),
           id: str(parsed, 'id') === '' ? `trial-${Date.now()}` : str(parsed, 'id'),
         })
+        if (!record.accepted && record.buckets.length > 0) {
+          recordMoment('learn', 'a lesson recorded: ' + record.buckets[0])
+        } else if (record.accepted && (record.repairs ?? 0) > 0) {
+          recordMoment('epiphany', 'a repair that held')
+        } else if (record.accepted) {
+          recordMoment('build', 'a build that held')
+        }
         // A successful build is saved immediately when storage is available, so
         // "it worked" and "it is kept" are the same moment.
         let saved: { id: string; name: string } | undefined

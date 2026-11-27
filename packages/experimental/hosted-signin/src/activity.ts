@@ -54,9 +54,30 @@ export function recordActivity(
 }
 
 /** How many of each kind are warm right now — counts only, no content. */
+/** Moments the one-turn builder recorded: a lesson learned, a repair that held, a build that held. */
+function builderMoments(now: number): Array<{ kind: ActivityKind; at: number }> {
+  try {
+    const path = join(process.env.DSH_HOME ?? join(process.env.HOME ?? '/tmp', '.dsh'), 'one-turn', 'moments.jsonl')
+    const recent: Array<{ kind: ActivityKind; at: number }> = []
+    for (const line of readFileSync(path, 'utf8').trim().split('\n').slice(-200)) {
+      try {
+        const row = JSON.parse(line) as { kind?: unknown; at?: unknown }
+        if (typeof row.at !== 'number' || now - row.at >= WINDOW_MS) continue
+        if (row.kind === 'learn' || row.kind === 'epiphany' || row.kind === 'build') recent.push({ kind: row.kind, at: row.at })
+      } catch { /* a torn line is not a moment */ }
+    }
+    return recent
+  } catch {
+    return []
+  }
+}
+
 export function kindsOf(now = Date.now()): Record<ActivityKind, number> {
   const totals: Record<ActivityKind, number> = { tool: 0, fail: 0, learn: 0, epiphany: 0, build: 0 }
   for (const event of readActivity(now)) totals[event.kind] += 1
+  // Real builder moments join the same tally: a green spark means a lesson was actually
+  // recorded, a bright one means a repair actually held.
+  for (const moment of builderMoments(now)) totals[moment.kind] += 1
   return totals
 }
 

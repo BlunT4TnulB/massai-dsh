@@ -117,6 +117,29 @@ service restarts. If a conversation matters, build from it — the artifact is w
 Deleting is always something you choose.</p>
 </div>
 
+<h2>The free preview is paused, and why</h2>
+<div class="box warn">
+<p><b>Guest sessions are switched off right now.</b> A guest session was starting in the deployment's own
+workspace with full filesystem access — which means a guest could have read the workshop's environment or
+edited the application's own files. That is a fault on our side, not a limit you hit.</p>
+<p>Until guests run in a properly sealed sandbox (their own scratch directory, no environment, no shell
+escape), the free preview stays closed. The owner's key works exactly as before, and the starter shelf is
+open to everyone as a substitute: real, finished builds you can open without an account.</p>
+</div>
+
+<h2>What it reads, and what it does not</h2>
+<table>
+  <tr><th>thing</th><th>the honest answer</th></tr>
+  <tr><td>a link you paste</td><td>Massai fetches that page once and reads its text to summarise it. Nothing is stored, and nothing else on the site is fetched.</td></tr>
+  <tr><td>Claude or Gemini chat histories</td><td><b>not possible through an API.</b> Neither company offers one for consumer history. A single shared conversation can be read from a public share link; bulk history needs an export (e.g. Google Takeout) that you import.</td></tr>
+  <tr><td>a conversation file you import</td><td>read on this server, held in memory, and <b>refused above 8 MB</b>. Larger files are rejected rather than risk the machine — that ceiling is a hard safety limit, measured after it took the site down once.</td></tr>
+  <tr><td>the starter shelf</td><td>four curated builds, hand-written, embedded in the deployment. They are not generated from visitors' prompts and they cost nothing to open.</td></tr>
+</table>
+
+<h2>What is deliberately hidden</h2>
+<p>The door in the mind is not drawn, but it still opens. That is an Easter egg, and it is stated here so it
+is never a trick: the way in is a gesture, a keypress, or patience — not a menu.</p>
+
 ${showTips ? `<h2>Tips that save you money and time</h2>
 <ul>
   <li><b>Be specific.</b> One clear paragraph beats five vague ones — fewer messages, better results.</li>

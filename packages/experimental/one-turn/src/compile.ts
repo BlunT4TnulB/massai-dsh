@@ -49,6 +49,16 @@ function bullets(items: readonly string[], prefix = '- '): string {
 }
 
 /** What the environment offers the build, stated plainly so it cannot be assumed wrong. */
+/** The four strings that turn a build into a failure, and what to write instead. */
+const FORBIDDEN_STRINGS = [
+  'FORBIDDEN STRINGS. These four are checked by string search, and any one of them fails the build:',
+  '- "TODO"  -> write the thing, or a bracketed note such as [decide the price]',
+  '- "FIXME" -> fix it now; a known defect is not finished',
+  '- "lorem ipsum" -> real copy, even if short',
+  '- "example.com" -> [your link]',
+  'After writing the artifact, read it once looking only for these four, and delete every hit.',
+].join('\n')
+
 const ENVIRONMENT = [
   'You are writing files into an empty workspace. Nothing is preinstalled beyond a standard toolchain.',
   'There is no internet at build time: no CDN links, no package installs, no fonts from the network.',
@@ -137,6 +147,8 @@ export function compile(spec: OneTurnSpec): CompiledMask {
     'WHERE IT RUNS — this decides whether it works at all:',
     spec.techLimits,
   ].join('\n'))
+
+  add('forbidden', FORBIDDEN_STRINGS)
 
   add('trace', [
     'EVERY REQUIREMENT MUST LEAVE A TRACE IN THE ARTIFACT.',
