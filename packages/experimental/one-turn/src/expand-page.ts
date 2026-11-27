@@ -131,6 +131,10 @@ costs anything until you choose to build.</p>
   <label for="goal">What should exist when this is done?</label>
   <textarea id="goal" placeholder="a page for my lawn care business with prices and my phone number"></textarea>
   <p class="hint" id="readLine">One sentence, your own words. Roughness is information — do not tidy it.</p>
+  <p class="seedline" id="seedline" aria-live="polite" style="margin:.45rem 0 0;font-size:.82rem;color:#8f8474;min-height:1.4em;transition:opacity .5s ease">
+    <span style="color:#6f6553;letter-spacing:.14em;font-size:.62rem;text-transform:uppercase">try</span>
+    <button type="button" id="seedUse" style="border:0;background:none;color:#c6b9a2;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0"></button>
+  </p>
   <div class="row">
     <button id="random" class="ghost" type="button">Surprise me</button>
     <button id="showSeeds" class="ghost" type="button">Browse starting points</button>
@@ -181,6 +185,8 @@ costs anything until you choose to build.</p>
   const INSIGHTS = ${insights};
   const $ = (id) => document.getElementById(id);
   const state = { goal: '', shape: '', answers: {} };
+  let lastReading = null;
+  let typedTimer = 0;
   let questions = [];
   let shapes = [];
 
@@ -260,6 +266,7 @@ costs anything until you choose to build.</p>
     try {
       const response = await fetch('/api/one-turn/readings?goal=' + encodeURIComponent(state.goal));
       const data = await response.json();
+      lastReading = data.readings.length > 0 ? data.readings[0] : null;
       if (Array.isArray(data.readings) && data.readings.length > 0) {
         const first = document.createElement('div');
         first.className = 'insight';
@@ -291,7 +298,7 @@ costs anything until you choose to build.</p>
     }
     select.value = state.shape || (shapes[0] ? shapes[0].shape : '');
     state.shape = select.value;
-    select.addEventListener('change', () => { state.shape = select.value; renderInsight(); });
+    select.addEventListener('change', () => { state.shape = select.value; state.shapeTouched = true; renderInsight(); });
     renderInsight();
   };
 
@@ -317,13 +324,34 @@ costs anything until you choose to build.</p>
     }
   };
 
-  const begin = async () => {
-    state.goal = $('goal').value.trim();
-    if (state.goal.length < 8) { toast('give it a sentence first'); return; }
+  /**
+   * Work out the steps for what has been typed so far.
+   * @param silent - true while the person is still typing: no scroll, no toast.
+   */
+  const begin = async (silent) => {
+    const typed = $('goal').value.trim();
+    if (typed.length < 8) {
+      if (silent !== true) toast('give it a sentence first');
+      return;
+    }
+    const changed = typed !== state.goal;
+    state.goal = typed;
     $('stage2').classList.remove('hidden');
+    if (silent === true) $('readLine').textContent = 'reading it as you type…';
     await renderReadings();
+    // The shape follows the sentence until the person chooses one themselves.
+    if (shapes.length > 0 && !state.shapeTouched && lastReading !== null && typeof lastReading.shape === 'string') {
+      const inferred = shapes.find(choice => choice.shape === lastReading.shape);
+      if (inferred !== undefined) state.shape = inferred.shape;
+    }
     renderShapes();
     renderQuestions();
+    if (silent === true) {
+      $('readLine').textContent = changed
+        ? 'reading it as you type — the steps below follow your sentence.'
+        : 'One sentence, your own words. Roughness is information — do not tidy it.';
+      return;
+    }
     $('stage2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -397,7 +425,16 @@ costs anything until you choose to build.</p>
     }
     host.classList.toggle('hidden');
   });
-  $('goal').addEventListener('input', () => { $('readLine').textContent = 'One sentence, your own words. Roughness is information — do not tidy it.'; });
+  $('goal').addEventListener('input', () => {
+    const text = $('goal').value.trim();
+    $('readLine').textContent = text.length === 0
+      ? 'One sentence, your own words. Roughness is information — do not tidy it.'
+      : 'reading it as you type — the steps below follow your sentence.';
+    $('seedline').style.opacity = '0';
+    clearTimeout(typedTimer);
+    if (text.length < 8) return;
+    typedTimer = setTimeout(() => { void begin(true) }, 650);
+  });
   document.getElementById('goal').addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void begin(); }
   });
@@ -410,7 +447,32 @@ costs anything until you choose to build.</p>
   });
   $('openWorkshop').addEventListener('click', () => { location.href = '/access'; });
 
-  $('goal').addEventListener('blur', () => { if (state.goal === '' && $('goal').value.trim().length >= 8) void begin(); });
+  // One suggestion at a time, changing every six seconds, until a person starts to type:
+  // the page should feel attended rather than pre-filled.
+  let seedIndex = Math.floor(Math.random() * SEEDS.length);
+  let seedTimer = 0;
+  const paintSeed = () => {
+    $('seedUse').textContent = SEEDS[seedIndex % SEEDS.length].title.toLowerCase();
+    $('seedline').style.opacity = '1';
+  };
+  const nextSeed = () => {
+    seedIndex += 1;
+    $('seedline').style.opacity = '0';
+    setTimeout(paintSeed, 500);
+  };
+  paintSeed();
+  seedTimer = setInterval(() => {
+    if ($('goal').value.trim() !== '') { clearInterval(seedTimer); return }
+    nextSeed();
+  }, 6000);
+  $('seedUse').addEventListener('click', () => {
+    $('goal').value = SEEDS[seedIndex % SEEDS.length].goal;
+    $('seedline').style.opacity = '0';
+    clearInterval(seedTimer);
+    void begin(true);
+  });
+
+  $('goal').addEventListener('blur', () => { if ($('goal').value.trim().length >= 8) void begin(true); });
 
   // The interview and the shapes come from the server, so they cannot drift from the build.
   void (async () => {
