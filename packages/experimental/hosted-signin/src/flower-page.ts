@@ -607,6 +607,10 @@ if (typeof window.visualViewport !== 'undefined' && window.visualViewport !== nu
 // every line breathes together — zoom and rotation stay exactly where the hand left
 // them, which is what makes it read as a living thing rather than a camera move.
 let breathScale = 1;
+/** How much real work is happening right now, 0..1, decaying. */
+let activityHeat = 0;
+/** The feed's count last time, so only an increase counts as a beat. */
+let lastFeedTotal = 0;
 /** Speech makes the breath unsteady: each letter is a small push. */
 let breathPulse = 0;
 /** How strongly the mind is speaking right now, 0..1, decaying. */
@@ -617,10 +621,15 @@ function stepBreath(now) {
   breathPulse *= 0.9;
   speechLevel *= 0.9;
   if (!MIND.breathe) { breathScale = 1; return }
+  activityHeat *= 0.992;
   // ~8 s per breath, with a second slower wave underneath so no two breaths match.
-  const slow = Math.sin(now * 0.00078) * 0.62 + Math.sin(now * 0.00037 + 1.7) * 0.38;
+  // When the workshop is really working, it breathes faster and deeper and a small
+  // pulse rides on top of it: the body shows the work, rather than only the caption.
+  const rate = 0.00078 + activityHeat * 0.0014;
+  const slow = Math.sin(now * rate) * 0.62 + Math.sin(now * 0.00037 + 1.7) * 0.38;
   const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.02;
-  breathScale = 1 + MIND.breath * (0.045 * slow) + breathPulse + speakingPart;
+  const thump = Math.pow(Math.max(0, Math.sin(now * (0.0042 + activityHeat * 0.0022))), 10) * activityHeat * 0.03;
+  breathScale = 1 + MIND.breath * ((0.045 + activityHeat * 0.03) * slow) + breathPulse + speakingPart + thump;
   // A readout, so the breath can be observed rather than argued about: any test can
   // sample this attribute over time and see the body swell and settle.
   document.documentElement.dataset.breath = breathScale.toFixed(4);
@@ -2078,7 +2087,10 @@ async function poll() {
       });
       simulated = trail.length === 0;
       if (data.kinds !== null && typeof data.kinds === 'object') kindCounts = data.kinds;
-      noteActivity(skills, data.skills && typeof data.skills.total === 'number' ? data.skills.total : -1);
+      const total = data.skills && typeof data.skills.total === 'number' ? data.skills.total : -1;
+      if (total > lastFeedTotal) activityHeat = Math.min(1, activityHeat + 0.4);
+      if (total >= 0) lastFeedTotal = total;
+      noteActivity(skills, total);
       const badge = document.getElementById('simulated');
       if (badge) badge.style.opacity = simulated ? '0.7' : '0';
       const hot = data.focus;
@@ -2095,6 +2107,8 @@ async function poll() {
     trail = Array.isArray(data.trail) ? data.trail : [];
     agents = Array.isArray(data.agents) ? data.agents : [];
     trailTotal = data.counts && typeof data.counts.total === 'number' ? data.counts.total : trail.length;
+    if (trailTotal > lastFeedTotal) activityHeat = Math.min(1, activityHeat + 0.4);
+    lastFeedTotal = trailTotal;
     simulated = trail.length === 0;
     {
       // the owner's feed carries events, so count the kinds here
@@ -2271,6 +2285,15 @@ function togglePanel() {
   });
   document.body.appendChild(panel);
 }
+
+// Arriving somewhere again: it says it remembers the last thing you looked at.
+setTimeout(function () {
+  if (!MIND.speak) return;
+  let looked = '';
+  try { looked = String(window.localStorage.getItem('massai_looked_at') ?? ''); } catch (error) { void error; }
+  if (looked === '') return;
+  say('you were here. you were looking at ' + looked + '.');
+}, 4200);
 
 addEventListener('message', function (event) {
   const data = event.data;
@@ -2485,6 +2508,8 @@ function resolveTaps() {
   if (picked >= 0) {
     diveNode = picked;
     flashNote(describe(picked));
+    // It remembers. One short phrase, kept locally, greeting the next visit.
+    try { window.localStorage.setItem('massai_looked_at', describe(picked)); } catch (error) { void error; }
     if (MIND.speak && !speaking) say();
     // Touching a star is the act that opens the workshop: inside the app it tells the
     // frame, so the composer appears where it already sits rather than from nothing.
