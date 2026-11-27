@@ -1147,6 +1147,50 @@ A living visualiser, not a screensaver. Everything below is verified live on `d1
 
 Public address is **/mind**; `/flower` is the embedding surface and redirects a top-level visit.
 
+## It notices you, and you can talk to it (2026-11-27, `f9eede4`)
+
+### The observation memory
+
+Sixteen rules with real thresholds, each watched once and remembered in
+`localStorage 'massai_observed'` (`starts` = visits, `seen` = what has already been said):
+
+| judgement | fires when |
+|---|---|
+| first_tap | you touch it at all |
+| twenty_taps | 25 taps |
+| ten_stars / deep / very_deep | 10 stars · zoom 9 · zoom 22 |
+| still / long_stay | 32 s without input · 10 minutes here |
+| first_return / many_returns | second visit · fifth visit |
+| void / cathedral | you choose that world |
+| dials | you open the panel |
+| silence / spoke | 90 s with speech off · you issue a command |
+| stubborn | the same star three times running |
+| small_hours | 01:00–04:00 local |
+
+At most one unsolicited remark every 30 s, and only while the voice is free — noticing must
+not become chatter.
+
+### Talking to it
+
+Press **T** (or `/`), or use the panel's **talk to it** / **listen once** buttons.
+
+```
+open <name>     dive to the best matching star
+deeper / out    zoom by 0.8 octaves, respecting the drift hold
+back / home     return to 1× and release the held star
+where           it says which star you were on, and goes there
+quiet / speak   toggles its voice
+<world>         voyage · still · storm · bare · nebula · deepfield · cathedral · ember · void
+sleep           the screensaver
+who are you / what is this / what have i built / remember / help
+anything else   "i only know what i have watched you do. that, i know well."
+```
+
+Voice uses the browser's own `SpeechRecognition` (Chrome/Edge). One sentence per press, nothing
+recorded, nothing sent anywhere. It is **not** a language model — that is stated in the handoff and
+should stay stated in the product. Wiring real answers would mean an owner-keyed call per question;
+the honest place for that is a later, capped feature, not a silent one.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
