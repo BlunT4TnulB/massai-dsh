@@ -1027,6 +1027,7 @@ function obey(raw) {
   if (/(deeper|closer|go in|down)/.test(text)) { zoomBy(0.8); return reply('in.') }
   if (/(out|wider|further|away|back out)/.test(text)) { zoomBy(-0.8); return reply('out.') }
   if (/(beginning|start over|home)/.test(text)) { zoomLogTarget = 0; diveNode = -1; return reply('the beginning, then.') }
+  if (/(beginning|start over|home)/.test(text)) { zoomLogTarget = 0; diveNode = -1; return reply('the beginning, then.') }
   // Opening things. What it will open depends on who is standing there: a stranger gets
   // the public rooms, a signed-in person gets their own, and only the operator gets the
   // workshop — the same rule the rest of the site follows.
