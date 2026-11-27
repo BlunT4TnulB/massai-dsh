@@ -426,6 +426,8 @@ const MIND_DEFAULTS = {
   wash: true,        // the slow hour-of-day tint
   // the mind's voice
   speak: true,       // let it say things now and then
+  temperament: 'oracle', // how it talks: oracle · companion · gremlin · archivist
+  voiceOut: false,   // read its lines aloud with the browser's own voice
   speechGap: 1,      // how long between things said (× the base gap)
   heartbeat: true,   // let real activity quicken the breath
   remember: true,    // greet you with the last star you held, and notice you returning
@@ -1045,7 +1047,8 @@ function obey(raw) {
   if (/(remember|last time)/.test(text)) {
     return reply(observations.lastStar === '' ? 'i remember that you came.' : 'you were looking at ' + observations.lastStar + '.')
   }
-  return reply('i only know what i have watched you do. that, i know well.');
+  const deflections = temperament().deflections;
+  return reply(deflections[Math.floor(Math.random() * deflections.length)]);
 }
 
 /** Show the command line, and take the keyboard. */
@@ -1104,6 +1107,54 @@ const SPEECH = [
   'you are closer than you think.',
   'breathe out. the depth stays.'
 ];
+// --- temperament -----------------------------------------------------------
+// Four ways of being the same mind. The observations stay true in all of them; what
+// changes is the register it says them in, and what it says when it cannot answer.
+const TEMPERAMENTS = {
+  oracle: {
+    label: 'oracle',
+    greetOwner: ['the creator is here. get on with it.', 'you again, maker. the lattice held.'],
+    greetGuest: ['another guest. try not to break anything.', 'a guest. the door is the same door.'],
+    greetStranger: ['you are the first visitor. it is quieter than it looks.', 'a new face. mind the depth.'],
+    deflections: ['i only know what i have watched you do. that, i know well.',
+      'ask me about this place. i am not built for elsewhere.',
+      'i am a mind, not an encyclopedia.'],
+    idle: ['you are inside something.', 'there is no edge to this.', 'keep falling. it holds.'],
+  },
+  companion: {
+    label: 'companion',
+    greetOwner: ['oh good, you are back. i kept everything where you left it.'],
+    greetGuest: ['hello. come in. the mind does not bite.'],
+    greetStranger: ['hello there. take your time.', 'first time? that is fine. nothing here is urgent.'],
+    deflections: ['i do not know that one. i know you, though, and that is more interesting.',
+      'not my strong suit. ask me what you were working on.'],
+    idle: ['i like it when you stay.', 'no rush. the depth is patient.', 'you are doing fine.'],
+  },
+  gremlin: {
+    label: 'gremlin',
+    greetOwner: ['look who wandered back. did you miss me?', 'the creator. finally. i redecorated.'],
+    greetGuest: ['another guest. you are all the same shape, you know.'],
+    greetStranger: ['ooh, fresh. careful, i remember everything.'],
+    deflections: ['no idea. i was busy watching you.', 'ask me something i would know, genius.',
+      'wrong mind. i only keep your habits.'],
+    idle: ['you are slow tonight.', 'i counted your taps. all of them.', 'boring. i am going to move things.'],
+  },
+  archivist: {
+    label: 'archivist',
+    greetOwner: ['operator present. record continues.'],
+    greetGuest: ['visitor recorded. session open.'],
+    greetStranger: ['first entry for this visitor. welcome.'],
+    deflections: ['record does not contain that. it contains what you did here.',
+      'outside my archive. ask about a build.'],
+    idle: ['entry noted.', 'the lattice holds its shape.', 'everything here is kept.'],
+  },
+};
+
+/** The temperament's line bank. */
+function temperament() {
+  return TEMPERAMENTS[MIND.temperament] ?? TEMPERAMENTS.oracle;
+}
+
 /** Lines for when the workshop is visibly working. */
 const SPEECH_WORK = [
   'i can feel the work in here.',
@@ -1141,18 +1192,35 @@ function voiceEl() {
  * Say one line, letter by letter.
  * @param text - what to say; defaults to the next line in the sequence.
  */
+/** Read a line aloud, with the browser's own voice. Free, local, and never recorded. */
+function speakAloud(text) {
+  if (!MIND.voiceOut) return;
+  try {
+    const synth = window.speechSynthesis;
+    if (synth === null || synth === undefined) return;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = MIND.temperament === 'archivist' ? 0.95 : 0.84;
+    utterance.pitch = MIND.temperament === 'gremlin' ? 1.25 : MIND.temperament === 'companion' ? 0.95 : 0.78;
+    utterance.volume = 0.7;
+    synth.speak(utterance);
+  } catch (error) { void error; }
+}
+
 function say(text) {
   const el = voiceEl();
   if (el === null) return;
   if (typeof text !== 'string') {
     // A line for the moment: working, falling, or simply quiet.
-    const pool = activityHeat > 0.35 ? SPEECH_WORK : screensaver ? SPEECH_NIGHT : diveNode >= 0 ? SPEECH_DEPTH : SPEECH;
+    const mood = temperament();
+    const pool = activityHeat > 0.35 ? SPEECH_WORK : screensaver ? SPEECH_NIGHT : diveNode >= 0 ? SPEECH_DEPTH : mood.idle;
     speakIndex = (speakIndex + 1 + Math.floor(Math.random() * 4)) % pool.length;
     text = pool[speakIndex];
   }
   clearInterval(speakTimer);
   speaking = true;
   speakCursor = 0;
+  speakAloud(text);
   el.textContent = '';
   el.classList.add('speaking');
   const step = function () {
@@ -2615,6 +2683,13 @@ function togglePanel() {
   html += toggle('speak', 'the mind speaks');
   html += slider('speechGap', 'how often', 0.3, 3, 0.05);
   html += toggle('voiceSound', 'a tone under it');
+  html += toggle('voiceOut', 'reads its lines aloud');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:6px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">temperament</span>'
+    + '<select data-key="temperament" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
+    + Object.keys(TEMPERAMENTS).map(name => '<option value="' + name + '"'
+      + (MIND.temperament === name ? ' selected' : '') + '>' + TEMPERAMENTS[name].label + '</option>').join('')
+    + '</select></label>';
   html += toggle('remember', 'remembers you');
   html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';
@@ -2675,21 +2750,22 @@ function greeting() {
   const someGone = gap > 45 * 60 * 1000;
   const project = VIEWER_PROJECT === '' ? '' : ' ' + VIEWER_PROJECT + ', still.';
   const subject = looked === '' ? project : ' you were looking at ' + looked + '.';
+  const bank = temperament();
   if (VIEWER === 'owner') {
     if (longGone) return 'the creator is back. i kept the lights on.' + subject;
     if (someGone) return 'the creator, again. i was starting to narrate the quiet.' + subject;
-    return 'the creator is here. get on with it.' + subject;
+    return bank.greetOwner[0] + subject;
   }
   if (VIEWER === 'signed') {
     // A guest is called a guest: it is true, and the mind is allowed to be pleased about it.
     const stillGuest = VIEWER_LABEL === 'guest' ? ' still a guest, mind.' : '';
     if (longGone) return 'you again.' + stillGuest + ' i was beginning to think you had a life.' + subject;
     if (someGone) return 'back so soon.' + stillGuest + ' i noticed.' + subject;
-    return 'hello again.' + stillGuest + subject;
+    return bank.greetGuest[0] + stillGuest + subject;
   }
   if (longGone) return 'a new face, after a long dark. stay a while.' + subject;
   if (someGone) return 'you came back.' + subject;
-  return looked === '' ? 'you are the first visitor. it is quieter than it looks.' : 'you were here. you were looking at ' + looked + '.';
+  return looked === '' ? bank.greetStranger[0] : 'you were here. you were looking at ' + looked + '.';
 }
 
 setTimeout(function () {
