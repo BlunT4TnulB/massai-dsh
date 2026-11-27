@@ -39,7 +39,7 @@ function CornerMenu() {
   // Categorised, because a drawer is only useful if a person can find the door
   // they meant without reading all of them.
   const groups: ReadonlyArray<readonly [string, ReadonlyArray<readonly [string, string]>]> = [
-    ['Make', [['New conversation', '/'], ['The workshop', '/access'], ['Projects', '/projects']]],
+    ['Make', [['New conversation', '/'], ['Idea Expander', '/expand'], ['The workshop', '/access'], ['Projects', '/projects']]],
     ['Wander', [['The mind', '/flower'], ['Visualiser', '/mind'], ['The welcome page', '/welcome'], ['Map', '/map'], ['Library', '/library']]],
     ['Understand', [['Limits', '/limits'], ['Guide', '/guide'], ['Support', '/support']]],
     ['Yours', [['You', '/me'], ['Settings', '/settings'], ['Operator', '/admin']]],

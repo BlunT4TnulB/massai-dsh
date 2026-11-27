@@ -29,6 +29,7 @@ import {
   type ProjectFile, type ProjectStatus, type ProjectVisibility,
 } from './projects.ts'
 import { projectsPageHtml } from './projects-page.ts'
+import { expandPageHtml } from './expand-page.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
@@ -181,6 +182,22 @@ export function apply(ctx: Context): void {
       process.stderr.write(`one-turn: store boot failed: ${error instanceof Error ? error.message : String(error)}\n`)
     }
   })()
+
+
+  // The Idea Expander: the journey that produces a sealed, one-turn-ready prompt.
+  // Free to walk; nothing is spent until the person decides to build.
+  ctx.webServer.register({
+    kind: 'exact', path: '/expand', auth: 'anonymous',
+    handler: (req, res) => {
+      const html = Buffer.from(expandPageHtml())
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // The interview as data, so any surface can render it and never drift.
   ctx.webServer.register({

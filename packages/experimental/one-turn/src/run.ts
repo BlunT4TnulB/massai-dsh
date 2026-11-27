@@ -65,6 +65,8 @@ export interface TrialRecord {
   readonly report?: string
   /** Failure buckets this trial taught the shelf. */
   readonly buckets: readonly string[]
+  /** How many repair passes were spent before the checks were accepted. */
+  readonly repairs?: number
 }
 
 /** Where trial artifacts live. */
@@ -289,6 +291,92 @@ function closeUnbalanced(text: string): string {
   return out
 }
 
+/**
+ * One model call with the build contract, whether it is the first attempt or a repair.
+ * @param options - mask text, the user turn, credentials and the model.
+ * @returns the raw reply text and what it cost.
+ */
+async function callBuild(options: {
+  readonly maskText: string
+  readonly userText: string
+  readonly apiKey: string
+  readonly model: string
+  readonly maxTokens: number
+}): Promise<{
+  readonly text: string
+  readonly inputTokens: number
+  readonly outputTokens: number
+  readonly costUsd: number
+  readonly error?: string
+}> {
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${options.apiKey}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: options.model,
+      messages: [
+        { role: 'system', content: options.maskText },
+        { role: 'user', content: options.userText },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: options.maxTokens,
+      temperature: 0.15,
+    }),
+  })
+  const body = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+    usage?: { prompt_tokens?: number; completion_tokens?: number }
+    error?: { message?: string }
+  }
+  const inputTokens = body.usage?.prompt_tokens ?? 0
+  const outputTokens = body.usage?.completion_tokens ?? 0
+  return {
+    text: body.choices?.[0]?.message?.content ?? '',
+    inputTokens,
+    outputTokens,
+    costUsd: estimateCost(inputTokens, outputTokens),
+    ...(body.error === undefined ? {} : { error: body.error.message ?? 'provider error' }),
+  }
+}
+
+/** The build contract, unchanged between attempts. */
+const BUILD_TURN = [
+  'Build it now.',
+  'Reply with one JSON object and nothing else:',
+  '{"files":[{"path":"index.html","content":"..."}],"report":"how each acceptance check was verified"}',
+  'Every file\'s content must be a complete, final file. No ellipses, no placeholders.',
+].join('\n')
+
+/**
+ * The repair turn: the same contract, plus exactly what failed and what to change.
+ *
+ * A single call has to get everything right at once; a repair call only has to fix a
+ * named defect. That is why this is the cheapest quality in the whole pipeline — it
+ * turns "the model missed a TODO" from a failed trial into one more small call.
+ * @param failures - the checks that did not pass, with their observations.
+ * @param files - what the first attempt produced.
+ * @returns the user turn for the repair pass.
+ */
+function repairTurn(failures: readonly CheckResult[], files: readonly BuiltFile[]): string {
+  const problems = failures.map(check => `- ${check.check}: ${check.detail}`).join('\n')
+  const current = JSON.stringify({ files }, null, 2)
+  return [
+    'Repair pass. The previous attempt failed deterministic checks. Fix only what is listed,',
+    'keep everything that already works, and return the complete corrected file set.',
+    '',
+    'FAILED CHECKS',
+    problems,
+    '',
+    'CURRENT FILES',
+    current,
+    '',
+    BUILD_TURN,
+  ].join('\n')
+}
+
 /** Ask the model for files, and bound what comes back to something safe to write. */
 function parseFiles(raw: unknown): BuiltFile[] {
   const source = raw as { files?: unknown }
@@ -332,57 +420,29 @@ export async function runTrial(options: {
   }
 
   try {
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${options.apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: options.model,
-        messages: [
-          { role: 'system', content: options.mask.text },
-          {
-            role: 'user',
-            content: [
-              'Build it now.',
-              'Reply with one JSON object and nothing else:',
-              '{"files":[{"path":"index.html","content":"..."}],"report":"how each acceptance check was verified"}',
-              'Every file\'s content must be a complete, final file. No ellipses, no placeholders.',
-            ].join('\n'),
-          },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 12000,
-        temperature: 0.15,
-      }),
+    // First attempt.
+    const first = await callBuild({
+      maskText: options.mask.text, userText: BUILD_TURN, apiKey: options.apiKey,
+      model: options.model, maxTokens: 12000,
     })
-
-    const body = await response.json() as {
-      choices?: Array<{ message?: { content?: string } }>
-      usage?: { prompt_tokens?: number; completion_tokens?: number }
-      error?: { message?: string }
-    }
-
-    const inputTokens = body.usage?.prompt_tokens ?? 0
-    const outputTokens = body.usage?.completion_tokens ?? 0
-    const costUsd = estimateCost(inputTokens, outputTokens)
+    let inputTokens = first.inputTokens
+    let outputTokens = first.outputTokens
+    let costUsd = first.costUsd
 
     // From here on every return carries the real cost: a failed trial that spent
     // money must still report what it spent, or the ledger lies.
-    if (body.error !== undefined) {
+    if (first.error !== undefined) {
       return {
         id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
         inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
-        accepted: false, buckets: [], error: body.error.message ?? 'provider error',
+        accepted: false, buckets: [], error: first.error,
       }
     }
 
-    const text = body.choices?.[0]?.message?.content ?? ''
     let parsed: { report?: unknown }
     let files: BuiltFile[]
     try {
-      parsed = extractJson(text) as { report?: unknown }
+      parsed = extractJson(first.text) as { report?: unknown }
       files = parseFiles(parsed)
     } catch (parseError) {
       void saveTrial({
@@ -397,8 +457,49 @@ export async function runTrial(options: {
         error: `could not read the reply: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
       }
     }
-    const checks = checkFiles(options.spec, files)
-    const accepted = checks.every(check => check.pass)
+    let checks = checkFiles(options.spec, files)
+    let accepted = checks.every(check => check.pass)
+    let repairs = 0
+
+    // Repair pass: one more call, only when it can actually help and only when the
+    // budget still covers it. The defect list is deterministic, so this is a fix,
+    // not a re-roll — and the better of the two attempts is the one that is kept.
+    const failures = checks.filter(check => !check.pass)
+    const repairable = failures.length > 0
+      && files.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0) <= 120_000
+      && !failures.some(check => check.check === 'size')
+    if (repairable) {
+      const spent = costUsd
+      const projectedRepair = estimateCost(options.mask.tokens + 4000, 8000)
+      if (spent + projectedRepair <= maxTrialUsd()) {
+        const second = await callBuild({
+          maskText: options.mask.text, userText: repairTurn(failures, files), apiKey: options.apiKey,
+          model: options.model, maxTokens: 12000,
+        })
+        inputTokens += second.inputTokens
+        outputTokens += second.outputTokens
+        costUsd += second.costUsd
+        if (second.error === undefined) {
+          try {
+            const repairedParsed = extractJson(second.text) as { report?: unknown }
+            const repairedFiles = parseFiles(repairedParsed)
+            const repairedChecks = checkFiles(options.spec, repairedFiles)
+            const passed = (list: readonly CheckResult[]): number => list.filter(check => check.pass).length
+            // Keep the attempt that satisfies more checks; on a tie, keep the first
+            // (it cost less and the model was confident enough to stop there).
+            if (passed(repairedChecks) > passed(checks) && repairedFiles.length > 0) {
+              files = repairedFiles
+              checks = repairedChecks
+              accepted = repairedChecks.every(check => check.pass)
+              repairs = 1
+              if (typeof repairedParsed.report === 'string') parsed = repairedParsed
+            }
+          } catch {
+            /* an unreadable repair is simply not used */
+          }
+        }
+      }
+    }
 
     // Learning: every failed check becomes a lesson for the shape, so the next
     // interview on this shape asks differently and the next mask carries a warning.
@@ -430,6 +531,7 @@ export async function runTrial(options: {
     const record: TrialRecord = {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
       inputTokens, outputTokens, costUsd, model: options.model, files, checks, accepted, buckets,
+      repairs,
       ...(typeof parsed.report === 'string' ? { report: parsed.report } : {}),
     }
     // Evidence outlives the container now.
