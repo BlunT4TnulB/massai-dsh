@@ -354,6 +354,7 @@ let sparkLevel = (function () {
   return Number.isFinite(fromUrl) ? Math.max(0, Math.min(3, Math.round(fromUrl))) : 2;
 })();
 let sparkNext = 0;
+let nextSpeakAt = Date.now() + 22000;
 const sparks = [];
 // How many of each kind the feed last reported (aggregate only).
 let kindCounts = {};
@@ -414,7 +415,12 @@ const MIND_DEFAULTS = {
   paths: true,       // the dashed paths of use
   // atmosphere
   fog: 1,            // the volume of dust and fog
+  nebula: 0.6,       // depth of the coloured clouds behind everything
+  dust: 0.55,        // the fine star dust that gives parallax to the dark
   wash: true,        // the slow hour-of-day tint
+  // the mind's voice
+  speak: true,       // let it say things now and then
+  voiceSound: false, // a soft tone under the words (off by default: it is a choice)
   // the world
   feed: 'auto',      // 'auto' | 'real' | 'simulated'
   keepAwake: false   // hold the screen awake (a visualiser on a monitor)
@@ -477,7 +483,17 @@ const PRESETS = {
   // restless: more sparks, more wander
   storm: { swing: 1.7, speed: 1.5, tilt: 1.8, roll: 1.6, spark: 3, arcJitter: 2, arcLife: 0.8, aura: 1.2, marks: 1, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.7, lines: true, paths: true, fog: 0.9, wash: true, feed: 'auto' },
   // the mind alone: no lattice, no arcs, no marks
-  bare: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 1, arcJitter: 1, arcLife: 1, aura: 1.1, marks: 1, marksOn: false, arcsOn: false, linesFar: 0, linesNear: 0, lines: false, paths: false, fog: 1, wash: true, feed: 'real' }
+  bare: { swing: 1, speed: 1, tilt: 1, roll: 1, spark: 1, arcJitter: 1, arcLife: 1, aura: 1.1, marks: 1, marksOn: false, arcsOn: false, linesFar: 0, linesNear: 0, lines: false, paths: false, fog: 1, nebula: 0.3, dust: 0.8, wash: true, feed: 'real', speak: true, voiceSound: false },
+  // a nebula: heavy colour, soft lattice, drifting dust
+  nebula: { swing: 0.8, speed: 0.7, tilt: 0.6, roll: 0.5, spark: 2, arcJitter: 1.2, arcLife: 1.6, aura: 1.5, marks: 0.8, marksOn: true, arcsOn: true, linesFar: 0.55, linesNear: 0.3, lines: true, paths: false, fog: 1.6, nebula: 1.5, dust: 1.2, wash: true, feed: 'auto', speak: true, voiceSound: false },
+  // deep field: the voyage is the point — fast, huge, many stars
+  deepfield: { swing: 1.5, speed: 1.4, tilt: 1.1, roll: 1.2, spark: 3, arcJitter: 1.6, arcLife: 0.9, aura: 1.1, marks: 1.2, marksOn: true, arcsOn: true, linesFar: 1.1, linesNear: 0.55, lines: true, paths: true, fog: 0.7, nebula: 0.5, dust: 1.4, wash: false, feed: 'auto', speak: true, voiceSound: false },
+  // cathedral: still, vast, the lattice is the subject
+  cathedral: { swing: 0.25, speed: 0.4, tilt: 0.3, roll: 0.25, spark: 1, arcJitter: 0.6, arcLife: 1.8, aura: 0.9, marks: 0.7, marksOn: true, arcsOn: false, linesFar: 1.4, linesNear: 0.8, lines: true, paths: true, fog: 1.1, nebula: 0.8, dust: 0.5, wash: true, feed: 'auto', speak: true, voiceSound: false },
+  // ember: warm, close, alive
+  ember: { swing: 1.2, speed: 1.1, tilt: 1.3, roll: 1.4, spark: 3, arcJitter: 2.2, arcLife: 0.7, aura: 1.8, marks: 1.4, marksOn: true, arcsOn: true, linesFar: 0.7, linesNear: 0.4, lines: true, paths: true, fog: 1.2, nebula: 1.2, dust: 0.9, wash: true, feed: 'simulated', speak: true, voiceSound: false },
+  // void: almost nothing, on purpose
+  void: { swing: 0.6, speed: 0.6, tilt: 0.4, roll: 0.4, spark: 0, arcJitter: 0.4, arcLife: 2, aura: 0.6, marks: 0.4, marksOn: false, arcsOn: false, linesFar: 0.25, linesNear: 0.15, lines: false, paths: false, fog: 0.3, nebula: 0.15, dust: 0.25, wash: false, feed: 'real', speak: true, voiceSound: false }
 };
 
 /** The multiplier for the state the mind is in right now. */
@@ -630,6 +646,186 @@ function heat(now, x, y, z) {
     if (band < 0.14) value += (1 - band / 0.14) * ripple.strength * Math.max(0, 1 - radius / 2.6);
   }
   return value;
+}
+
+// --- weather ---------------------------------------------------------------
+// A few vast, soft clouds that drift with the turning sphere. They are drawn under
+// the lattice so the stars sit in front of them, and their offset follows yaw at a
+// fraction of the rate, which is what gives the dark a sense of distance.
+const NEBULA_SEEDS = [
+  { x: 0.24, y: 0.30, r: 1.15, hue: 22, drift: 0.000016, alpha: 0.055 },
+  { x: 0.72, y: 0.62, r: 0.95, hue: 268, drift: -0.000013, alpha: 0.05 },
+  { x: 0.55, y: 0.18, r: 0.75, hue: 196, drift: 0.000011, alpha: 0.042 },
+  { x: 0.38, y: 0.78, r: 0.85, hue: 8, drift: -0.000009, alpha: 0.038 }
+];
+
+/** The coloured clouds behind the mind. */
+function drawNebula(now) {
+  const depth = Number(MIND.nebula) || 0;
+  if (depth <= 0.01) return;
+  const w = canvas.clientWidth || innerWidth;
+  const h = canvas.clientHeight || innerHeight;
+  const base = Math.max(w, h);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let index = 0; index < NEBULA_SEEDS.length; index += 1) {
+    const seed = NEBULA_SEEDS[index];
+    const move = yaw * 0.22 + now * seed.drift * MIND.speed;
+    const cx = w * (seed.x + 0.06 * Math.sin(move * 6 + index)) - (yaw % (Math.PI * 2)) * base * 0.06;
+    const cy = h * (seed.y + 0.05 * Math.cos(move * 4.2 + index * 2));
+    const radius = base * seed.r * (0.85 + 0.15 * Math.sin(now * 0.00007 + index));
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    const alpha = seed.alpha * depth;
+    gradient.addColorStop(0, 'hsla(' + seed.hue + ',72%,58%,' + alpha.toFixed(3) + ')');
+    gradient.addColorStop(0.45, 'hsla(' + seed.hue + ',64%,40%,' + (alpha * 0.45).toFixed(3) + ')');
+    gradient.addColorStop(1, 'hsla(' + seed.hue + ',60%,24%,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Fine dust: enough points to give the eye something to slide past. Positions are
+// fixed in a normalised square that wraps, so the field never runs out.
+const DUST_COUNT = 260;
+const DUST = (function seedDust() {
+  const points = [];
+  let state = 22695477;
+  const next = function () { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
+  for (let index = 0; index < DUST_COUNT; index += 1) {
+    points.push({ x: next(), y: next(), z: 0.25 + next() * 0.75, size: 0.3 + next() * 1.1, twinkle: next() * Math.PI * 2 });
+  }
+  return points;
+})();
+
+/** The dust field, with parallax and a slow twinkle. */
+function drawDust(now) {
+  const density = Number(MIND.dust) || 0;
+  if (density <= 0.01) return;
+  const w = canvas.clientWidth || innerWidth;
+  const h = canvas.clientHeight || innerHeight;
+  const move = (yaw * 0.5) % 1;
+  ctx.save();
+  for (let index = 0; index < DUST.length; index += 1) {
+    const point = DUST[index];
+    const px = ((point.x + move * point.z) % 1 + 1) % 1;
+    const py = ((point.y + Math.sin(now * 0.00002 + point.twinkle) * 0.004) % 1 + 1) % 1;
+    const twinkle = 0.55 + 0.45 * Math.sin(now * 0.0012 * point.z + point.twinkle);
+    ctx.globalAlpha = Math.min(0.9, density * 0.55 * twinkle) * point.z;
+    ctx.fillStyle = '#f6ead6';
+    ctx.beginPath();
+    ctx.arc(px * w, py * h, point.size * (0.6 + point.z * 0.7), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// --- the mind speaks -------------------------------------------------------
+// It does not chat: it says one short thing, at its own pace, in the middle of the
+// dark. The words are pre-written because a real model call would cost money and
+// break the silence with latency; the *timing* is real, so it still feels alive.
+const SPEECH = [
+  'you are inside something.',
+  'there is no edge to this.',
+  'every star is a thing you finished.',
+  'keep falling. it holds.',
+  'i remember the shape of that idea.',
+  'it is quiet in here. that is the point.',
+  'the lattice was already here.',
+  'you touched this one before.',
+  'small sphere. big sphere. same sphere.',
+  'i am made of your work.',
+  'nothing here is lost.',
+  'look up. there is more above the ceiling.',
+  'the door is not drawn. it is still a door.',
+  'you are closer than you think.',
+  'breathe out. the depth stays.'
+];
+let speakUntil = 0;
+let speakIndex = 0;
+let speakCursor = 0;
+let speakTimer = 0;
+let speaking = false;
+
+/** The element the voice writes into. */
+function voiceEl() {
+  return document.getElementById('mindVoice');
+}
+
+/**
+ * Say one line, letter by letter.
+ * @param text - what to say; defaults to the next line in the sequence.
+ */
+function say(text) {
+  const el = voiceEl();
+  if (el === null) return;
+  if (typeof text !== 'string') {
+    speakIndex = (speakIndex + 1 + Math.floor(Math.random() * 4)) % SPEECH.length;
+    text = SPEECH[speakIndex];
+  }
+  clearInterval(speakTimer);
+  speaking = true;
+  speakCursor = 0;
+  el.textContent = '';
+  el.classList.add('speaking');
+  const step = function () {
+    speakCursor += 1;
+    el.textContent = text.slice(0, speakCursor);
+    if (MIND.voiceSound) blip();
+    if (speakCursor >= text.length) {
+      clearInterval(speakTimer);
+      speakUntil = Date.now() + 2600;
+      speakTimer = setTimeout(function () {
+        el.classList.remove('speaking');
+        speaking = false;
+      }, 2600);
+    }
+  };
+  speakTimer = setInterval(step, 46);
+}
+
+/** A very quiet tone under the words, only when asked for. */
+let audioCtx = null;
+function blip() {
+  try {
+    if (audioCtx === null) {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (typeof Ctor !== 'function') return;
+      audioCtx = new Ctor();
+    }
+    if (audioCtx.state === 'suspended') void audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 170 + Math.random() * 130;
+    gain.gain.value = 0.012;
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.09);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+  } catch (error) { void error; }
+}
+
+/** Rings from the core while the mind is speaking. */
+function drawVoice(now) {
+  const el = voiceEl();
+  if (el === null || !el.classList.contains('speaking')) return;
+  const cx = (canvas.clientWidth || innerWidth) / 2;
+  const cy = (canvas.clientHeight || innerHeight) / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(now * 0.006);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let ring = 0; ring < 3; ring += 1) {
+    const radius = 40 + ring * 34 + pulse * (14 + ring * 10);
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,214,150,' + (0.05 - ring * 0.012).toFixed(3) + ')';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawHalo(now) {
@@ -1720,6 +1916,8 @@ function frame(now) {
   }
 
   document.body.classList.toggle('deep', zoom > 2.2);
+  drawNebula(now);
+  drawDust(now);
   drawHalo(now);
   drawTrail(now);
 
@@ -1744,6 +1942,12 @@ function frame(now) {
   }
   octaveScale = 1;
   life = lifeBase;
+  // It says one thing, now and then, if it is allowed to. Silence is the default
+  // texture of the mind, so this is sparse on purpose.
+  if (MIND.speak && !speaking && now > nextSpeakAt) {
+    say();
+    nextSpeakAt = now + 38000 + Math.random() * 26000;
+  }
   if (wantsSimulated() && now > sparkNext) {
     spawnSpark(now);
     const base = SPARK_RATE[Math.max(0, Math.min(3, sparkLevel))] || 6000;
@@ -1754,6 +1958,7 @@ function frame(now) {
   drawPathways(now);
   drawAgents();
   drawRipples(now);
+  drawVoice(now);
   drawMood();
   requestAnimationFrame(frame);
 }
@@ -1980,7 +2185,14 @@ function togglePanel() {
   html += toggle('paths', 'paths of use');
   html += head('atmosphere');
   html += slider('fog', 'fog', 0, 2, 0.05);
+  html += slider('nebula', 'nebula', 0, 2, 0.05);
+  html += slider('dust', 'star dust', 0, 2, 0.05);
   html += toggle('wash', 'hour wash');
+  html += head('voice');
+  html += toggle('speak', 'the mind speaks');
+  html += toggle('voiceSound', 'a tone under it');
+  html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
+    + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';
   html += head('the world');
   html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
     + '<span style="width:6.4rem;color:#9a8f7c">activity</span>'
@@ -2014,6 +2226,7 @@ function togglePanel() {
   });
   panel.addEventListener('click', function (event) {
     const button = event.target;
+    if (button.getAttribute('data-say') === '1') { say(); return; }
     const name = button.getAttribute('data-preset');
     if (name === null) return;
     MIND = name === 'reset'
@@ -2239,6 +2452,7 @@ function resolveTaps() {
   if (picked >= 0) {
     diveNode = picked;
     flashNote(describe(picked));
+    if (MIND.speak && !speaking) say();
     // Touching a star is the act that opens the workshop: inside the app it tells the
     // frame, so the composer appears where it already sits rather than from nothing.
     try {
@@ -2437,7 +2651,16 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
   /* Travelling in, the page's own voice fades: the deeper you are, the less the
      interface says. Lost is a feature here, not a failure. */
   .deep .overlay, .deep .hint, .deep .shapes, .deep .sim-ui, .deep .counter,
-  .deep .settled, .deep .sim, .deep .node-name { opacity: .12; transition: opacity 1.2s ease }
+  .deep .settled, .deep .sim, .deep .voice { position: fixed; left: 50%; bottom: 12.5vh; transform: translateX(-50%);
+  max-width: min(30rem, 84vw); margin: 0; text-align: center; pointer-events: none;
+  font: italic 400 clamp(14px, 2.1vw, 19px)/1.5 Georgia, 'Times New Roman', serif;
+  letter-spacing: .015em; color: rgba(247, 234, 210, 0); text-shadow: 0 0 22px rgba(255, 198, 120, .25);
+  transition: color 1.4s ease, opacity 1.4s ease; opacity: 0; z-index: 3; }
+.voice.speaking { color: rgba(247, 234, 210, .82); opacity: 1; transition: color .35s ease, opacity .35s ease; }
+body.screensaver .voice { bottom: 8.5vh; }
+body.screensaver .voice.speaking { opacity: .9; }
+
+.node-name { opacity: .12; transition: opacity 1.2s ease }
   /* Screensaver: the mind is the whole screen and it narrates itself quietly. */
   body.screensaver .overlay, body.screensaver .hint, body.screensaver .shapes,
   body.screensaver .sim-ui, body.screensaver .counter, body.screensaver .settled,
@@ -2474,6 +2697,7 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
   <a class="back" href="/access">← the door</a>
 </div>
 <p class="caption" id="caption"></p>
+<p class="voice" id="mindVoice" aria-live="polite"></p>
 <p class="node-name" id="nodeName"></p>
 <p class="still" id="still"></p>
 <p class="counter" id="counter"></p>
