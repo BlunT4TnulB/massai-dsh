@@ -2188,6 +2188,16 @@ function flashNote(text) {
 function resolveTaps() {
   const n = tapCount;
   tapCount = 0;
+  if (n >= 5) {
+    // Five taps: the settings panel, wherever you are in the mind — including out of
+    // the screensaver, because that is exactly when you want to change something.
+    if (screensaver) {
+      screensaver = false;
+      document.body.classList.remove('screensaver');
+    }
+    togglePanel();
+    return;
+  }
   if (n >= 3) {
     // Triple tap: the perfect fullscreen — no chrome, no bars, just the mind.
     document.body.classList.toggle('screensaver');
@@ -2471,7 +2481,7 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>two taps</b> stirs it · <b>three taps</b> is the whole screen · <b>three fingers opening</b> lets you in</p>
+<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>two taps</b> stirs it · <b>three taps</b> is the whole screen · <b>five taps</b> opens the dials · <b>three fingers opening</b> lets you in</p>
 <!-- the simulator lives on the glass now: double tap stirs it, triple tap calms it -->
   <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
