@@ -234,6 +234,48 @@ function stageFits(): boolean {
  * @param props - see {@link HeroShellProps}.
  * @returns the centered hero element tree.
  */
+
+/** One starter build, as the shelf shows it. */
+interface StarterCard {
+  readonly slug: string
+  readonly name: string
+  readonly shape: string
+  readonly what: string
+}
+
+/**
+ * The starter shelf: a few finished builds, openable, published on purpose.
+ *
+ * It answers "what does this make?" without a prompt and without a token, and it is the
+ * only list on this screen — the owner's own projects live behind the door, not here.
+ */
+function StarterShelf({ t }: { t: HeroTranslate }): ReactNode {
+  const [cards, setCards] = useState<readonly StarterCard[]>([])
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const response = await fetch('/api/starters', { headers: { accept: 'application/json' } })
+        if (!response.ok) return
+        const body = await response.json() as { starters?: StarterCard[] }
+        if (!cancelled && Array.isArray(body.starters)) setCards(body.starters)
+      } catch { /* a shelf that cannot load is simply absent */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+  if (cards.length === 0) return null
+  return (
+    <nav className={css.starterShelf} aria-label={t('hero.startersLabel')}>
+      <span className={css.starterLead}>{t('hero.startersLead')}</span>
+      {cards.map(card => (
+        <a key={card.slug} className={css.starterCard} href={`/starters/${card.slug}`} target="_blank" rel="noreferrer" title={card.what}>
+          {card.name}
+        </a>
+      ))}
+    </nav>
+  )
+}
+
 export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
   const [wide, setWide] = useState(() => (typeof window === 'undefined' ? false : stageFits()))
   useEffect(() => {
@@ -252,6 +294,7 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
         {wide
           ? (
             <div className={css.immersion}>
+              <StarterShelf t={t} />
               <span className={css.immersionHint}>{t('hero.diveToBegin')}</span>
             </div>
           )

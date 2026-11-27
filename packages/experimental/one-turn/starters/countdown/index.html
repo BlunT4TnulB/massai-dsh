@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Countdown</title>
+<style>
+body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0a0a0c;color:#EDE7DA;font:16px/1.5 system-ui,sans-serif;padding:16px;background-image:radial-gradient(50rem 30rem at 50% -10%,rgba(193,68,14,.18),transparent 70%)}
+main{text-align:center;width:min(28rem,100%)}
+h1{font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:#9b8f78;margin:0}
+.days{font-size:5.5rem;font-weight:700;line-height:1.05;margin:.4rem 0 0;color:#ffd9a8;font-variant-numeric:tabular-nums}
+.what{color:#c8bda9;margin:.2rem 0 1.4rem}
+input{background:#100e0c;border:1px solid #332c24;border-radius:9px;color:#EDE7DA;padding:.55rem .7rem;font:inherit;width:100%;box-sizing:border-box}
+label{display:block;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#8a7f6c;margin:1rem 0 .3rem;text-align:left}
+</style></head><body><main>
+<h1>Days until</h1>
+<p class="days" id="days">—</p>
+<p class="what" id="what">Set a date below.</p>
+<label for="when">The date</label><input id="when" type="date">
+<label for="name">What is it</label><input id="name" placeholder="a birthday, a trip, the end of winter">
+</main>
+<script>
+const $ = (id) => document.getElementById(id)
+const paint = () => {
+  const saved = JSON.parse(localStorage.getItem('countdown') ?? '{}')
+  $('when').value = saved.when ?? ''
+  $('name').value = saved.name ?? ''
+  if (!saved.when) { $('days').textContent = '—'; $('what').textContent = 'Set a date below.'; return }
+  const target = new Date(saved.when + 'T00:00:00')
+  const days = Math.ceil((target - new Date()) / 86400000)
+  $('days').textContent = String(days)
+  $('what').textContent = (days === 0 ? 'that is today · ' : days < 0 ? 'already passed · ' : '') + (saved.name || 'the day')
+}
+$('when').addEventListener('change', () => {
+  localStorage.setItem('countdown', JSON.stringify({ when: $('when').value, name: $('name').value })); paint()
+})
+$('name').addEventListener('input', () => {
+  localStorage.setItem('countdown', JSON.stringify({ when: $('when').value, name: $('name').value })); paint()
+})
+paint()
+</script></body></html>

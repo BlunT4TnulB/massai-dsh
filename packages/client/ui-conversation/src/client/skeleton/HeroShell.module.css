@@ -399,3 +399,37 @@
     will-change: auto;
   }
 }
+
+/* The starter shelf: a single quiet line of finished builds, above the hint. It is the
+   only list on this screen — the owner's projects stay behind the door. */
+.starterShelf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px 12px;
+  max-width: min(34rem, 92vw);
+  margin: 0 auto 14px;
+  font-size: .76rem;
+  letter-spacing: .04em;
+}
+
+.starterLead {
+  color: color-mix(in srgb, var(--dsh-fg, #f2f2f4) 46%, transparent);
+  text-transform: lowercase;
+}
+
+.starterCard {
+  color: color-mix(in srgb, var(--dsh-fg, #f2f2f4) 76%, transparent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--dsh-fg, #f2f2f4) 22%, transparent);
+  padding-bottom: 1px;
+  transition: color .15s ease, border-color .15s ease;
+}
+
+.starterCard:hover,
+.starterCard:focus-visible {
+  color: #ffd9a8;
+  border-color: #c1440e;
+  outline: none;
+}

@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Packing list</title>
+<style>
+body{margin:0;min-height:100dvh;background:#0b0a09;color:#EDE7DA;font:16px/1.5 system-ui,sans-serif;padding:18px}
+main{width:min(32rem,100%);margin:0 auto}
+h1{font-size:1.15rem;margin:0 0 .2rem}p.h{color:#9a8f7c;font-size:.82rem;margin:0 0 1rem}
+.add{display:flex;gap:.5rem}
+input{flex:1;background:#100e0c;border:1px solid #332c24;border-radius:9px;color:#EDE7DA;padding:.55rem .7rem;font:inherit}
+button{border:1px solid #3a3128;background:#1a1714;color:#EDE7DA;border-radius:9px;padding:.55rem .8rem;font:inherit;cursor:pointer}
+button:hover{border-color:#c1440e}
+h2{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#8a7f6c;margin:1.2rem 0 .4rem}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:.6rem;border-bottom:1px solid #201c17;padding:.5rem 0}
+li.done span{color:#6f6658;text-decoration:line-through}
+li span{flex:1}
+li button{padding:.2rem .5rem;font-size:.8rem}
+.empty{color:#7d7364;font-size:.85rem}
+</style></head><body><main>
+<h1>Packing list</h1><p class="h">Ticks survive a reload. Grouped, so nothing gets forgotten at the bottom of a bag.</p>
+<div class="add"><input id="item" placeholder="add something (jumper, passport, charger)"><button id="add">Add</button></div>
+<div id="lists"></div>
+</main>
+<script>
+const groups = { Clothing: [], Documents: [], Tech: [], Other: [] }
+const keys = { jumper: 'Clothing', socks: 'Clothing', shirt: 'Clothing', trousers: 'Clothing',
+  passport: 'Documents', ticket: 'Documents', insurance: 'Documents', visa: 'Documents',
+  charger: 'Tech', adapter: 'Tech', laptop: 'Tech', phone: 'Tech', camera: 'Tech' }
+const guess = (text) => {
+  const lower = text.toLowerCase()
+  for (const [word, group] of Object.entries(keys)) if (lower.includes(word)) return group
+  return 'Other'
+}
+let state = { items: [] }
+const save = () => localStorage.setItem('packing-list', JSON.stringify(state))
+const render = () => {
+  const host = document.getElementById('lists')
+  host.innerHTML = ''
+  const byGroup = Object.keys(groups).map((g) => [g, state.items.filter((i) => i.group === g)])
+  for (const [group, items] of byGroup) {
+    if (items.length === 0) continue
+    const section = document.createElement('section')
+    section.innerHTML = '<h2>' + group + '</h2>'
+    const ul = document.createElement('ul')
+    for (const item of items) {
+      const li = document.createElement('li')
+      if (item.done) li.className = 'done'
+      li.innerHTML = '<span>' + item.text.replace(/[<>&]/g, '') + '</span>'
+      const tick = document.createElement('button')
+      tick.textContent = item.done ? 'undo' : 'tick'
+      tick.addEventListener('click', () => { item.done = !item.done; save(); render() })
+      const remove = document.createElement('button')
+      remove.textContent = '×'
+      remove.addEventListener('click', () => { state.items = state.items.filter((i) => i !== item); save(); render() })
+      li.append(tick, remove)
+      ul.append(li)
+    }
+    section.append(ul)
+    host.append(section)
+  }
+  if (state.items.length === 0) host.innerHTML = '<p class="empty">Nothing yet. Add the first thing.</p>'
+}
+try { const saved = JSON.parse(localStorage.getItem('packing-list') ?? 'null'); if (saved?.items) state = saved } catch { /* first visit */ }
+document.getElementById('add').addEventListener('click', () => {
+  const input = document.getElementById('item')
+  const text = input.value.trim()
+  if (text === '') return
+  state.items.push({ text, group: guess(text), done: false })
+  input.value = ''
+  save(); render()
+})
+document.getElementById('item').addEventListener('keydown', (event) => { if (event.key === 'Enter') document.getElementById('add').click() })
+render()
+</script></body></html>

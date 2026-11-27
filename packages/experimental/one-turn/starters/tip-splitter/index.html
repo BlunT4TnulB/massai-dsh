@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tip splitter</title>
+<style>
+body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0c0b0a;color:#EDE7DA;font:16px/1.5 system-ui,sans-serif;padding:16px}
+main{width:min(30rem,100%);border:1px solid #2a241d;border-radius:16px;padding:1.1rem;background:#141210}
+h1{font-size:1.1rem;margin:0 0 .2rem}p.h{color:#9a8f7c;font-size:.82rem;margin:0 0 1rem}
+label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#9b8f78;margin:.7rem 0 .3rem}
+input{width:100%;box-sizing:border-box;background:#0e0c0a;border:1px solid #332c24;border-radius:9px;color:#EDE7DA;padding:.6rem;font:inherit}
+.people{display:flex;gap:.5rem;align-items:center;margin-top:.4rem}
+button{border:1px solid #3a3128;background:#1a1714;color:#EDE7DA;border-radius:9px;padding:.45rem .8rem;font:inherit;cursor:pointer}
+button:hover{border-color:#c1440e}
+.out{margin-top:1rem;border-top:1px dashed #2a241d;padding-top:.8rem}
+.row{display:flex;justify-content:space-between;padding:.25rem 0;font-variant-numeric:tabular-nums}
+.total{color:#ffd9a8;font-weight:600;border-top:1px solid #2a241d;margin-top:.4rem;padding-top:.5rem}
+</style></head><body><main>
+<h1>Tip splitter</h1><p class="h">An uneven split: each person pays for their own share, then their share of the tip.</p>
+<label for="bill">Bill</label><input id="bill" type="number" min="0" step="0.01" value="120">
+<label for="tip">Tip %</label><input id="tip" type="number" min="0" step="1" value="18">
+<label>People</label>
+<div class="people"><button id="minus">−</button><strong id="count">3</strong><button id="plus">+</button></div>
+<div class="out" id="out"></div>
+</main>
+<script>
+const state = { people: 3 }
+const $ = (id) => document.getElementById(id)
+const money = (n) => '$' + n.toFixed(2)
+const render = () => {
+  const bill = Number($('bill').value) || 0
+  const tip = (Number($('tip').value) || 0) / 100
+  const each = bill / state.people
+  const rows = Array.from({ length: state.people }, (_, i) => {
+    const share = each * (1 + tip)
+    return '<div class="row"><span>Person ' + (i + 1) + '</span><span>' + money(share) + '</span></div>'
+  }).join('')
+  $('out').innerHTML = rows + '<div class="row total"><span>Total paid</span><span>' + money(bill * (1 + tip)) + '</span></div>'
+  $('count').textContent = String(state.people)
+  localStorage.setItem('tip-splitter', JSON.stringify({ bill: $('bill').value, tip: $('tip').value, people: state.people }))
+}
+$('bill').addEventListener('input', render)
+$('tip').addEventListener('input', render)
+$('plus').addEventListener('click', () => { state.people = Math.min(20, state.people + 1); render() })
+$('minus').addEventListener('click', () => { state.people = Math.max(1, state.people - 1); render() })
+try {
+  const saved = JSON.parse(localStorage.getItem('tip-splitter') ?? 'null')
+  if (saved !== null) { state.people = saved.people ?? 3; $('bill').value = saved.bill ?? 120; $('tip').value = saved.tip ?? 18 }
+} catch { /* first visit */ }
+render()
+</script></body></html>

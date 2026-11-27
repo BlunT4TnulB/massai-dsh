@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice</title>
+<style>
+body{margin:0;background:#f4f1ea;color:#1d1b18;font:15px/1.5 system-ui,sans-serif;padding:20px}
+main{width:min(40rem,100%);margin:0 auto;background:#fffdf8;border:1px solid #e0d9cb;padding:1.4rem}
+h1{font-size:1.3rem;margin:0 0 .2rem;letter-spacing:-.01em}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:1rem 0}
+label{display:block;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#6f6656;margin-bottom:.2rem}
+input{width:100%;box-sizing:border-box;border:1px solid #d9d0bf;background:#fff;padding:.45rem .55rem;font:inherit}
+table{width:100%;border-collapse:collapse;margin-top:1rem}
+th,td{text-align:left;padding:.4rem .3rem;border-bottom:1px solid #e6dfd2;font-variant-numeric:tabular-nums}
+th{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#6f6656}
+td input{border:0;border-bottom:1px dotted #cfc6b4;background:transparent;padding:.2rem}
+.totals{margin-top:1rem;margin-left:auto;width:min(18rem,100%)}
+.tr{display:flex;justify-content:space-between;padding:.25rem 0;font-variant-numeric:tabular-nums}
+.tr.total{border-top:1px solid #1d1b18;margin-top:.3rem;padding-top:.4rem;font-weight:700}
+button{border:1px solid #c9c0ae;background:#fff;padding:.4rem .7rem;font:inherit;cursor:pointer}
+@media print{button{display:none}body{padding:0}main{border:0}}
+</style></head><body><main>
+<h1>Invoice</h1>
+<div class="meta">
+  <div><label for="from">From</label><input id="from" placeholder="[your business]"></div>
+  <div><label for="to">To</label><input id="to" placeholder="[client]"></div>
+  <div><label for="number">Invoice no.</label><input id="number" value="001"></div>
+  <div><label for="date">Date</label><input id="date" type="date"></div>
+</div>
+<table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody id="rows"></tbody></table>
+<div class="totals">
+  <div class="tr"><span>Subtotal</span><span id="sub">$0.00</span></div>
+  <div class="tr"><span>Tax %</span><span><input id="tax" type="number" min="0" step="1" value="5" style="width:4.5rem;text-align:right"></span></div>
+  <div class="tr total"><span>Total</span><span id="total">$0.00</span></div>
+</div>
+<p><button id="add">Add line</button> <button onclick="window.print()">Print</button></p>
+</main>
+<script>
+const rows = document.getElementById('rows')
+const money = (n) => '$' + n.toFixed(2)
+const addRow = (item = { what: '', qty: 1, rate: 0 }) => {
+  const tr = document.createElement('tr')
+  tr.innerHTML = '<td><input value="' + item.what + '" placeholder="what you did"></td>'
+    + '<td><input type="number" min="0" step="1" value="' + item.qty + '" style="width:4rem"></td>'
+    + '<td><input type="number" min="0" step="0.01" value="' + item.rate + '" style="width:5.5rem"></td>'
+    + '<td>' + money(item.qty * item.rate) + '</td>'
+  rows.append(tr)
+  for (const input of tr.querySelectorAll('input')) input.addEventListener('input', recalc)
+  recalc()
+}
+const recalc = () => {
+  let subtotal = 0
+  for (const tr of rows.querySelectorAll('tr')) {
+    const [what, qty, rate] = tr.querySelectorAll('input')
+    const amount = (Number(qty.value) || 0) * (Number(rate.value) || 0)
+    tr.lastElementChild.textContent = money(amount)
+    subtotal += amount
+    void what
+  }
+  const taxRate = (Number(document.getElementById('tax').value) || 0) / 100
+  document.getElementById('sub').textContent = money(subtotal)
+  document.getElementById('total').textContent = money(subtotal * (1 + taxRate))
+}
+document.getElementById('add').addEventListener('click', () => addRow())
+document.getElementById('tax').addEventListener('input', recalc)
+document.getElementById('date').value = new Date().toISOString().slice(0, 10)
+addRow({ what: 'Labour', qty: 1, rate: 90 })
+addRow({ what: 'Materials', qty: 1, rate: 40 })
+</script></body></html>

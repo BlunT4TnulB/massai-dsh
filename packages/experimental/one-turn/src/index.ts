@@ -30,6 +30,7 @@ import {
 } from './projects.ts'
 import { projectsPageHtml } from './projects-page.ts'
 import { expandPageHtml } from './expand-page.ts'
+import { STARTERS } from './starters.ts'
 import { hydrateVoice, readVoice, writeVoice, type Voice } from './voice.ts'
 import { nextStep } from './suggest.ts'
 import { normalise, refusalText } from './normalise.ts'
@@ -183,6 +184,53 @@ export function apply(ctx: Context): void {
     }
   })()
 
+
+
+  // The starter shelf: a handful of finished builds, published on purpose. They are the
+  // honest answer to "what does this make?" — openable, small, and free to look at.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/starters', auth: 'anonymous',
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') { respond(res, 405, { error: 'method not allowed' }); return }
+      respond(res, 200, {
+        starters: STARTERS.map(starter => ({
+          slug: starter.slug, name: starter.name, shape: starter.shape, what: starter.what,
+        })),
+      })
+    },
+  })
+
+  // Serve a starter exactly as built: the files are embedded, so this cannot fall
+  // out of step with the manifest.
+  ctx.webServer.register({
+    kind: 'prefix', path: '/starters/', auth: 'anonymous',
+    handler: (req, res) => {
+      const url = new URL(req.url ?? '/', 'https://placeholder')
+      const rest = url.pathname.replace(/^\/starters\//, '')
+      const [slug = '', ...fileParts] = rest.split('/').filter(part => part !== '')
+      const starter = STARTERS.find(candidate => candidate.slug === slug)
+      if (starter === undefined) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+        res.end('no such starter')
+        return
+      }
+      const wanted = fileParts.length === 0 ? starter.entry : fileParts.join('/')
+      const content = starter.files[wanted]
+      if (content === undefined) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+        res.end('no such file in this starter')
+        return
+      }
+      const type = wanted.endsWith('.html') ? 'text/html; charset=utf-8'
+        : wanted.endsWith('.json') ? 'application/json; charset=utf-8'
+        : wanted.endsWith('.css') ? 'text/css; charset=utf-8'
+        : wanted.endsWith('.js') ? 'text/javascript; charset=utf-8'
+        : 'text/plain; charset=utf-8'
+      const body = Buffer.from(content)
+      res.writeHead(200, { 'content-type': type, 'content-length': String(body.byteLength), 'cache-control': 'public, max-age=300' })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
 
   // The Idea Expander: the journey that produces a sealed, one-turn-ready prompt.
   // Free to walk; nothing is spent until the person decides to build.
