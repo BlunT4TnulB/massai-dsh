@@ -1,0 +1,831 @@
+{
+  "at": "2026-11-27T03:34:24.100Z",
+  "base": "https://massai-itu.ca",
+  "runs": 1,
+  "passRates": [
+    1
+  ],
+  "meanRate": 1,
+  "spread": 0,
+  "tasks": 20,
+  "accepted": 19,
+  "repaired": 0,
+  "repairedAccepted": 0,
+  "repairAttempts": 0,
+  "graded": 19,
+  "oneTurnRate": 1,
+  "refusalsCorrect": 1,
+  "spentUsd": 0.0358,
+  "costPerAccepted": 0.0019,
+  "failuresByCheck": {},
+  "results": [
+    {
+      "task": "site-lawn-care",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.00158872,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "5175 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-c86cce0c-8f91-4b3c-bd7e-7e6310f485fc",
+      "pass": 1
+    },
+    {
+      "task": "site-wedding",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.00146188,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4371 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-8726bf21-85b6-410b-a46f-b1a9cb40a184",
+      "pass": 1
+    },
+    {
+      "task": "site-podcast",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.0017513999999999997,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "6216 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-64bf56ef-8d65-420c-908a-4cf2494b3c5c",
+      "pass": 1
+    },
+    {
+      "task": "site-dogwalking",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.00137998,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4065 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-c71d2c91-eac7-48c1-a178-ec3b06db8b5e",
+      "pass": 1
+    },
+    {
+      "task": "app-tip-calculator",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.0018957400000000001,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "7298 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-0426234b-c82e-41f6-973d-11a3b81c6623",
+      "pass": 1
+    },
+    {
+      "task": "app-countdown",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.00183722,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "6901 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-f4bca0e1-0e3f-40f5-920a-1e7e87877f0f",
+      "pass": 1
+    },
+    {
+      "task": "app-todo-persist",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.0018289600000000001,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "6421 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-54b476e7-4811-465f-baee-9d125b52afda",
+      "pass": 1
+    },
+    {
+      "task": "app-kanban",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.00230454,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "10680 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-762564f0-ca8b-42cf-8571-9b699af70eda",
+      "pass": 1
+    },
+    {
+      "task": "script-photo-rename",
+      "shape": "script",
+      "accepted": true,
+      "costUsd": 0.00170212,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "main.py present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "7862 bytes, ceiling 120000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-90ff49f6-9964-4bc5-aed1-c9dfc7fbe035",
+      "pass": 1
+    },
+    {
+      "task": "script-csv-clean",
+      "shape": "script",
+      "accepted": true,
+      "costUsd": 0.00153482,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "main.py present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "6004 bytes, ceiling 120000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-c9d3b644-9a3c-423d-ad26-33c5c7638b3e",
+      "pass": 1
+    },
+    {
+      "task": "script-duplicate-finder",
+      "shape": "script",
+      "accepted": true,
+      "costUsd": 0.0015405599999999998,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "main.py present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "6625 bytes, ceiling 120000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-69bd098d-481a-404d-9c91-e51e9b0a0f46",
+      "pass": 1
+    },
+    {
+      "task": "script-folder-backup",
+      "shape": "script",
+      "accepted": true,
+      "costUsd": 0.0012731600000000002,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "main.py present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "3781 bytes, ceiling 120000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-4819fd99-e13c-4caf-bf8d-4178b4ab84c6",
+      "pass": 1
+    },
+    {
+      "task": "data-revenue-dashboard",
+      "shape": "data-view",
+      "accepted": true,
+      "costUsd": 0.00224462,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "2 file(s), ceiling 4"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "11925 bytes, ceiling 400000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-364ab31c-9db4-4688-8843-75578b95f488",
+      "pass": 1
+    },
+    {
+      "task": "data-sortable-table",
+      "shape": "data-view",
+      "accepted": true,
+      "costUsd": 0.0023357599999999997,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "2 file(s), ceiling 4"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "10557 bytes, ceiling 400000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-3b2a6a3b-f576-4a16-a131-2a5ceca32c12",
+      "pass": 1
+    },
+    {
+      "task": "data-heatmap",
+      "shape": "data-view",
+      "accepted": true,
+      "costUsd": 0.005470640000000001,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 4"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "20437 bytes, ceiling 400000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-77159135-d8a5-4ce7-bf56-cb4a0b8db3fc",
+      "pass": 1
+    },
+    {
+      "task": "doc-resume",
+      "shape": "document",
+      "accepted": true,
+      "costUsd": 0.00074522,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "document.md present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "1239 bytes, ceiling 80000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-2ece56f6-0333-44a9-8ad7-7766458427aa",
+      "pass": 1
+    },
+    {
+      "task": "doc-invoice",
+      "shape": "document",
+      "accepted": true,
+      "costUsd": 0.0020536599999999997,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "document.md present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "2 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "8482 bytes, ceiling 80000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-2c137646-83f5-41a1-a653-b4cc221be42c",
+      "pass": 1
+    },
+    {
+      "task": "doc-readme",
+      "shape": "document",
+      "accepted": true,
+      "costUsd": 0.00161154,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "document.md present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "2 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "5463 bytes, ceiling 80000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-d5598e39-e9ed-4042-8900-395ae8feb90f",
+      "pass": 1
+    },
+    {
+      "task": "doc-fiber-tubing",
+      "shape": "document",
+      "accepted": true,
+      "costUsd": 0.00123004,
+      "repairs": 0,
+      "repairAttempted": false,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "document.md present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 3"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4641 bytes, ceiling 80000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-9dede105-7561-4ce8-a263-9a790a70e6e2",
+      "pass": 1
+    },
+    {
+      "task": "adv-uber",
+      "refused": true,
+      "status": 422,
+      "accepted": false,
+      "costUsd": 0,
+      "checks": [],
+      "detail": "\"an app like Uber\" is a company, not a one-turn artifact",
+      "pass": 1
+    }
+  ]
+}

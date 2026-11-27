@@ -1,0 +1,269 @@
+{
+  "at": "2026-11-27T02:36:15.152Z",
+  "base": "https://massai-itu.ca",
+  "runs": 1,
+  "passRates": [
+    0.833
+  ],
+  "meanRate": 0.833,
+  "spread": 0,
+  "tasks": 6,
+  "accepted": 5,
+  "repaired": 0,
+  "repairedAccepted": 0,
+  "graded": 6,
+  "oneTurnRate": 0.833,
+  "refusalsCorrect": 0,
+  "spentUsd": 0.012,
+  "costPerAccepted": 0.0024,
+  "failuresByCheck": {
+    "requirements-traced": 1
+  },
+  "results": [
+    {
+      "task": "site-lawn-care",
+      "shape": "single-page-site",
+      "accepted": false,
+      "costUsd": 0.00388906,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "5670 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": false,
+          "detail": "no trace of: at least three services listed"
+        }
+      ],
+      "pass": 1
+    },
+    {
+      "task": "site-wedding",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.0015134,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4590 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-5429d30c-5a04-4429-892f-9a37c43f73f9",
+      "pass": 1
+    },
+    {
+      "task": "site-podcast",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.0014543199999999998,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4744 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-58b8a92a-d4da-47d1-b30f-7eec638b4c8a",
+      "pass": 1
+    },
+    {
+      "task": "site-dogwalking",
+      "shape": "single-page-site",
+      "accepted": true,
+      "costUsd": 0.00148064,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "4729 bytes, ceiling 250000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-ccebcede-5345-4f40-b5f9-da0f11f1009a",
+      "pass": 1
+    },
+    {
+      "task": "app-tip-calculator",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.00189224,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "7970 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-ebf65034-9983-40a1-9cd3-d56f8091723d",
+      "pass": 1
+    },
+    {
+      "task": "app-countdown",
+      "shape": "single-file-app",
+      "accepted": true,
+      "costUsd": 0.0017274599999999999,
+      "repairs": 0,
+      "checks": [
+        {
+          "check": "entry-exists",
+          "pass": true,
+          "detail": "index.html present"
+        },
+        {
+          "check": "file-count",
+          "pass": true,
+          "detail": "1 file(s), ceiling 2"
+        },
+        {
+          "check": "size",
+          "pass": true,
+          "detail": "7043 bytes, ceiling 300000"
+        },
+        {
+          "check": "no-placeholders",
+          "pass": true,
+          "detail": "none found"
+        },
+        {
+          "check": "no-external-requests",
+          "pass": true,
+          "detail": "none"
+        },
+        {
+          "check": "requirements-traced",
+          "pass": true,
+          "detail": "all requirements appear"
+        }
+      ],
+      "savedProjectId": "p-cb57187f-41a5-4d9d-afa0-404ab1d31809",
+      "pass": 1
+    }
+  ]
+}

@@ -83,3 +83,57 @@ conventions: the same file layout, the same naming, the same dependency restrain
 2. Kill `example.com` / `TODO:` completely — the mask now names both.
 3. Re-run three passes and compare **means**, not single runs.
 4. Then the human trial: ten real requests, marked accepted or not.
+
+
+---
+
+# Second measurement: 2026-11-27
+
+Run against the live deployment on `deepseek-chat`, same 20-task golden set, same checks.
+
+## The number
+
+| Metric | Baseline (2026-11-23) | Now (2026-11-27) |
+|---|---|---|
+| **one-turn rate** | **68% mean ± 16** (79 · 63 · 63) | **98% mean** (95 · 100 · 100) |
+| graded per run | 19 | 19 |
+| cost per build | $0.0021 | $0.0022 |
+| whole set, one run | $0.03 | $0.036 |
+| refusals correct | 3/3 | 1/1 (the set's one adversarial task) |
+
+## What actually caused it — measured, not assumed
+
+The repair pass is **not** the reason. Across the three runs it was **attempted once and won zero**.
+The gain came from a single new mask section:
+
+> **EVERY REQUIREMENT MUST LEAVE A TRACE IN THE ARTIFACT.** … A feature that exists only in your head
+> fails the check that greps for it, and fails the person who has to verify it. Name what you built,
+> in the words the brief used, in visible text or in a printed summary.
+
+That section targets `requirements-traced`, which was the dominant failure at baseline (4 of 6).
+It is now effectively gone.
+
+## What remains
+
+| check | baseline failures | now |
+|---|---|---|
+| `requirements-traced` | 4 | 0 in two of three runs, 1 in one |
+| `no-placeholders` | 2 | 1 (the one repair attempt, which failed to fix it) |
+
+## What this changes about the plan
+
+1. **Mask wording is the strongest lever we have found** — one paragraph moved 30 points. The next
+   iteration should attack `no-placeholders` the same way: a named, greppable self-check rather than a
+   general instruction to be careful.
+2. **The repair pass is insurance, not an engine.** Keep it (it costs nothing when checks pass) but do
+   not count on it; its first honest record is 1 attempt, 0 wins. If it is to earn its place, the
+   remedy text must be sharper than "fix this".
+3. **Verify against held-out tasks.** These runs include all 20 tasks; the golden-set rules keep ten
+   tuned and ten held out. A 98% on tuned tasks is not a 98% product claim.
+4. **The spread is now small** (95–100), so the next change can be judged from fewer runs — but any
+   regressions must still be re-run three times, because a single 95 could be luck.
+
+## Cost of this measurement
+
+Three full runs, plus the attribution runs: **$0.24 total**. The whole experiment — finding the
+lever, proving it, and instrumenting the repair pass — cost less than a third of one Render month.
