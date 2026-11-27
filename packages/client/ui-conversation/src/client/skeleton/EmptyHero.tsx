@@ -313,6 +313,8 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
                 </span>
               </div>
               <div className={css.body} />
+              {/* The narrow layout is what a phone gets; the shelf belongs there too. */}
+              <StarterShelf />
             </div>
           )}
       </div>
