@@ -253,7 +253,18 @@ export function ConversationContent(props: ConversationContentProps) {
   useEffect(() => {
     const receive = (event: MessageEvent): void => {
       const data = event.data as { type?: unknown } | null
-      if (data !== null && typeof data === 'object' && data.type === 'massai:enter') {
+      if (data === null || typeof data !== 'object') return
+      // A touched star is the invitation: the chat opens because they reached into the
+      // mind, not because the page loaded.
+      if ((data as { type?: unknown }).type === 'massai:node') {
+        enter()
+        if (typeof (data as { thought?: unknown }).thought === 'string') {
+          const thought = (data as { thought: string }).thought
+          setEnteredThought(thought === '' ? undefined : thought)
+        }
+        return
+      }
+      if ((data as { type?: unknown }).type === 'massai:enter') {
         enter()
         if (typeof (data as { thought?: unknown }).thought === 'string') {
           setEnteredThought((data as { thought: string }).thought)
@@ -280,25 +291,9 @@ export function ConversationContent(props: ConversationContentProps) {
     return () => { delete document.body.dataset['massaiPhase'] }
   }, [phase])
 
-  // Creating a workspace is an act of intent: the drawer offered it before the door was
-  // found, so making one now opens the workshop rather than leaving it shut.
-  const workspaceCount = workspaces.items.length
-  const firstWorkspaceCount = useRef<number | null>(null)
-  useEffect(() => {
-    if (workspaces.phase !== 'ready') return
-    if (firstWorkspaceCount.current === null) {
-      firstWorkspaceCount.current = workspaceCount
-      // Existing workspaces mean this is not a first encounter.
-      if (workspaceCount > 0) enter()
-      return
-    }
-    if (workspaceCount > firstWorkspaceCount.current) enter()
-  }, [workspaceCount, workspaces.phase, enter])
-
-  // Arriving at a session means the door is already behind them.
-  useEffect(() => {
-    if (sessionId !== undefined) enter()
-  }, [sessionId, enter])
+  // Opening the chat is earned by touching the mind (a `massai:node` message), by the
+  // keyboard, or by the quiet way-in line. A seeded workspace or a URL alone is not a
+  // touch, so it no longer opens the composer before the person reaches in.
 
   const wayIn = hero && !entered && nudged ? (
     <button type="button" className={css.wayIn} onClick={enter}>

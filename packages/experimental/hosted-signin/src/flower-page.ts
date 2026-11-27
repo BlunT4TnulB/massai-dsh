@@ -2229,6 +2229,13 @@ function resolveTaps() {
   if (picked >= 0) {
     diveNode = picked;
     flashNote(describe(picked));
+    // Touching a star is the act that opens the workshop: inside the app it tells the
+    // frame, so the composer appears where it already sits rather than from nothing.
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'massai:node', thought: describe(picked) }, '*');
+      }
+    } catch (error) { void error; }
     return;
   }
   if (diveNode >= 0) {

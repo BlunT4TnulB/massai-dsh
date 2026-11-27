@@ -640,14 +640,16 @@
    NOT absolute+transform: a transform would make this box the containing
    block for position:fixed descendants (pickers/modals), shrinking them. */
 .composerHero {
-  align-self: center;
+  align-self: stretch;
   /* figma 75:8208 drew 12 between all three rows; the workspace row now sits
      8 above the card (its margin-top restores 12 under the hero chrome). */
   gap: 8px;
   /* Foot inside the centered box floats the stack a bit above true center. */
-  padding-bottom: 32px;
-  /* Card cap + both clearances: the hero input card lands at exactly the same
-     width as the docked composer at every viewport. */
+  /* The stack rests on the floor of the column, like the docked composer. */
+  margin-top: auto;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  /* Card cap + both clearances: the hero input card keeps the same width as the
+     docked composer at every viewport. */
   width: min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);
   z-index: 1;
 }
@@ -678,11 +680,12 @@
   display: none;
 }
 
-/* Hero: the composer sits inside the session scroll body; center there so
-   the tree seat matches active (sticky footer) without a Root remount. */
+/* Hero: the composer lives where it will live for the rest of the session — at the
+   bottom. Centring it was a nice idea that made the first click move the whole page;
+   now opening the chat reveals it in place instead of teleporting it. */
 .root[data-phase='hero'] .scrollBody,
 .embeddedBody[data-content-phase='hero'] .scrollBody {
-  justify-content: center;
+  justify-content: flex-end;
   overflow-y: auto;
 }
 
