@@ -621,6 +621,9 @@ function stepBreath(now) {
   const slow = Math.sin(now * 0.00078) * 0.62 + Math.sin(now * 0.00037 + 1.7) * 0.38;
   const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.02;
   breathScale = 1 + MIND.breath * (0.045 * slow) + breathPulse + speakingPart;
+  // A readout, so the breath can be observed rather than argued about: any test can
+  // sample this attribute over time and see the body swell and settle.
+  document.documentElement.dataset.breath = breathScale.toFixed(4);
 }
 
 function project(x, y, z) {
