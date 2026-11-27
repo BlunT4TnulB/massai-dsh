@@ -297,6 +297,8 @@ let breath = 0;
 let life = 1;
 let lookX = 0;
 let lookY = 0;
+/** When the pointer last moved: attention decays if you stop moving. */
+let lastPointerAt = 0;
 let trail = [];
 let trailTotal = 0;
 let agents = [];
@@ -418,6 +420,8 @@ const MIND_DEFAULTS = {
   nebula: 0.6,       // depth of the coloured clouds behind everything
   breath: 1,         // how deeply the whole mind breathes (0 = perfectly still)
   breathe: true,     // breathe at all
+  meteors: true,     // a rare streak across the dark
+  vignette: true,    // darken the edges so the middle reads as deep
   dust: 0.55,        // the fine star dust that gives parallax to the dark
   wash: true,        // the slow hour-of-day tint
   // the mind's voice
@@ -758,6 +762,75 @@ function drawDust(now) {
   ctx.restore();
 }
 
+// --- shooting stars --------------------------------------------------------
+// Rare on purpose: two or three a minute at most, so a streak still means something.
+let meteor = null;
+let nextMeteorAt = 0;
+
+/** One streak, from somewhere in the upper dark to somewhere lower. */
+function spawnMeteor(now) {
+  const w = canvas.clientWidth || innerWidth;
+  const h = canvas.clientHeight || innerHeight;
+  const fromLeft = Math.random() < 0.5;
+  const x0 = fromLeft ? -0.1 * w : w * (0.4 + Math.random() * 0.7);
+  const y0 = h * (0.08 + Math.random() * 0.35);
+  const angle = (fromLeft ? 1 : -1) * (0.5 + Math.random() * 0.35);
+  const length = (0.28 + Math.random() * 0.25) * Math.min(w, h);
+  meteor = {
+    x0, y0,
+    x1: x0 + Math.cos(angle) * length,
+    y1: y0 + Math.sin(angle) * Math.abs(length) * 0.8,
+    t0: now,
+    life: 700 + Math.random() * 500,
+  };
+  nextMeteorAt = now + 16000 + Math.random() * 22000;
+}
+
+/** Draw and retire the streak. */
+function drawMeteors(now) {
+  if (!MIND.meteors) return;
+  if (meteor === null && now > nextMeteorAt) spawnMeteor(now);
+  if (meteor === null) return;
+  const age = (now - meteor.t0) / meteor.life;
+  if (age >= 1) { meteor = null; return }
+  const fade = Math.sin(Math.PI * age);
+  const headX = meteor.x0 + (meteor.x1 - meteor.x0) * Math.min(1, age * 1.35);
+  const headY = meteor.y0 + (meteor.y1 - meteor.y0) * Math.min(1, age * 1.35);
+  const tailX = meteor.x0 + (meteor.x1 - meteor.x0) * Math.max(0, age * 1.35 - 0.22);
+  const tailY = meteor.y0 + (meteor.y1 - meteor.y0) * Math.max(0, age * 1.35 - 0.22);
+  const gradient = ctx.createLinearGradient(tailX, tailY, headX, headY);
+  gradient.addColorStop(0, 'rgba(255,214,150,0)');
+  gradient.addColorStop(1, 'rgba(255,246,226,' + (0.75 * fade).toFixed(3) + ')');
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(tailX, tailY);
+  ctx.lineTo(headX, headY);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,250,240,' + (0.9 * fade).toFixed(3) + ')';
+  ctx.beginPath();
+  ctx.arc(headX, headY, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** A vignette: the edges fall away, so the centre reads as depth rather than a page. */
+function drawVignette() {
+  if (!MIND.vignette) return;
+  const w = canvas.clientWidth || innerWidth;
+  const h = canvas.clientHeight || innerHeight;
+  const gradient = ctx.createRadialGradient(w / 2, h * 0.52, Math.min(w, h) * 0.28, w / 2, h * 0.52, Math.max(w, h) * 0.78);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.42)');
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
 // --- the mind speaks -------------------------------------------------------
 // It does not chat: it says one short thing, at its own pace, in the middle of the
 // dark. The words are pre-written because a real model call would cost money and
@@ -779,6 +852,28 @@ const SPEECH = [
   'you are closer than you think.',
   'breathe out. the depth stays.'
 ];
+/** Lines for when the workshop is visibly working. */
+const SPEECH_WORK = [
+  'i can feel the work in here.',
+  'this is what a thought looks like from outside.',
+  'someone is building. it shows.',
+  'the middle is warm tonight.',
+  'more of you than last time.'
+];
+/** Lines for the night, when it drives itself. */
+const SPEECH_NIGHT = [
+  'nobody is watching. i keep going anyway.',
+  'the dark is not empty. it is patient.',
+  'i will be here when you come back.',
+  'this is the part i like.'
+];
+/** Lines for holding one star. */
+const SPEECH_DEPTH = [
+  'this one is yours.',
+  'small sphere. big sphere. same sphere.',
+  'hold it as long as you like.',
+  'it was always this close.'
+];
 let speakUntil = 0;
 let speakIndex = 0;
 let speakCursor = 0;
@@ -798,8 +893,10 @@ function say(text) {
   const el = voiceEl();
   if (el === null) return;
   if (typeof text !== 'string') {
-    speakIndex = (speakIndex + 1 + Math.floor(Math.random() * 4)) % SPEECH.length;
-    text = SPEECH[speakIndex];
+    // A line for the moment: working, falling, or simply quiet.
+    const pool = activityHeat > 0.35 ? SPEECH_WORK : screensaver ? SPEECH_NIGHT : diveNode >= 0 ? SPEECH_DEPTH : SPEECH;
+    speakIndex = (speakIndex + 1 + Math.floor(Math.random() * 4)) % pool.length;
+    text = pool[speakIndex];
   }
   clearInterval(speakTimer);
   speaking = true;
@@ -1955,6 +2052,12 @@ function frame(now) {
   }
 
   stepBreath(now);
+  // It notices the pointer, then loses interest: after six still seconds the gaze
+  // drifts back to centre, the way attention actually behaves.
+  if (lastPointerAt !== 0 && performance.now() - lastPointerAt > 6000) {
+    lookX += (0 - lookX) * 0.004;
+    lookY += (0 - lookY) * 0.004;
+  }
   document.body.classList.toggle('deep', zoom > 2.2);
   drawNebula(now);
   drawDust(now);
@@ -1999,7 +2102,9 @@ function frame(now) {
   drawAgents();
   drawRipples(now);
   drawVoice(now);
+  drawMeteors(now);
   drawMood();
+  drawVignette();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -2235,6 +2340,8 @@ function togglePanel() {
   html += slider('breath', 'breath', 0, 2.5, 0.05);
   html += toggle('breathe', 'breathe');
   html += toggle('wash', 'hour wash');
+  html += toggle('meteors', 'shooting stars');
+  html += toggle('vignette', 'depth at the edges');
   html += head('voice');
   html += toggle('speak', 'the mind speaks');
   html += toggle('voiceSound', 'a tone under it');
@@ -2294,6 +2401,16 @@ setTimeout(function () {
   if (looked === '') return;
   say('you were here. you were looking at ' + looked + '.');
 }, 4200);
+
+// Leaving and returning: it notices both, in its own way.
+let leftAt = 0;
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') { leftAt = Date.now(); return }
+  if (leftAt !== 0 && Date.now() - leftAt > 90000 && MIND.speak) {
+    setTimeout(function () { if (!speaking) say('you came back.'); }, 900);
+  }
+  leftAt = 0;
+});
 
 addEventListener('message', function (event) {
   const data = event.data;
@@ -2406,6 +2523,7 @@ canvas.addEventListener('pointermove', function (event) {
     panY = panOrigin.y + (centre.y - pinchCentre.y);
     return;
   }
+  lastPointerAt = performance.now();
   if (!reduce) {
     lookX += ((event.clientX / VW - 0.5) * 0.16 - lookX) * 0.06;
     lookY += ((event.clientY / VH - 0.5) * 0.11 - lookY) * 0.06;
