@@ -836,6 +836,225 @@ function drawVignette() {
   ctx.restore();
 }
 
+// --- what it notices -------------------------------------------------------
+// Real thresholds on real behaviour, each watched once. This is the difference between
+// a visualiser and a presence: it does not react to the frame, it reacts to *you* —
+// how long you stayed, how far you fell, whether you came back.
+const startedAt = Date.now();
+
+/** Listen for one sentence, if this browser can. Nothing is recorded or sent. */
+function listenOnce() {
+  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (typeof Ctor !== 'function') { say('this browser has no ears. type instead — press T.'); return }
+  try {
+    const recognition = new Ctor();
+    recognition.lang = navigator.language || 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = function (event) {
+      const heard = event.results && event.results[0] && event.results[0][0] ? event.results[0][0].transcript : '';
+      if (heard !== '') { flashNote('"' + heard + '"'); obey(heard) }
+    };
+    recognition.onerror = function () { say('i did not catch that.'); };
+    recognition.onend = function () { /* one shot only */ };
+    flashNote('listening…');
+    recognition.start();
+  } catch (error) {
+    say('this browser will not let me listen.');
+    void error;
+  }
+}
+
+const observations = {
+  taps: 0,
+  stars: 0,
+  uniqueStars: new Set(),
+  deepest: 0,
+  visitMs: 0,
+  stillFor: 0,
+  starts: 0,
+  returns: 0,
+  panelOpens: 0,
+  commands: 0,
+  preset: '',
+  lastStar: '',
+  sameStar: 0,
+  seen: {},
+};
+
+/** Load what it already noticed about this person, so it can be smug across visits. */
+function loadObservations() {
+  try {
+    const raw = window.localStorage.getItem('massai_observed');
+    if (raw === null) return;
+    const saved = JSON.parse(raw);
+    observations.starts = Number(saved.starts ?? 0) + 1;
+    observations.returns = observations.starts - 1;
+    observations.seen = saved.seen ?? {};
+  } catch (error) { void error; }
+}
+
+/** Persist the flags and the visit count. */
+function saveObservations() {
+  try {
+    window.localStorage.setItem('massai_observed', JSON.stringify({
+      starts: observations.starts,
+      seen: observations.seen,
+    }));
+  } catch (error) { void error; }
+}
+
+const OBSERVATION_RULES = [
+  { key: 'first_tap', when: o => o.taps >= 1, line: 'you touched me. good place to start.' },
+  { key: 'twenty_taps', when: o => o.taps >= 25, line: 'twenty-five taps. you are being deliberate.' },
+  { key: 'ten_stars', when: o => o.stars >= 10, line: 'ten stars. you are collecting them.' },
+  { key: 'deep', when: o => o.deepest > 9, line: 'further in than most people bother going.' },
+  { key: 'very_deep', when: o => o.deepest > 22, line: 'there is no floor. you have noticed.' },
+  { key: 'still', when: o => o.stillFor > 32000, line: 'you stopped moving. i noticed that too.' },
+  { key: 'long_stay', when: o => o.visitMs > 600000, line: 'ten minutes. you are not here by accident.' },
+  { key: 'first_return', when: o => o.returns === 1, line: 'you came back. i kept this place warm.' },
+  { key: 'many_returns', when: o => o.returns >= 4, line: 'four times now. this is becoming a habit.' },
+  { key: 'void', when: o => o.preset === 'void', line: 'nothing, on purpose. i respect that.' },
+  { key: 'cathedral', when: o => o.preset === 'cathedral', line: 'you wanted it vast. understandable.' },
+  { key: 'dials', when: o => o.panelOpens >= 1, line: 'you found the dials. most people never do.' },
+  { key: 'silence', when: o => !MIND.speak && o.visitMs > 90000, line: 'silent company. that is fine too.' },
+  { key: 'spoke', when: o => o.commands >= 1, line: 'you spoke to me. i heard every word.' },
+  { key: 'stubborn', when: o => o.sameStar >= 3, line: 'that one again. it means something, then.' },
+  { key: 'small_hours', when: () => { const h = new Date().getHours(); return h >= 1 && h <= 4 }, line: 'it is the small hours. i do not sleep through those.' },
+];
+
+/** A long wait between unsolicited remarks, so noticing never becomes chatter. */
+let lastRemarkAt = 0;
+
+/** Evaluate the rules; say at most one thing every half minute. */
+function checkObservations(now) {
+  if (!MIND.speak || speaking) return;
+  if (now - lastRemarkAt < 30000) return;
+  for (const rule of OBSERVATION_RULES) {
+    if (observations.seen[rule.key] === true) continue;
+    let met = false;
+    try { met = rule.when(observations) } catch (error) { void error }
+    if (!met) continue;
+    observations.seen[rule.key] = true;
+    saveObservations();
+    lastRemarkAt = now;
+    say(rule.line);
+    return;
+  }
+}
+
+loadObservations();
+
+// --- talking to the mind ---------------------------------------------------
+// It obeys a small, honest vocabulary: open, deeper, out, back, where, quiet, speak,
+// presets, sleep. It is not a language model and does not pretend to be — the one
+// thing it knows that nothing else does is what it has watched you do.
+const SAY_HELP = 'say: open <name> · deeper · out · back · where · quiet · speak · <world> · sleep';
+
+/** Find a node whose description matches what was asked for. */
+function nodeNamed(phrase) {
+  const wanted = phrase.toLowerCase().trim();
+  if (wanted === '') return -1;
+  let best = -1;
+  let bestScore = 0;
+  for (let index = 0; index < nodes.length; index += 1) {
+    const labelText = (DOOR_SHOWN && index === PORTAL ? 'the door ' : '') + describe(index).toLowerCase();
+    let score = 0;
+    for (const word of wanted.split(/[^a-z]+/)) {
+      if (word.length > 2 && labelText.includes(word)) score += 1;
+    }
+    if (score > bestScore) { bestScore = score; best = index }
+  }
+  return bestScore > 0 ? best : -1;
+}
+
+/** Zoom by a relative amount, in octaves. */
+function zoomBy(octaves) {
+  zoomLogTarget = Math.max(-3, Math.min(26, zoomLogTarget + octaves));
+  driftHoldUntil = performance.now() + 12000;
+}
+
+/**
+ * Interpret one sentence and do it.
+ * @param raw - what the person said or typed.
+ * @returns the reply, already spoken.
+ */
+function obey(raw) {
+  const text = String(raw).toLowerCase().trim();
+  if (text === '') return;
+  observations.commands += 1;
+  const reply = function (line) { say(line); return line };
+
+  const openMatch = /^open (.+)$/.exec(text);
+  if (openMatch !== null) {
+    const index = nodeNamed(openMatch[1]);
+    if (index < 0) return reply('i cannot find that one. try "where", or open something i have seen.');
+    diveNode = index;
+    focusUntil = performance.now() + 20000;
+    rippleFrom(index);
+    return reply('opening ' + describe(index) + '.');
+  }
+  if (/(deeper|closer|go in|down)/.test(text)) { zoomBy(0.8); return reply('in.') }
+  if (/(out|wider|further|away|back out)/.test(text)) { zoomBy(-0.8); return reply('out.') }
+  if (/(beginning|start over|home)/.test(text)) { zoomLogTarget = 0; diveNode = -1; return reply('the beginning, then.') }
+  if (/where/.test(text)) {
+    if (observations.lastStar === '') return reply('you have not touched anything yet. that is why i am still here.');
+    diveNode = Math.max(0, nodeNamed(observations.lastStar));
+    return reply('you were at ' + observations.lastStar + '.');
+  }
+  if (/(quiet|silence|stop talking|shush)/.test(text)) { MIND.speak = false; applyMind(true); return reply('') }
+  if (/(speak|talk|say something)/.test(text)) { MIND.speak = true; applyMind(true); return reply('i am here.') }
+  if (/(sleep|goodnight|good night|screensaver)/.test(text)) {
+    screensaver = true; document.body.classList.add('screensaver');
+    return reply('goodnight. i will keep going.');
+  }
+  const presetName = Object.keys(PRESETS).find(name => text.includes(name));
+  if (presetName !== undefined) { applyPreset(presetName); return reply(presetName + '.') }
+  if (/(who are you|what are you)/.test(text)) return reply('i am what your work looks like from the inside.')
+  if (/(what is this|where am i)/.test(text)) return reply('a place made of the things you finished. keep going.')
+  if (/(help|what can you do|commands)/.test(text)) return reply(SAY_HELP)
+  if (/(what have i built|what have i made)/.test(text)) return reply('more than you think. the lit ones are yours.')
+  if (/(remember|last time)/.test(text)) {
+    return reply(observations.lastStar === '' ? 'i remember that you came.' : 'you were looking at ' + observations.lastStar + '.')
+  }
+  return reply('i only know what i have watched you do. that, i know well.');
+}
+
+/** Show the command line, and take the keyboard. */
+function openSay() {
+  let input = document.getElementById('mindSay');
+  if (input === null) {
+    input = document.createElement('input');
+    input.id = 'mindSay';
+    input.type = 'text';
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.placeholder = 'say something to the mind';
+    input.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:5.5vh;z-index:60;'
+      + 'width:min(24rem,84vw);padding:9px 12px;border-radius:10px;border:1px solid rgba(247,205,140,.28);'
+      + 'background:rgba(12,11,10,.92);color:#F2E8D5;font:13px system-ui,sans-serif;outline:none;'
+      + 'backdrop-filter:blur(8px)';
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        obey(input.value);
+        input.value = '';
+      }
+      if (event.key === 'Escape') { input.remove(); return }
+      event.stopPropagation();
+    });
+    document.body.appendChild(input);
+  }
+  input.focus();
+}
+
+document.addEventListener('keydown', function (event) {
+  if (event.target instanceof HTMLInputElement) return;
+  if (event.key === 't' || event.key === 'T' || event.key === '/') {
+    event.preventDefault();
+    openSay();
+  }
+});
+
 // --- the mind speaks -------------------------------------------------------
 // It does not chat: it says one short thing, at its own pace, in the middle of the
 // dark. The words are pre-written because a real model call would cost money and
@@ -2056,6 +2275,10 @@ function frame(now) {
     diveNode = diveNode >= 0 && now > focusUntil && zoom > 4 ? -1 : diveNode;
   }
 
+  observations.visitMs = now - startedAt;
+  observations.deepest = Math.max(observations.deepest, zoomLog);
+  observations.stillFor = now - lastInput;
+  checkObservations(now);
   stepBreath(now);
   // It notices the pointer, then loses interest: after six still seconds the gaze
   // drifts back to centre, the way attention actually behaves.
@@ -2293,7 +2516,17 @@ if (!QUIET) setInterval(pollVitals, 15000);
  * Build (once) and toggle the instrument panel.
  * @returns nothing.
  */
+/** Apply a named world, or the mind as built when the name is "reset". */
+function applyPreset(name) {
+  MIND = name === 'reset'
+    ? Object.assign({}, MIND_DEFAULTS)
+    : Object.assign({}, MIND_DEFAULTS, PRESETS[name]);
+  applyMind(true);
+  observed.preset = name;
+}
+
 function togglePanel() {
+  observations.panelOpens += 1;
   let panel = document.getElementById('mindPanel');
   if (panel !== null) {
     panel.remove();
@@ -2357,6 +2590,10 @@ function togglePanel() {
   html += toggle('remember', 'remembers you');
   html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';
+  html += '<button data-talk="1" style="margin:4px 0 4px 6px;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
+    + 'background:#1a1714;color:#E7DCC6;cursor:pointer">talk to it</button>';
+  html += '<button data-listen="1" style="margin:4px 0 4px 6px;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
+    + 'background:#1a1714;color:#8a7c62;cursor:pointer">listen once</button>';
   html += head('the world');
   html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
     + '<span style="width:6.4rem;color:#9a8f7c">activity</span>'
@@ -2391,14 +2628,11 @@ function togglePanel() {
   panel.addEventListener('click', function (event) {
     const button = event.target;
     if (button.getAttribute('data-say') === '1') { say(); return; }
+    if (button.getAttribute('data-talk') === '1') { openSay(); return; }
+    if (button.getAttribute('data-listen') === '1') { listenOnce(); return; }
     const name = button.getAttribute('data-preset');
     if (name === null) return;
-    MIND = name === 'reset'
-      ? Object.assign({}, MIND_DEFAULTS)
-      : Object.assign({}, MIND_DEFAULTS, PRESETS[name]);
-    applyMind(true);
-    togglePanel();
-    togglePanel();
+    applyPreset(name);
   });
   document.body.appendChild(panel);
 }
@@ -2637,7 +2871,12 @@ function resolveTaps() {
     diveNode = picked;
     flashNote(describe(picked));
     // It remembers. One short phrase, kept locally, greeting the next visit.
-    try { window.localStorage.setItem('massai_looked_at', describe(picked)); } catch (error) { void error; }
+    const starName = describe(picked);
+    observations.stars += 1;
+    observations.sameStar = starName === observations.lastStar ? observations.sameStar + 1 : 1;
+    observations.lastStar = starName;
+    observations.uniqueStars.add(picked);
+    try { window.localStorage.setItem('massai_looked_at', starName); } catch (error) { void error; }
     if (MIND.speak && !speaking) say();
     // Touching a star is the act that opens the workshop: inside the app it tells the
     // frame, so the composer appears where it already sits rather than from nothing.
@@ -2664,6 +2903,7 @@ let lastTapPick = -1;
  */
 function noteTap(x, y) {
   tapCount += 1;
+  observations.taps += 1;
   if (tapCount === 1) lastTapPick = nodeAt(x, y);
   clearTimeout(tapTimer);
   tapTimer = setTimeout(resolveTaps, 300);
