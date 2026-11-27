@@ -554,6 +554,13 @@ export function apply(ctx: Context): void {
   }
 
   onPreStep('agent/pre-step', async ({ agent, ...rest }, next) => {
+    // Defence in depth: even if a guest session cookie survives from before the freeze,
+    // no guest may take a step. The freeze at the door is the first line; this is the
+    // second, and it does not depend on the door behaving.
+    const guestUser = String((agent.session as { header?: { userId?: string } }).header?.userId ?? '')
+    if (guestUser.startsWith('guest-') || guestUser.startsWith('c-')) {
+      return { kind: 'reject' }
+    }
     // The control node: notes the operator queued from the hive arrive here, once,
     // labelled as the operator speaking. This runs before the money gate because a
     // direction can change what the step is about to do.
