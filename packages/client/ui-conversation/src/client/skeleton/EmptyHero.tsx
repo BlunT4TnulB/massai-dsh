@@ -249,7 +249,7 @@ interface StarterCard {
  * It answers "what does this make?" without a prompt and without a token, and it is the
  * only list on this screen — the owner's own projects live behind the door, not here.
  */
-function StarterShelf({ t }: { t: HeroTranslate }): ReactNode {
+function StarterShelf(): ReactNode {
   const [cards, setCards] = useState<readonly StarterCard[]>([])
   useEffect(() => {
     let cancelled = false
@@ -265,8 +265,8 @@ function StarterShelf({ t }: { t: HeroTranslate }): ReactNode {
   }, [])
   if (cards.length === 0) return null
   return (
-    <nav className={css.starterShelf} aria-label={t('hero.startersLabel')}>
-      <span className={css.starterLead}>{t('hero.startersLead')}</span>
+    <nav className={css.starterShelf} aria-label="starter builds">
+      <span className={css.starterLead}>look at what it makes:</span>
       {cards.map(card => (
         <a key={card.slug} className={css.starterCard} href={`/starters/${card.slug}`} target="_blank" rel="noreferrer" title={card.what}>
           {card.name}
@@ -294,7 +294,7 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
         {wide
           ? (
             <div className={css.immersion}>
-              <StarterShelf t={t} />
+              <StarterShelf />
               <span className={css.immersionHint}>{t('hero.diveToBegin')}</span>
             </div>
           )

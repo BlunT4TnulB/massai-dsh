@@ -488,8 +488,6 @@ export const en = {
   'hero.headline': 'Into the Unknown',
   'hero.preview': 'Preview',
   'hero.diveToBegin': 'touch the mind — dive into a star to begin',
-  'hero.startersLead': 'look at what it makes:',
-  'hero.startersLabel': 'starter builds',
   'hero.chooseWorkspace': 'Choose workspace',
   'header.more': 'More actions',
   'session.hierarchy': 'Session hierarchy',
