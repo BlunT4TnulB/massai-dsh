@@ -428,6 +428,7 @@ const MIND_DEFAULTS = {
   speak: true,       // let it say things now and then
   temperament: 'oracle', // how it talks: oracle · companion · gremlin · archivist
   voiceOut: false,   // read its lines aloud with the browser's own voice
+  ask: true,         // let it actually think about a question it was not built to answer
   speechGap: 1,      // how long between things said (× the base gap)
   heartbeat: true,   // let real activity quicken the breath
   remember: true,    // greet you with the last star you held, and notice you returning
@@ -1079,8 +1080,40 @@ function obey(raw) {
   if (/(remember|last time)/.test(text)) {
     return reply(observations.lastStar === '' ? 'i remember that you came.' : 'you were looking at ' + observations.lastStar + '.')
   }
+  // Not in the vocabulary: think about it, if this person is allowed and the budget is.
+  if (MIND.ask) {
+    askTheMind(raw);
+    return raw;
+  }
   const deflections = temperament().deflections;
   return reply(deflections[Math.floor(Math.random() * deflections.length)]);
+}
+
+/**
+ * Ask the mind a question it was not built to answer. Capped server-side; a refusal is
+ * spoken in its own voice rather than shown as an error.
+ * @param question - what the person said.
+ */
+function askTheMind(question) {
+  const context = [
+    VIEWER === 'owner' ? 'they are the operator.' : VIEWER === 'stranger' ? 'they are a stranger.' : 'they are signed in.',
+    VIEWER_PROJECT === '' ? '' : 'their last project was ' + VIEWER_PROJECT + '.',
+    observations.lastStar === '' ? '' : 'they last looked at ' + observations.lastStar + '.',
+    'they have visited ' + Math.max(1, observations.starts + 1) + ' times.',
+  ].filter(part => part !== '').join(' ');
+  flashNote('thinking…');
+  fetch('/api/mind/ask', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text: question, context }),
+  })
+    .then(function (response) { return response.json() })
+    .then(function (body) {
+      if (body !== null && body.ok === true && typeof body.answer === 'string') { say(body.answer); return }
+      if (body !== null && typeof body.say === 'string') { say(body.say); return }
+      say('the line went quiet. ask me again.');
+    })
+    .catch(function () { say('the line went quiet. ask me again.'); });
 }
 
 /** Show the command line, and take the keyboard. */
@@ -2726,6 +2759,10 @@ function togglePanel() {
     + Object.keys(TEMPERAMENTS).map(name => '<option value="' + name + '"'
       + (MIND.temperament === name ? ' selected' : '') + '>' + TEMPERAMENTS[name].label + '</option>').join('')
     + '</select></label>';
+  html += toggle('ask', 'answers real questions');
+  html += '<p style="margin:0 0 6px;font-size:10px;color:#6f6553;line-height:1.5">'
+    + 'When on, a question outside its vocabulary goes to a model. A fraction of a cent each, '
+    + 'capped, and signed-in only.</p>';
   html += toggle('remember', 'remembers you');
   html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';

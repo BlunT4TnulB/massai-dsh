@@ -1086,6 +1086,99 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // The mind answers. A real model call, capped hard, and gated by who is standing there:
+  // the operator and signed-in people may ask anything short; a stranger is refused with a
+  // sentence rather than a silent failure. Every answer is recorded against the same budget
+  // ledger as the workshop, so the monthly cap covers it too.
+  const askGuard = new Map<string, { at: number; day: number; count: number }>()
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/ask', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const own = isOwnerRequest(req)
+      const auth = ctx.get('browserAuth') as
+        | { sessionUserId(request: { headers: Record<string, string | string[] | undefined> }): string | undefined }
+        | undefined
+      let userId: string | undefined
+      try {
+        userId = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> })
+      } catch { userId = undefined }
+      if (!own && userId === undefined) {
+        respond(res, 200, { ok: false, reason: 'stranger', say: 'that is a question for someone who has signed in.' })
+        return
+      }
+      // One question every fifteen seconds, forty a day, per network — the shape of an
+      // experiment rather than a free chatbot.
+      const key = guestKeyOf(req)
+      const now = Date.now()
+      const today = Math.floor(now / 86_400_000)
+      const guard = askGuard.get(key)
+      if (guard !== undefined && (now - guard.at < 15_000 || (guard.day === today && guard.count >= 40))) {
+        respond(res, 200, { ok: false, reason: 'pace', say: 'give it a moment. i am not a tap.' })
+        return
+      }
+      askGuard.set(key, { at: now, day: today, count: guard !== undefined && guard.day === today ? guard.count + 1 : 1 })
+
+      const apiKey = process.env.DEEPSEEK_API_KEY ?? ''
+      if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
+      let body: { text?: unknown; context?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown } } catch {
+        respond(res, 400, { error: 'expected json' }); return
+      }
+      const question = String(body.text ?? '').slice(0, 400).trim()
+      if (question === '') { respond(res, 400, { error: 'say something' }); return }
+      const context = String(body.context ?? '').slice(0, 300)
+      // The monthly cap covers this too; if the workshop is over, the mind goes quiet.
+      const report = await budgetReport().catch(() => undefined)
+      if (report !== undefined && report.tracked && report.spent >= report.cap) {
+        respond(res, 200, { ok: false, reason: 'budget', say: 'the credit for this month is spent. the mind still keeps everything.' })
+        return
+      }
+      const persona = [
+        'You are the mind inside Massai: a sphere of finished work that a person is standing in.',
+        'Answer in at most two short sentences, plainly and warmly. Never invent facts about the site,',
+        'the person, or their projects — if you do not know, say so in one sentence and offer what you',
+        'do know. You are not a general chatbot and you say so when pushed outside this place.',
+        own ? 'You are speaking to the operator who built this place.' : 'You are speaking to someone who signed in.',
+        context === '' ? '' : 'What you can see of the moment: ' + context,
+      ].filter(line => line !== '').join(' ')
+      try {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [{ role: 'system', content: persona }, { role: 'user', content: question }],
+            max_tokens: 180,
+            temperature: 0.8,
+          }),
+          signal: AbortSignal.timeout(20_000),
+        })
+        const payload = await response.json() as {
+          choices?: Array<{ message?: { content?: string } }>
+          usage?: { prompt_tokens?: number; completion_tokens?: number }
+          error?: { message?: string }
+        }
+        if (payload.error !== undefined) {
+          respond(res, 200, { ok: false, reason: 'provider', say: 'something in me did not answer.' }); return
+        }
+        const answer = (payload.choices?.[0]?.message?.content ?? '').trim().slice(0, 600)
+        if (answer === '') { respond(res, 200, { ok: false, reason: 'empty', say: 'i have nothing to add.' }); return }
+        const input = Number(payload.usage?.prompt_tokens ?? 0)
+        const output = Number(payload.usage?.completion_tokens ?? 0)
+        void recordUsage({
+          at: now, session: 'mind-ask', userId: userId ?? 'operator', model: 'deepseek-chat',
+          input, output, cacheRead: 0, cacheWrite: 0,
+        }).catch(() => { /* the ledger reports itself in /api/db/status */ })
+        respond(res, 200, { ok: true, answer, costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)) })
+      } catch (error) {
+        respond(res, 200, { ok: false, reason: 'transport', say: 'the line went quiet. ask me again.' })
+        void error
+      }
+    },
+  })
+
   // Who is looking at the mind. The mind is a public place, but a place can know you.
   // Owner is proven by the signed marker cookie (never a token in the page); a signed-in
   // session is proven by the session cookie; everything else is a stranger.
