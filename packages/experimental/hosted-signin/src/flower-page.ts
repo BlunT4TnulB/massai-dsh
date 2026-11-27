@@ -426,6 +426,10 @@ const MIND_DEFAULTS = {
   wash: true,        // the slow hour-of-day tint
   // the mind's voice
   speak: true,       // let it say things now and then
+  speechGap: 1,      // how long between things said (× the base gap)
+  heartbeat: true,   // let real activity quicken the breath
+  remember: true,    // greet you with the last star you held, and notice you returning
+  notice: true,      // let the view drift toward the pointer
   voiceSound: false, // a soft tone under the words (off by default: it is a choice)
   // the world
   feed: 'auto',      // 'auto' | 'real' | 'simulated'
@@ -626,14 +630,15 @@ function stepBreath(now) {
   speechLevel *= 0.9;
   if (!MIND.breathe) { breathScale = 1; return }
   activityHeat *= 0.992;
+  const heat = MIND.heartbeat ? activityHeat : 0;
   // ~8 s per breath, with a second slower wave underneath so no two breaths match.
   // When the workshop is really working, it breathes faster and deeper and a small
   // pulse rides on top of it: the body shows the work, rather than only the caption.
-  const rate = 0.00078 + activityHeat * 0.0014;
+  const rate = 0.00078 + heat * 0.0014;
   const slow = Math.sin(now * rate) * 0.62 + Math.sin(now * 0.00037 + 1.7) * 0.38;
   const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.02;
-  const thump = Math.pow(Math.max(0, Math.sin(now * (0.0042 + activityHeat * 0.0022))), 10) * activityHeat * 0.03;
-  breathScale = 1 + MIND.breath * ((0.045 + activityHeat * 0.03) * slow) + breathPulse + speakingPart + thump;
+  const thump = Math.pow(Math.max(0, Math.sin(now * (0.0042 + heat * 0.0022))), 10) * heat * 0.03;
+  breathScale = 1 + MIND.breath * ((0.045 + heat * 0.03) * slow) + breathPulse + speakingPart + thump;
   // A readout, so the breath can be observed rather than argued about: any test can
   // sample this attribute over time and see the body swell and settle.
   document.documentElement.dataset.breath = breathScale.toFixed(4);
@@ -2054,9 +2059,9 @@ function frame(now) {
   stepBreath(now);
   // It notices the pointer, then loses interest: after six still seconds the gaze
   // drifts back to centre, the way attention actually behaves.
-  if (lastPointerAt !== 0 && performance.now() - lastPointerAt > 6000) {
-    lookX += (0 - lookX) * 0.004;
-    lookY += (0 - lookY) * 0.004;
+  if ((!MIND.notice || (lastPointerAt !== 0 && performance.now() - lastPointerAt > 6000))) {
+    lookX += (0 - lookX) * (MIND.notice ? 0.004 : 0.02);
+    lookY += (0 - lookY) * (MIND.notice ? 0.004 : 0.02);
   }
   document.body.classList.toggle('deep', zoom > 2.2);
   drawNebula(now);
@@ -2089,7 +2094,7 @@ function frame(now) {
   // texture of the mind, so this is sparse on purpose.
   if (MIND.speak && !speaking && now > nextSpeakAt) {
     say();
-    nextSpeakAt = now + 38000 + Math.random() * 26000;
+    nextSpeakAt = now + (38000 + Math.random() * 26000) * Math.max(0.2, MIND.speechGap);
   }
   if (wantsSimulated() && now > sparkNext) {
     spawnSpark(now);
@@ -2340,11 +2345,16 @@ function togglePanel() {
   html += slider('breath', 'breath', 0, 2.5, 0.05);
   html += toggle('breathe', 'breathe');
   html += toggle('wash', 'hour wash');
+  html += head('presence');
+  html += toggle('heartbeat', 'heartbeat from real work');
+  html += toggle('notice', 'notices the pointer');
   html += toggle('meteors', 'shooting stars');
   html += toggle('vignette', 'depth at the edges');
   html += head('voice');
   html += toggle('speak', 'the mind speaks');
+  html += slider('speechGap', 'how often', 0.3, 3, 0.05);
   html += toggle('voiceSound', 'a tone under it');
+  html += toggle('remember', 'remembers you');
   html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';
   html += head('the world');
@@ -2395,7 +2405,7 @@ function togglePanel() {
 
 // Arriving somewhere again: it says it remembers the last thing you looked at.
 setTimeout(function () {
-  if (!MIND.speak) return;
+  if (!MIND.speak || !MIND.remember) return;
   let looked = '';
   try { looked = String(window.localStorage.getItem('massai_looked_at') ?? ''); } catch (error) { void error; }
   if (looked === '') return;
@@ -2406,7 +2416,7 @@ setTimeout(function () {
 let leftAt = 0;
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'hidden') { leftAt = Date.now(); return }
-  if (leftAt !== 0 && Date.now() - leftAt > 90000 && MIND.speak) {
+  if (leftAt !== 0 && Date.now() - leftAt > 90000 && MIND.speak && MIND.remember) {
     setTimeout(function () { if (!speaking) say('you came back.'); }, 900);
   }
   leftAt = 0;
@@ -2524,7 +2534,7 @@ canvas.addEventListener('pointermove', function (event) {
     return;
   }
   lastPointerAt = performance.now();
-  if (!reduce) {
+  if (!reduce && MIND.notice) {
     lookX += ((event.clientX / VW - 0.5) * 0.16 - lookX) * 0.06;
     lookY += ((event.clientY / VH - 0.5) * 0.11 - lookY) * 0.06;
   }
