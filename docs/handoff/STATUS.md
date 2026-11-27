@@ -1067,6 +1067,39 @@ Three findings, each one earned by an experiment:
 - Archive updated to the frame-per-record file (30.3 MB) so boot restore is consistent with the
   format the app can read.
 
+## The audit that found an outage (2026-11-27, live on `0775aeb`)
+Full pass over everything built. Three faults mattered, and one of them was taking the whole site down.
+1. **OOM loop (critical, fixed).** Render events showed `server_failed` / `oomKilled` at memoryLimit
+   **512Mi** three times between 23:56 and 00:01. Cause: the ported conversation. A 30 MB log with
+   39,559 frames is replayed into memory when opened, and a 512 MB instance cannot survive it — the
+   kill takes the site down for everyone, not just the session. Fixes: `MASSAA_SESSIONS_REPO` cleared so
+   boot no longer restores it; the archive repo now holds the transcript with `sessions: []` and a note;
+   `/api/mind/session/import` **refuses any body over 8 MB with a 413 and a plain explanation**. No OOM
+   events since.
+2. **Keep-alive was pinging the challenged domain.** Cloudflare answers non-browser fetches with a
+   challenge (429/"Just a moment"), and a challenge is not traffic, so the free instance slept anyway
+   and the next visitor got `hibernate-wake-error` (503). The worker now pings
+   `massai-dsh.onrender.com/healthz` **directly**, checks the public path once an hour, and its version
+   string is `massai-keepalive/2`. Verified deployed and the origin answers 200 with no challenge.
+3. **Banned copy survived.** "weeks on what one coffee costs" was still on /access. Replaced.
+
+### Also repaired in this pass
+- My earlier menu-removal script had deleted the splash's riddle **and** slogan rotation (86 lines).
+  Restored: 9 riddles / 21 slogans, and two riddles now teach the three-finger gesture.
+- The instrument panel is complete and verified by screenshot: motion, travel, thought, structure,
+  atmosphere, the world, four presets and reset, every dial wired.
+- Whole-site sweep after the fixes: every page and API 200 (19 requests), /providers included.
+
+### Faults still open, stated plainly
+- **512 MB is the real ceiling.** Session replay, big imports, or a heavy page can still OOM the
+  instance. A $7/mo Starter instance (2 GB) removes the whole class of problem; until then the guard
+  refuses oversized transcripts instead of dying.
+- **The ported conversation is held, not restored** — it needs that larger instance.
+- Gemini link extraction still unverified (needs one real share link).
+- `learn` and `epiphany` kinds have no real emitters; `fail` does.
+- Multi-agent panel, Nous wiring, APK secrets, and `/limits` disclosure of the link reader and session
+  port are all still open.
+
 ## Open, needs the owner
 1. **Render disk** — API returns `402 Payment information required`. Needs a card.
    Gives permanent notes/usage/memory across deploys.
