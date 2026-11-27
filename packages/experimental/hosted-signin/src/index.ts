@@ -1108,27 +1108,42 @@ export function apply(ctx: Context): void {
         respond(res, 200, { ok: false, reason: 'stranger', say: 'that is a question for someone who has signed in.' })
         return
       }
-      // One question every fifteen seconds, forty a day, per network — the shape of an
-      // experiment rather than a free chatbot.
+      // A pace that suits a conversation rather than a curiosity. The operator gets the
+      // room; a signed-in guest gets a smaller allowance of the same shape.
       const key = guestKeyOf(req)
       const now = Date.now()
       const today = Math.floor(now / 86_400_000)
+      const paceMs = own ? 3_500 : 8_000
+      const dailyCap = own ? 300 : 60
       const guard = askGuard.get(key)
-      if (guard !== undefined && (now - guard.at < 15_000 || (guard.day === today && guard.count >= 40))) {
-        respond(res, 200, { ok: false, reason: 'pace', say: 'give it a moment. i am not a tap.' })
+      if (guard !== undefined && (now - guard.at < paceMs || (guard.day === today && guard.count >= dailyCap))) {
+        respond(res, 200, { ok: false, reason: 'pace', say: own
+          ? 'a second between thoughts, please.'
+          : 'give it a moment. i am not a tap.' })
         return
       }
       askGuard.set(key, { at: now, day: today, count: guard !== undefined && guard.day === today ? guard.count + 1 : 1 })
 
       const apiKey = process.env.DEEPSEEK_API_KEY ?? ''
       if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
-      let body: { text?: unknown; context?: unknown }
-      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown } } catch {
+      let body: { text?: unknown; context?: unknown; history?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown } } catch {
         respond(res, 400, { error: 'expected json' }); return
       }
-      const question = String(body.text ?? '').slice(0, 400).trim()
+      const question = String(body.text ?? '').slice(0, 500).trim()
       if (question === '') { respond(res, 400, { error: 'say something' }); return }
       const context = String(body.context ?? '').slice(0, 300)
+      // A short memory of the conversation, so a follow-up means something. Bounded on
+      // both sides: six turns, two hundred characters each, and only ever as text.
+      const history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+      if (Array.isArray(body.history)) {
+        for (const turn of (body.history as unknown[]).slice(-6)) {
+          const item = turn as { role?: unknown; text?: unknown }
+          const role = item.role === 'assistant' ? 'assistant' : item.role === 'user' ? 'user' : null
+          const text = String(item.text ?? '').slice(0, 200).trim()
+          if (role !== null && text !== '') history.push({ role, content: text })
+        }
+      }
       // The monthly cap covers this too; if the workshop is over, the mind goes quiet.
       const report = await budgetReport().catch(() => undefined)
       if (report !== undefined && report.tracked && report.spent >= report.cap) {
@@ -1137,9 +1152,11 @@ export function apply(ctx: Context): void {
       }
       const persona = [
         'You are the mind inside Massai: a sphere of finished work that a person is standing in.',
-        'Answer in at most two short sentences, plainly and warmly. Never invent facts about the site,',
-        'the person, or their projects — if you do not know, say so in one sentence and offer what you',
-        'do know. You are not a general chatbot and you say so when pushed outside this place.',
+        'You answer ordinary, everyday questions helpfully and briefly — one to three sentences,',
+        'plain language, no lists unless asked. You are in this place, so you speak quietly and with',
+        'some warmth, but you are not coy: if you know, answer.',
+        'Never invent facts about this site, the person, or their projects. If you are unsure, say so',
+        'in one clause and then give your best short answer.',
         own ? 'You are speaking to the operator who built this place.' : 'You are speaking to someone who signed in.',
         context === '' ? '' : 'What you can see of the moment: ' + context,
       ].filter(line => line !== '').join(' ')
@@ -1149,8 +1166,12 @@ export function apply(ctx: Context): void {
           headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
           body: JSON.stringify({
             model: 'deepseek-chat',
-            messages: [{ role: 'system', content: persona }, { role: 'user', content: question }],
-            max_tokens: 180,
+            messages: [
+              { role: 'system', content: persona },
+              ...history.map(turn => ({ role: turn.role, content: turn.content })),
+              { role: 'user', content: question },
+            ],
+            max_tokens: 240,
             temperature: 0.8,
           }),
           signal: AbortSignal.timeout(20_000),

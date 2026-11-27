@@ -1094,6 +1094,20 @@ function obey(raw) {
  * spoken in its own voice rather than shown as an error.
  * @param question - what the person said.
  */
+/** The last few exchanges, kept in this browser so a follow-up means something. */
+let askHistory = [];
+try {
+  const saved = JSON.parse(window.localStorage.getItem('massai_chat') ?? '[]');
+  if (Array.isArray(saved)) askHistory = saved.slice(-6);
+} catch (error) { void error; }
+
+/** Keep one turn, bounded, and persist it. */
+function rememberTurn(role, text) {
+  askHistory.push({ role, text: String(text).slice(0, 200) });
+  askHistory = askHistory.slice(-6);
+  try { window.localStorage.setItem('massai_chat', JSON.stringify(askHistory)) } catch (error) { void error; }
+}
+
 function askTheMind(question) {
   const context = [
     VIEWER === 'owner' ? 'they are the operator.' : VIEWER === 'stranger' ? 'they are a stranger.' : 'they are signed in.',
@@ -1105,11 +1119,16 @@ function askTheMind(question) {
   fetch('/api/mind/ask', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text: question, context }),
+    body: JSON.stringify({ text: question, context, history: askHistory }),
   })
     .then(function (response) { return response.json() })
     .then(function (body) {
-      if (body !== null && body.ok === true && typeof body.answer === 'string') { say(body.answer); return }
+      if (body !== null && body.ok === true && typeof body.answer === 'string') {
+        rememberTurn('user', question);
+        rememberTurn('assistant', body.answer);
+        say(body.answer);
+        return;
+      }
       if (body !== null && typeof body.say === 'string') { say(body.say); return }
       say('the line went quiet. ask me again.');
     })
@@ -2760,6 +2779,8 @@ function togglePanel() {
       + (MIND.temperament === name ? ' selected' : '') + '>' + TEMPERAMENTS[name].label + '</option>').join('')
     + '</select></label>';
   html += toggle('ask', 'answers real questions');
+  html += '<button data-forget="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
+    + 'background:#1a1714;color:#8a7c62;cursor:pointer">forget the conversation</button>';
   html += '<p style="margin:0 0 6px;font-size:10px;color:#6f6553;line-height:1.5">'
     + 'When on, a question outside its vocabulary goes to a model. A fraction of a cent each, '
     + 'capped, and signed-in only.</p>';
@@ -2805,6 +2826,12 @@ function togglePanel() {
     const button = event.target;
     if (button.getAttribute('data-say') === '1') { say(); return; }
     if (button.getAttribute('data-talk') === '1') { openSay(); return; }
+    if (button.getAttribute('data-forget') === '1') {
+      askHistory = [];
+      try { window.localStorage.removeItem('massai_chat') } catch (error) { void error; }
+      say('forgotten.');
+      return;
+    }
     if (button.getAttribute('data-listen') === '1') { listenOnce(); return; }
     const name = button.getAttribute('data-preset');
     if (name === null) return;
