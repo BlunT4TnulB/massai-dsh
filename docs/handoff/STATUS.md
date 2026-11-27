@@ -1100,6 +1100,35 @@ Full pass over everything built. Three faults mattered, and one of them was taki
 - Multi-agent panel, Nous wiring, APK secrets, and `/limits` disclosure of the link reader and session
   port are all still open.
 
+## Security incident: guest sessions reached the deployment's own workspace (2026-11-27)
+
+Reported by the owner: after "start free", their private projects were visible. The finding was worse than
+visibility: **a guest session was rooted at the deployment directory with `danger-full-access`**, so a guest
+chat could have read the process environment (model key, database URL, Clerk keys) and edited the app's own
+source.
+
+Closed, in order:
+
+1. `DSH_GUEST_FROZEN` set — `POST /api/preview` returns 503; no new guest sessions are minted.
+2. Private seeds removed from the public deployment (`MASSAA_PROJECTS`, `MASSAA_WORKSPACE_DIR` empty,
+   `MASSAA_SEED_WORKSPACES=0`) — the public box now reports **0 projects, 0 sessions**.
+3. Guest sessions rejected at the step boundary as well, so a surviving cookie cannot act.
+4. `DSH_WEB_TOKEN` rotated — every browser session minted before the freeze is invalid; the owner
+   re-claims with the token once.
+5. Both doors (`/` and `/access`) state the freeze and why, rather than offering a button that refuses.
+6. `/limits` now discloses the freeze, the link reader, the 8 MB import ceiling and the hidden door.
+
+**Still to build before the preview can reopen:** per-guest workspace (`/tmp/guest-<id>`), guest sandbox
+mode `workspace-write` with no environment reads, and an owner-only workspace list. Owner projects belong
+on the owner's instance, not the public one.
+
+## What the starter shelf is (and is not)
+
+`/starters` + the hero shelf show **four hand-written, finished builds** (tip splitter, countdown, packing
+list, invoice), embedded in the deployment from `packages/experimental/one-turn/starters/`. They are
+curated by the owner, never generated from a visitor's prompt, and cost nothing to open. This is the
+public list; the owner's own projects stay behind the door.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
