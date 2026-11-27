@@ -1027,6 +1027,38 @@ function obey(raw) {
   if (/(deeper|closer|go in|down)/.test(text)) { zoomBy(0.8); return reply('in.') }
   if (/(out|wider|further|away|back out)/.test(text)) { zoomBy(-0.8); return reply('out.') }
   if (/(beginning|start over|home)/.test(text)) { zoomLogTarget = 0; diveNode = -1; return reply('the beginning, then.') }
+  // Opening things. What it will open depends on who is standing there: a stranger gets
+  // the public rooms, a signed-in person gets their own, and only the operator gets the
+  // workshop — the same rule the rest of the site follows.
+  const signedIn = VIEWER !== 'stranger';
+  if (/(settings|dials|panel|options)/.test(text)) {
+    togglePanel();
+    return reply('the dials.');
+  }
+  if (/(workshop|chat|compose|build here|the door)/.test(text)) {
+    if (!signedIn) return reply('that door is not yours yet. sign in at /access and ask me again.');
+    if (window.parent !== window) window.parent.postMessage({ type: 'massai:enter', thought: '' }, '*');
+    else location.href = '/access';
+    return reply('opening the workshop.');
+  }
+  if (/(my projects|projects|what i built)/.test(text)) {
+    if (!signedIn) return reply('projects belong to whoever signed in. that is not you yet.');
+    location.href = '/projects';
+    return reply('your projects.');
+  }
+  if (/(starters|examples|show me something)/.test(text)) { location.href = '/starters'; return reply('the shelf.') }
+  if (/(limits|rules|cost|price)/.test(text)) { location.href = '/limits'; return reply('every rule, printed.') }
+  if (/(expand|idea|new project)/.test(text)) { location.href = '/expand'; return reply('then start with a sentence.') }
+  if (/(map|guide|library)/.test(text)) {
+    const room = /map/.test(text) ? '/map' : /library/.test(text) ? '/library' : '/guide';
+    location.href = room;
+    return reply(room.replace('/', 'the ') .replace('-', ' ') + '.');
+  }
+  if (/(who is looking|who am i|do you know me)/.test(text)) {
+    if (VIEWER === 'owner') return reply('the operator. the one who made this.');
+    if (VIEWER !== 'stranger') return reply(VIEWER_LABEL === 'guest' ? 'a guest. still.' : 'a member, signed in.');
+    return reply('a stranger, for now.');
+  }
   if (/where/.test(text)) {
     if (observations.lastStar === '') return reply('you have not touched anything yet. that is why i am still here.');
     diveNode = Math.max(0, nodeNamed(observations.lastStar));
@@ -2630,9 +2662,13 @@ function togglePanel() {
   }
   panel = document.createElement('div');
   panel.id = 'mindPanel';
-  panel.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:50;width:min(19rem,88vw);'
+  // It is a tall panel on a short phone: cap the height and let it scroll, with a
+  // momentum scroll and a safe bottom inset so the last row is not under the thumb.
+  panel.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:50;width:min(19rem,92vw);'
+    + 'max-height:calc(100dvh - 20px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;'
     + 'background:rgba(12,11,10,.94);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
-    + 'padding:12px 14px;font:12px system-ui,sans-serif;color:#E7DCC6;backdrop-filter:blur(8px)';
+    + 'padding:12px 14px calc(18px + env(safe-area-inset-bottom));font:12px system-ui,sans-serif;'
+    + 'color:#E7DCC6;backdrop-filter:blur(8px)';
 
   let html = '<div style="letter-spacing:.22em;font-size:10px;color:#8a7c62;margin-bottom:8px">MIND</div>';
   /** One labelled slider row. */
