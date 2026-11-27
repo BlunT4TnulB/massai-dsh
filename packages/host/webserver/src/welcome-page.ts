@@ -516,7 +516,7 @@ export function accessPageHtml(line?: number, cookieHeader = ''): string {
     <p class="sub">Three ways in. Start free, sign in with an account, or bring your own
     DeepSeek key — whatever suits you.</p>
 
-    ${frozen ? '<p class="paused" style="text-align:left"><b>The free preview is paused for a security review.</b> A guest session was reaching the deployment&rsquo;s own workspace with full filesystem access. Until guests are properly sandboxed, bring your own key — and this says so rather than hiding it.</p>' : ankEmpty ? '<p class="paused" style="text-align:left"><b>The free preview is paused</b> — the model credit has run out. Bring your own key below and keep working.</p>' : previewEnabled ? `<a class="hero" href="/api/preview" style="margin-bottom:1.1rem">Start free — no account needed →</a>` : ''}
+    ${frozen ? '<p class="paused" style="text-align:left"><b>The free preview is paused for a security review.</b> A guest session was reaching the deployment&rsquo;s own workspace with full filesystem access. Until guests are properly sandboxed, bring your own key — and this says so rather than hiding it.</p>' : tankEmpty ? '<p class="paused" style="text-align:left"><b>The free preview is paused</b> — the model credit has run out. Bring your own key below and keep working.</p>' : previewEnabled ? `<a class="hero" href="/api/preview" style="margin-bottom:1.1rem">Start free — no account needed →</a>` : ''}
     <a class="hero" href="/expand" style="margin-bottom:1.1rem;background:linear-gradient(180deg,#171512,#12100e);border:1px solid #3a2f22;color:#EDE7DA">Have an idea? Expand it first →</a>
     <p class="hint" style="margin:-.6rem 0 1.1rem">A guided walk from one sentence to a build that cannot miss. Free.</p>
 
