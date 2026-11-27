@@ -81,6 +81,12 @@ async function runOne(task) {
     shape: trial.shape ?? task.shape,
     accepted: trial.accepted === true,
     costUsd: trial.costUsd ?? 0,
+    // Attribution: a repair pass is the difference between "the model got it right"
+    // and "the checks caught it and a second call fixed it". Without this the
+    // scorecard cannot say which mechanism moved the number.
+    repairs: Number(trial.repairs ?? 0),
+    repairAttempted: trial.repairAttempted === true,
+    ...(typeof trial.error === 'string' ? { error: trial.error } : {}),
     checks: (trial.checks ?? []).map(check => ({ check: check.check, pass: check.pass, detail: check.detail })),
     error: trial.error,
     savedProjectId: payload.savedProject?.id,
@@ -111,6 +117,9 @@ for (let pass = 1; pass <= runs; pass += 1) {
 const graded = results.filter(result => result.refused === undefined)
 const refusals = results.filter(result => result.refused !== undefined)
 const accepted = graded.filter(result => result.accepted).length
+const repaired = results.filter(result => result.repairs === 1).length
+const repairAttempts = results.filter(result => result.repairAttempted === true).length
+const repairedAccepted = results.filter(result => result.repairs === 1 && result.accepted).length
 const spent = results.reduce((sum, result) => sum + (result.costUsd ?? 0), 0)
 const failuresByCheck = new Map()
 for (const result of graded) {
@@ -139,6 +148,9 @@ const scorecard = {
   spread,
   tasks: results.length,
   accepted,
+  repaired,
+  repairedAccepted,
+  repairAttempts,
   graded: graded.length,
   oneTurnRate: graded.length === 0 ? 0 : Number((accepted / graded.length).toFixed(3)),
   refusalsCorrect: refusals.filter(result => result.refused === true).length,

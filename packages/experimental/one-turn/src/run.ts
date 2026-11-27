@@ -67,6 +67,8 @@ export interface TrialRecord {
   readonly buckets: readonly string[]
   /** How many repair passes were spent before the checks were accepted. */
   readonly repairs?: number
+  /** Whether a repair pass was spent at all, even if it did not improve the result. */
+  readonly repairAttempted?: boolean
 }
 
 /** Where trial artifacts live. */
@@ -460,6 +462,7 @@ export async function runTrial(options: {
     let checks = checkFiles(options.spec, files)
     let accepted = checks.every(check => check.pass)
     let repairs = 0
+    let repairAttempted = false
 
     // Repair pass: one more call, only when it can actually help and only when the
     // budget still covers it. The defect list is deterministic, so this is a fix,
@@ -472,6 +475,7 @@ export async function runTrial(options: {
       const spent = costUsd
       const projectedRepair = estimateCost(options.mask.tokens + 4000, 8000)
       if (spent + projectedRepair <= maxTrialUsd()) {
+        repairAttempted = true
         const second = await callBuild({
           maskText: options.mask.text, userText: repairTurn(failures, files), apiKey: options.apiKey,
           model: options.model, maxTokens: 12000,
@@ -532,6 +536,7 @@ export async function runTrial(options: {
       id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
       inputTokens, outputTokens, costUsd, model: options.model, files, checks, accepted, buckets,
       repairs,
+      repairAttempted,
       ...(typeof parsed.report === 'string' ? { report: parsed.report } : {}),
     }
     // Evidence outlives the container now.
