@@ -1191,6 +1191,28 @@ recorded, nothing sent anywhere. It is **not** a language model — that is stat
 should stay stated in the product. Wiring real answers would mean an owner-keyed call per question;
 the honest place for that is a later, capped feature, not a silent one.
 
+## Who is looking, and what they were on (2026-11-27, `6c4c7b6`)
+
+`/api/mind/who` resolves the **verified** session cookie — never a claim from the page — and returns a
+coarse label plus, for a non-operator, the project they were last in:
+
+```
+{"view":"stranger","label":"stranger"}          no cookie
+{"view":"owner","label":"operator"}             signed marker cookie
+{"view":"signed","label":"member"|"guest",      verified session cookie, plus "project"
+ "project":"<basename of that session's cwd>"}   when their newest session log can be read
+```
+
+`projectOf()` in `viewer.ts` reads only the **header record** of at most 40 recent session logs under
+3 MB, caches per user for two minutes, and never returns content. A forged `dsh-auth-*` cookie resolves
+to stranger, which is the correct failure mode.
+
+Verified live: stranger, operator, and a forged session cookie all answer 200 with the right label.
+**Not yet verifiable end to end:** the `guest` label and the project name, because the free preview is
+frozen (no guest sessions exist to look up). The long-absence wording also did not reproduce in the test
+— the visit clock appears to be overwritten earlier than intended, so that branch needs a fix before it
+can be claimed.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
