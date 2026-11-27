@@ -1267,6 +1267,26 @@ Verified live: "what is the capital of australia" (`brief`) → "Canberra … ac
 source `Australian Capital Territory`; a Stampede question → honest refusal plus what the reference did
 say, source `Calgary`.
 
+## Expander follows the sentence (2026-11-27, `7b15332` / `95cb4a4`)
+
+Reported by the owner's friend: the Idea Expander "starts with a suggestion but when he starts to type
+his idea it doesn't change the auto-populated steps regardless of user input"; and the suggestion should
+rotate to keep the page alive.
+
+Fixed, verified live:
+
+| before | now |
+|---|---|
+| steps appeared only on Enter or blur | typing (≥ 8 chars, 650 ms debounce) re-reads the sentence and re-renders the readings, the shape and all eight questions |
+| shape never changed | `guessShape()` in `ambiguity.ts` infers from the words — deterministic, no model call, so it can run per keystroke; the select follows it until the person chooses by hand |
+| one suggestion, forever | a rotating "try …" line under the box, a new idea every 6 s, stopping the moment they type; clicking it loads the idea |
+| hint never changed | the hero's first instruction rotates through four lines every 7 s (touch a star, press T, hold still, five taps) |
+
+Verified with puppeteer at 430×932: suggestion rotated (`a csv dashboard` → `a resume from my notes`);
+typing "a shift schedule for four people at a cafe…" opened stage 2 with 8 questions and inferred
+`single-file-app`; replacing it with "a printable recipe card for garlic pasta…" switched the shape to
+`single-page-site` — no button pressed. No console errors.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
