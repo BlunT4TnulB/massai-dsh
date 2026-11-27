@@ -138,6 +138,14 @@ export function compile(spec: OneTurnSpec): CompiledMask {
     spec.techLimits,
   ].join('\n'))
 
+  add('trace', [
+    'EVERY REQUIREMENT MUST LEAVE A TRACE IN THE ARTIFACT.',
+    'If the brief says "loads from data.json", the file must read data.json and the page must say so where a',
+    'reader can see it. If it says "trims whitespace", the script must trim it and print a line that says it did.',
+    'A feature that exists only in your head fails the check that greps for it, and fails the person who has to',
+    'verify it. Name what you built, in the words the brief used, in visible text or in a printed summary.',
+  ].join('\n'))
+
   add('constraints', ENVIRONMENT)
 
   add('style', [

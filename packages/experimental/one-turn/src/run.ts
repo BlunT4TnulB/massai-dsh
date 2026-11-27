@@ -362,15 +362,47 @@ const BUILD_TURN = [
  * @param files - what the first attempt produced.
  * @returns the user turn for the repair pass.
  */
+/** How to fix each deterministic check, in the words that actually fix it. */
+const REMEDIES: Readonly<Record<string, string>> = {
+  'no-placeholders': 'Remove every occurrence of TODO, FIXME, lorem ipsum, placeholder image and example.com. '
+    + 'Replace each with real content, or with a bracketed blank like [your link]. Then search the text again '
+    + 'and confirm none remain.',
+  'requirements-traced': 'A requirement is satisfied but invisible. Add it to the artifact in words: a heading, '
+    + 'a line of copy, a printed summary line. The exact nouns from the failing requirement must appear in the '
+    + 'output text.',
+  'no-external-requests': 'Remove every http(s) reference. Inline anything remote: write the font stack from '
+    + 'system fonts, draw the icon as inline SVG, and keep every asset inside the file.',
+  'entry-exists': 'Produce the named entry file at exactly that path, complete, not a stub.',
+  'file-count': 'Reduce to the allowed number of files; fold what is needed into the entry file.',
+  'size': 'Reduce the artifact size by removing repetition, not by removing features.',
+}
+
+/**
+ * The repair turn: the same contract, plus exactly what failed and how to fix that class
+ * of failure. A symptom alone makes the model guess; the remedy is what makes one more
+ * call worth its cost.
+ * @param failures - the checks that did not pass, with their observations.
+ * @param files - what the first attempt produced.
+ * @returns the user turn for the repair pass.
+ */
 function repairTurn(failures: readonly CheckResult[], files: readonly BuiltFile[]): string {
   const problems = failures.map(check => `- ${check.check}: ${check.detail}`).join('\n')
+  const remedies = failures
+    .map(check => REMEDIES[check.check])
+    .filter((remedy): remedy is string => remedy !== undefined)
+    .map(remedy => '- ' + remedy)
+    .join('\n')
   const current = JSON.stringify({ files }, null, 2)
   return [
-    'Repair pass. The previous attempt failed deterministic checks. Fix only what is listed,',
-    'keep everything that already works, and return the complete corrected file set.',
+    'Repair pass. The previous attempt failed deterministic checks that grep the artifact.',
+    'Fix exactly what is listed, keep everything that already works, and return the complete',
+    'corrected file set. Do not explain; return the files.',
     '',
     'FAILED CHECKS',
     problems,
+    '',
+    remedies === '' ? '' : 'HOW TO FIX THEM',
+    remedies === '' ? '' : remedies,
     '',
     'CURRENT FILES',
     current,
@@ -447,16 +479,40 @@ export async function runTrial(options: {
       parsed = extractJson(first.text) as { report?: unknown }
       files = parseFiles(parsed)
     } catch (parseError) {
-      void saveTrial({
-        id, shape: options.spec.shape, accepted: false, costUsd, inputTokens, outputTokens,
-        buckets: ['broken-run'], checks: [], files: [],
-        error: parseError instanceof Error ? parseError.message : String(parseError),
-      }).catch(() => undefined)
-      return {
-        id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
-        inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
-        accepted: false, buckets: ['broken-run'],
-        error: `could not read the reply: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+      // An unreadable reply is usually a truncated or fenced one, not a refusal.
+      // One stricter retry is cheaper than counting a usable build as a failure.
+      const retry = await callBuild({
+        maskText: options.mask.text,
+        userText: 'Your previous reply was not readable as one JSON object.\n'
+          + 'Reply with ONE JSON object and nothing else. No prose, no fences, no comments.\n'
+          + '{"files":[{"path":"index.html","content":"..."}],"report":"..."}\n' + BUILD_TURN,
+        apiKey: options.apiKey,
+        model: options.model,
+        maxTokens: 12000,
+      })
+      inputTokens += retry.inputTokens
+      outputTokens += retry.outputTokens
+      costUsd += retry.costUsd
+      if (retry.error === undefined) {
+        try {
+          parsed = extractJson(retry.text) as { report?: unknown }
+          files = parseFiles(parsed)
+        } catch {
+          files = []
+        }
+      }
+      if (files.length === 0) {
+        void saveTrial({
+          id, shape: options.spec.shape, accepted: false, costUsd, inputTokens, outputTokens,
+          buckets: ['broken-run'], checks: [], files: [],
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        }).catch(() => undefined)
+        return {
+          id, at: started, shape: options.spec.shape, maskTokens: options.mask.tokens,
+          inputTokens, outputTokens, costUsd, model: options.model, files: [], checks: [],
+          accepted: false, buckets: ['broken-run'],
+          error: `could not read the reply, twice: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        }
       }
     }
     let checks = checkFiles(options.spec, files)
