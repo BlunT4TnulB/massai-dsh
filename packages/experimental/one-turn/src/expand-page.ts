@@ -267,6 +267,7 @@ costs anything until you choose to build.</p>
       const response = await fetch('/api/one-turn/readings?goal=' + encodeURIComponent(state.goal));
       const data = await response.json();
       lastReading = data.readings.length > 0 ? data.readings[0] : null;
+      if (typeof data.suggested === 'string' && !state.shapeTouched) state.shape = data.suggested;
       if (Array.isArray(data.readings) && data.readings.length > 0) {
         const first = document.createElement('div');
         first.className = 'insight';

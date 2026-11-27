@@ -492,6 +492,7 @@ they run from the file itself, with no accounts and no build step.</p><ul>${rows
       const shape = url.searchParams.get('shape')
       const list = readings(goal, shape === null || shape === '' ? undefined : shape as never)
       respond(res, 200, {
+        suggested: guessShape(goal),
         ambiguous: isAmbiguous(goal, shape === null || shape === '' ? undefined : shape as never),
         readings: list,
         decision: list[0] === undefined ? '' : `interpretation taken: ${list[0].means}`,

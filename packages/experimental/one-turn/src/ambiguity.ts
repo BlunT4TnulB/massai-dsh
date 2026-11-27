@@ -113,6 +113,32 @@ export function readings(goal: string, chosen?: Shape): readonly Reading[] {
   }))
 }
 
+/** Words that make one shape clearly the right one, most specific first. */
+const SHAPE_HINTS: ReadonlyArray<{ shape: string; words: readonly string[] }> = [
+  { shape: 'document', words: ['resume', 'cv', 'cover letter', 'letter to', 'proposal', 'report', 'write-up', 'write up', 'memo', 'essay'] },
+  { shape: 'script', words: ['script', 'rename', 'batch', 'folder of', 'command line', 'python', 'clean this csv', 'automate'] },
+  { shape: 'data-view', words: ['dashboard', 'chart', 'graph', 'spreadsheet', 'csv', 'data', 'statistics', 'trend', 'revenue'] },
+  { shape: 'single-file-app', words: ['calculator', 'timer', 'tracker', 'schedule', 'rota', 'checklist', 'quiz', 'planner', 'budget', 'converter', 'split', 'countdown', 'inventory', 'log ', 'score'] },
+  { shape: 'single-page-site', words: ['website', 'web site', 'page', 'landing', 'business', 'portfolio', 'menu', 'prices', 'shop', 'service', 'recipe', 'invoice'] },
+]
+
+/**
+ * The shape a sentence most likely wants, from its own words.
+ *
+ * This exists because the readings only fire on ambiguous phrases; a perfectly clear
+ * sentence still needs the shape to follow it while the person types. Deterministic on
+ * purpose: no model call, so it can run on every keystroke.
+ * @param goal - the request as typed.
+ * @returns the closest shape, defaulting to a single page.
+ */
+export function guessShape(goal: string): Shape {
+  const lower = ' ' + goal.toLowerCase() + ' '
+  for (const hint of SHAPE_HINTS) {
+    if (hint.words.some(word => lower.includes(word))) return hint.shape as Shape
+  }
+  return 'single-page-site'
+}
+
 /**
  * Is this request genuinely ambiguous?
  * @param goal - the request as typed.
