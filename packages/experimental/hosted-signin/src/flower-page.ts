@@ -617,9 +617,10 @@ function stepBreath(now) {
   breathPulse *= 0.9;
   speechLevel *= 0.9;
   if (!MIND.breathe) { breathScale = 1; return }
-  const slow = Math.sin(now * 0.00092) * 0.6 + Math.sin(now * 0.00041 + 1.7) * 0.4;
-  const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.012;
-  breathScale = 1 + MIND.breath * (0.024 * slow) + breathPulse + speakingPart;
+  // ~8 s per breath, with a second slower wave underneath so no two breaths match.
+  const slow = Math.sin(now * 0.00078) * 0.62 + Math.sin(now * 0.00037 + 1.7) * 0.38;
+  const speakingPart = Math.sin(now * 0.019) * speechLevel * 0.02;
+  breathScale = 1 + MIND.breath * (0.045 * slow) + breathPulse + speakingPart;
 }
 
 function project(x, y, z) {
