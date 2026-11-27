@@ -473,8 +473,8 @@ export async function runTrial(options: {
       }
     }
 
-    let parsed: { report?: unknown }
-    let files: BuiltFile[]
+    let parsed: { report?: unknown } = {}
+    let files: BuiltFile[] = []
     try {
       parsed = extractJson(first.text) as { report?: unknown }
       files = parseFiles(parsed)
