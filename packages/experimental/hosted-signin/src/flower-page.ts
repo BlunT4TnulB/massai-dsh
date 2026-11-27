@@ -840,6 +840,7 @@ function drawVignette() {
 // Real thresholds on real behaviour, each watched once. This is the difference between
 // a visualiser and a presence: it does not react to the frame, it reacts to *you* —
 // how long you stayed, how far you fell, whether you came back.
+identify();
 const startedAt = Date.now();
 
 /** Listen for one sentence, if this browser can. Nothing is recorded or sent. */
@@ -863,6 +864,24 @@ function listenOnce() {
     say('this browser will not let me listen.');
     void error;
   }
+}
+
+/** Who the server says is looking: 'owner' | 'signed' | 'stranger'. */
+let VIEWER = 'stranger';
+/** How long since the last visit, in ms, or -1 when unknown. */
+let awayFor = -1;
+
+/** Load the visit clock and learn who is here. */
+function identify() {
+  try {
+    const last = Number(window.localStorage.getItem('massai_last_visit') ?? '');
+    if (Number.isFinite(last) && last > 0) awayFor = Date.now() - last;
+    window.localStorage.setItem('massai_last_visit', String(Date.now()));
+  } catch (error) { void error; }
+  fetch('/api/mind/who', { headers: { accept: 'application/json' } })
+    .then(function (response) { return response.ok ? response.json() : null })
+    .then(function (body) { if (body !== null && typeof body.view === 'string') VIEWER = body.view })
+    .catch(function () { /* a stranger until proven otherwise */ });
 }
 
 const observations = {
@@ -2638,12 +2657,33 @@ function togglePanel() {
 }
 
 // Arriving somewhere again: it says it remembers the last thing you looked at.
-setTimeout(function () {
-  if (!MIND.speak || !MIND.remember) return;
+/** A line that says who is here, how long they were gone, and what they left behind. */
+function greeting() {
   let looked = '';
   try { looked = String(window.localStorage.getItem('massai_looked_at') ?? ''); } catch (error) { void error; }
-  if (looked === '') return;
-  say('you were here. you were looking at ' + looked + '.');
+  const gap = awayFor;
+  const longGone = gap > 6 * 60 * 60 * 1000;
+  const someGone = gap > 45 * 60 * 1000;
+  const subject = looked === '' ? '' : ' you were looking at ' + looked + '.';
+  if (VIEWER === 'owner') {
+    if (longGone) return 'the creator is back. i kept the lights on.' + subject;
+    if (someGone) return 'the creator, again. i was starting to narrate the quiet.' + subject;
+    return 'the creator is here. get on with it.' + subject;
+  }
+  if (VIEWER === 'signed') {
+    if (longGone) return 'you again. i was beginning to think you had a life.' + subject;
+    if (someGone) return 'back so soon. i noticed.' + subject;
+    return 'hello again.' + subject;
+  }
+  if (longGone) return 'a new face, after a long dark. stay a while.' + subject;
+  if (someGone) return 'you came back.' + subject;
+  return looked === '' ? 'you are the first visitor. it is quieter than it looks.' : 'you were here. you were looking at ' + looked + '.';
+}
+
+setTimeout(function () {
+  if (!MIND.speak || !MIND.remember) return;
+  const line = greeting();
+  if (line !== '') say(line);
 }, 4200);
 
 // Leaving and returning: it notices both, in its own way.

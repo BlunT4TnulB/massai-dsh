@@ -1085,6 +1085,20 @@ export function apply(ctx: Context): void {
     },
   })
 
+  // Who is looking at the mind. The mind is a public place, but a place can know you.
+  // Owner is proven by the signed marker cookie (never a token in the page); a signed-in
+  // session is proven by the session cookie; everything else is a stranger.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/who', auth: 'anonymous',
+    handler: (req, res) => {
+      const signed = String(req.headers.cookie ?? '').includes('dsh-auth-')
+      const own = isOwnerRequest(req)
+      respond(res, 200, {
+        view: own ? 'owner' : signed ? 'signed' : 'stranger',
+      }, { 'cache-control': 'no-store' })
+    },
+  })
+
   // Installable, so it can live fullscreen on a spare screen.
   ctx.webServer.register({
     kind: 'exact', path: '/mind.webmanifest', auth: 'anonymous',
