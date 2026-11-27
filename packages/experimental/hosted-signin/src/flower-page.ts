@@ -429,6 +429,8 @@ const MIND_DEFAULTS = {
   temperament: 'oracle', // how it talks: oracle · companion · gremlin · archivist
   voiceOut: false,   // read its lines aloud with the browser's own voice
   ask: true,         // let it actually think about a question it was not built to answer
+  answerStyle: 'balanced', // brief · balanced · deep
+  lookItUp: true,    // consult a public reference before answering
   speechGap: 1,      // how long between things said (× the base gap)
   heartbeat: true,   // let real activity quicken the breath
   remember: true,    // greet you with the last star you held, and notice you returning
@@ -1119,14 +1121,21 @@ function askTheMind(question) {
   fetch('/api/mind/ask', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text: question, context, history: askHistory }),
+    body: JSON.stringify({
+      text: question, context, history: askHistory,
+      style: MIND.answerStyle, lookup: MIND.lookItUp,
+    }),
   })
     .then(function (response) { return response.json() })
     .then(function (body) {
       if (body !== null && body.ok === true && typeof body.answer === 'string') {
+        const source = body.source !== null && typeof body.source === 'object'
+          && typeof body.source.title === 'string' ? body.source : null;
+        const spoken = source === null ? body.answer : body.answer + ' (via ' + source.title + '.)';
         rememberTurn('user', question);
         rememberTurn('assistant', body.answer);
-        say(body.answer);
+        say(spoken);
+        if (source !== null) flashNote('source: ' + source.title);
         return;
       }
       if (body !== null && typeof body.say === 'string') { say(body.say); return }
@@ -2779,6 +2788,13 @@ function togglePanel() {
       + (MIND.temperament === name ? ' selected' : '') + '>' + TEMPERAMENTS[name].label + '</option>').join('')
     + '</select></label>';
   html += toggle('ask', 'answers real questions');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:6px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">answer style</span>'
+    + '<select data-key="answerStyle" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
+    + ['brief', 'balanced', 'deep'].map(name => '<option value="' + name + '"'
+      + (MIND.answerStyle === name ? ' selected' : '') + '>' + name + '</option>').join('')
+    + '</select></label>';
+  html += toggle('lookItUp', 'looks things up first');
   html += '<button data-forget="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#8a7c62;cursor:pointer">forget the conversation</button>';
   html += '<p style="margin:0 0 6px;font-size:10px;color:#6f6553;line-height:1.5">'

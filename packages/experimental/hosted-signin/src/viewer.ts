@@ -93,3 +93,60 @@ export function projectOf(userId: string): string | undefined {
   cache.byUser.set(userId, answer)
   return answer
 }
+
+
+/** What a lookup found, and where it came from. */
+export interface Reference {
+  readonly title: string
+  readonly extract: string
+  readonly url: string
+}
+
+/** Cached lookups, because a person often asks twice. */
+const refCache = new Map<string, { at: number; value: Reference | undefined }>()
+
+/**
+ * Look a question up on Wikipedia, which is free, public, and honest about being a
+ * source. No key, no tracking of the person asking, and the answer names where it came
+ * from — a mind that cites is more useful than one that sounds certain.
+ * @param question - what was asked.
+ * @returns the summary, or undefined when nothing useful was found or the line failed.
+ */
+export async function referenceFor(question: string): Promise<Reference | undefined> {
+  const key = question.toLowerCase().slice(0, 120)
+  const hit = refCache.get(key)
+  if (hit !== undefined && Date.now() - hit.at < 300_000) return hit.value
+  const remember = (value: Reference | undefined): Reference | undefined => {
+    refCache.set(key, { at: Date.now(), value })
+    if (refCache.size > 200) { const first = refCache.keys().next(); if (!first.done) refCache.delete(first.value) }
+    return value
+  }
+  try {
+    const searchUrl = 'https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=1&srsearch='
+      + encodeURIComponent(question.slice(0, 160))
+    const search = await fetch(searchUrl, {
+      headers: { 'user-agent': 'Massai/1.0 (a small workshop; contact: the operator)' },
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!search.ok) return remember(undefined)
+    const body = await search.json() as { query?: { search?: Array<{ title?: string; snippet?: string }> } }
+    const title = body.query?.search?.[0]?.title
+    if (title === undefined || title === '') return remember(undefined)
+    const summaryUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_'))
+    const summary = await fetch(summaryUrl, {
+      headers: { 'user-agent': 'Massai/1.0 (a small workshop; contact: the operator)' },
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!summary.ok) return remember(undefined)
+    const page = await summary.json() as { title?: string; extract?: string; content_urls?: { desktop?: { page?: string } } }
+    const extract = String(page.extract ?? '').slice(0, 900).trim()
+    if (extract === '') return remember(undefined)
+    return remember({
+      title: String(page.title ?? title),
+      extract,
+      url: String(page.content_urls?.desktop?.page ?? 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title.replace(/ /g, '_'))),
+    })
+  } catch {
+    return remember(undefined)
+  }
+}

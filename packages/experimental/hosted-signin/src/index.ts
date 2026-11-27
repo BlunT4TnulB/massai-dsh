@@ -31,7 +31,7 @@ import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession 
 import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
-import { labelOf, projectOf } from './viewer.ts'
+import { labelOf, projectOf, referenceFor } from './viewer.ts'
 import { mePageHtml } from './me-page.ts'
 import { isConversationHost, LINK_TEXT_LIMIT, readLink, urlsIn } from './link-reader.ts'
 import { providersPageHtml } from './providers-page.ts'
@@ -1126,13 +1126,17 @@ export function apply(ctx: Context): void {
 
       const apiKey = process.env.DEEPSEEK_API_KEY ?? ''
       if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
-      let body: { text?: unknown; context?: unknown; history?: unknown }
-      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown } } catch {
+      let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown } } catch {
         respond(res, 400, { error: 'expected json' }); return
       }
       const question = String(body.text ?? '').slice(0, 500).trim()
       if (question === '') { respond(res, 400, { error: 'say something' }); return }
       const context = String(body.context ?? '').slice(0, 300)
+      // How much it should say, and whether it should look the question up first.
+      const style = body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
+      const wantsLookup = body.lookup !== false
+      const reference = wantsLookup ? await referenceFor(question) : undefined
       // A short memory of the conversation, so a follow-up means something. Bounded on
       // both sides: six turns, two hundred characters each, and only ever as text.
       const history: Array<{ role: 'user' | 'assistant'; content: string }> = []
@@ -1159,6 +1163,14 @@ export function apply(ctx: Context): void {
         'in one clause and then give your best short answer.',
         own ? 'You are speaking to the operator who built this place.' : 'You are speaking to someone who signed in.',
         context === '' ? '' : 'What you can see of the moment: ' + context,
+        style === 'brief' ? 'Answer in one sentence. No preamble.'
+          : style === 'deep' ? 'Answer in two short paragraphs, the first the direct answer, the second the useful detail.'
+          : 'Answer in one or two sentences, then at most one sentence of useful detail.',
+        reference === undefined
+          ? 'No reference was found for this question: answer from what you know, and say plainly if you are unsure.'
+          : 'A reference was found (' + reference.title + '). Use it when it is relevant, and if you use it, '
+            + 'finish by naming the source in a few words, for example "according to Wikipedia". Reference text: '
+            + reference.extract,
       ].filter(line => line !== '').join(' ')
       try {
         const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -1192,7 +1204,12 @@ export function apply(ctx: Context): void {
           at: now, session: 'mind-ask', userId: userId ?? 'operator', model: 'deepseek-chat',
           input, output, cacheRead: 0, cacheWrite: 0,
         }).catch(() => { /* the ledger reports itself in /api/db/status */ })
-        respond(res, 200, { ok: true, answer, costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)) })
+        respond(res, 200, {
+          ok: true,
+          answer,
+          costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)),
+          ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
+        })
       } catch (error) {
         respond(res, 200, { ok: false, reason: 'transport', say: 'the line went quiet. ask me again.' })
         void error
