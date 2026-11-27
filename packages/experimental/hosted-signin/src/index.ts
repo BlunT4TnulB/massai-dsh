@@ -1294,6 +1294,18 @@ export function apply(ctx: Context): void {
         const dir = join(home, 'sessions', project, id)
         mkdirSync(dir, { recursive: true })
         const target = join(dir, 'session.v4.jsonl.zstd')
+        // A session log is replayed into memory by the app. On a 512 MB instance a
+        // large one takes the whole service down for everybody, so the door refuses
+        // it up front and says why instead of accepting it and dying later.
+        const declared = Number(req.headers['content-length'] ?? '0')
+        const CEILING = 8 * 1024 * 1024
+        if (declared > CEILING) {
+          respond(res, 413, {
+            error: `that transcript is ${(declared / 1048576).toFixed(1)} MB; this instance replays sessions in memory `
+              + `and its ceiling is ${CEILING / 1048576} MB. Trim it further, or host it on a larger instance.`,
+          })
+          return
+        }
         let bytes = 0
         await new Promise<void>((resolve, reject) => {
           const out = createWriteStream(target)
