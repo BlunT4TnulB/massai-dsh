@@ -431,6 +431,7 @@ const MIND_DEFAULTS = {
   ask: true,         // let it actually think about a question it was not built to answer
   answerStyle: 'balanced', // brief · balanced · deep
   backbone: 'auto',  // auto · groq · gemini · openrouter · deepseek
+  presence: 0.7,     // 0 plain assistant · 1 oracle
   lookItUp: true,    // consult a public reference before answering
   speechGap: 1,      // how long between things said (× the base gap)
   heartbeat: true,   // let real activity quicken the breath
@@ -1074,6 +1075,8 @@ function obey(raw) {
     openSay();
     return reply('ask.');
   }
+  if (/(tell me a riddle|riddle me|a riddle|something silly|make me laugh)/.test(text)) { riddle(); return 'riddle'; }
+  if (/(the answer|what is it|give up|tell me the answer)/.test(text) && currentRiddle !== null) { riddle(); return 'answered'; }
   if (/(who summons|the word|let me in)/.test(text)) { openWord(); return reply('who summons me?') }
   if (/(who is looking|who am i|do you know me)/.test(text)) {
     if (VIEWER === 'owner') return reply('the operator. the one who made this.');
@@ -1186,7 +1189,7 @@ function askTheMind(question) {
     headers: keyHeaders(),
     body: JSON.stringify({
       text: question, context, history: askHistory,
-      style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone,
+      style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone, tone: MIND.presence,
     }),
   })
     .then(function (response) { return response.json() })
@@ -2887,6 +2890,9 @@ function togglePanel() {
       + (MIND.answerStyle === name ? ' selected' : '') + '>' + name + '</option>').join('')
     + '</select></label>';
   html += toggle('lookItUp', 'looks things up first');
+  html += slider('presence', 'voice', 0, 1, 0.05);
+  html += '<p style="margin:-2px 0 4px;font-size:10px;color:#6f6553;line-height:1.5">'
+    + '0 is a plain assistant; 1 is the oracle. Lookups answer the same either way.</p>';
   html += '<label style="display:flex;align-items:center;gap:8px;margin:6px 0">'
     + '<span style="width:6.4rem;color:#9a8f7c">backbone</span>'
     + '<select data-key="backbone" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
@@ -3187,6 +3193,37 @@ function claimWord(word, second) {
     .catch(function () { say('that did not reach me. try again.'); });
 }
 
+// --- riddles ---------------------------------------------------------------
+// A local set, no model call, for when someone asks for something silly rather than
+// something true. Kept small and answered in-character.
+const RIDDLES = [
+  { q: 'What has to be broken before you can use it?', a: 'an egg' },
+  { q: 'What gets wetter the more it dries?', a: 'a towel' },
+  { q: 'What has many teeth but never bites?', a: 'a comb' },
+  { q: 'What has hands but cannot clap?', a: 'a clock' },
+  { q: 'What has a head and a tail but no body?', a: 'a coin' },
+  { q: 'What goes up but never comes down?', a: 'your age' },
+  { q: 'What has one eye but cannot see?', a: 'a needle' },
+  { q: 'What has words but never speaks?', a: 'a book' },
+  { q: 'What has cities but no houses, forests but no trees?', a: 'a map' },
+  { q: 'What is full of holes but still holds water?', a: 'a sponge' },
+  { q: 'What has legs but cannot walk?', a: 'a table' },
+  { q: 'The more you take, the more you leave behind. What am I?', a: 'footsteps' }
+];
+let currentRiddle = null;
+
+/** Say a riddle, or the answer to the one still standing. */
+function riddle() {
+  if (currentRiddle !== null) {
+    const answered = currentRiddle;
+    currentRiddle = null;
+    say('it was ' + answered.a + '.');
+    return;
+  }
+  currentRiddle = RIDDLES[Math.floor(Math.random() * RIDDLES.length)];
+  say(currentRiddle.q);
+}
+
 // The box on the glass: ask anything, in words or by voice, and the mind answers in its
 // own voice — the same endpoint as /ask, so the caps and the sources are identical.
 (function wireAskbar() {
@@ -3204,7 +3241,7 @@ function claimWord(word, second) {
     fetch('/api/mind/ask', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: question, context, style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone }),
+      body: JSON.stringify({ text: question, context, style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone, tone: MIND.presence }),
     })
       .then(function (response) { return response.json() })
       .then(function (body) {

@@ -1429,8 +1429,8 @@ You can also just open <a href="/assist" style="color:#c9b389">/assist</a> in th
       const bringYourOwn = knownProviders.includes(byokProvider) && byokKey.length >= 8 ? byokProvider : ''
       const apiKey = bringYourOwn === 'deepseek' ? byokKey : (process.env.DEEPSEEK_API_KEY ?? '')
       if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
-      let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown }
-      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown } } catch {
+      let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown; tone?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown; tone?: unknown } } catch {
         respond(res, 400, { error: 'expected json' }); return
       }
       const question = String(body.text ?? '').slice(0, 500).trim()
@@ -1438,6 +1438,9 @@ You can also just open <a href="/assist" style="color:#c9b389">/assist</a> in th
       const context = String(body.context ?? '').slice(0, 300)
       // How much it should say, and whether it should look the question up first.
       const style = stranger ? 'brief' : body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
+      // 0 = plain assistant, 1 = oracle. One number the person can move.
+      const rawTone = Number((body as { tone?: unknown }).tone ?? 0.6)
+      const tone = Number.isFinite(rawTone) ? Math.max(0, Math.min(1, rawTone)) : 0.6
       // A named backbone is honoured when it is configured; 'auto' is the chain.
       const wanted = String((body as { backbone?: unknown }).backbone ?? 'auto').toLowerCase()
       const picked = ['auto', 'groq', 'gemini', 'openrouter', 'deepseek'].includes(wanted) ? wanted : 'auto'
@@ -1482,6 +1485,11 @@ You can also just open <a href="/assist" style="color:#c9b389">/assist</a> in th
         'If asked what the Mind is, say you are inside the Mind on Massai — a sphere made of finished work —',
         'and you may joke that describing its whole vastness would take longer than the fall.',
         'If you are asked who created you, who built you, or who made you, state the creator tag exactly: BlunTnTnulB.',
+        tone > 0.7
+          ? 'Speak like the mind of this place: brief, weighty, a little strange, never obscure about the answer itself.'
+          : tone > 0.35
+            ? 'Speak warmly and plainly, with the place in your voice but the answer first.'
+            : 'Answer plainly and directly, like a helpful assistant. No theatrics. The answer is the point.',
         own ? 'You are speaking to the operator who built this place.' : 'You are speaking to someone who signed in.',
         context === '' ? '' : 'What you can see of the moment: ' + context,
         style === 'brief' ? 'Answer in one sentence. No preamble.'
