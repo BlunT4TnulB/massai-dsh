@@ -19,7 +19,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # The runner ships the Android SDK; the setup-android action has been failing
+      # upstream on a missing 'tools' package, so the SDK is used where it already is.
+      - name: Use the runner's Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "sdk at $SDK"
+          ls "$SDK" | head -20
+          MANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -n "$MANAGER" ]; then yes | "$MANAGER" --licenses >/dev/null 2>&1 || true; fi
 
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
@@ -80,7 +89,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
+      # The runner ships the Android SDK; the setup-android action has been failing
+      # upstream on a missing 'tools' package, so the SDK is used where it already is.
+      - name: Use the runner's Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "sdk at $SDK"
+          ls "$SDK" | head -20
+          MANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -n "$MANAGER" ]; then yes | "$MANAGER" --licenses >/dev/null 2>&1 || true; fi
 
       - uses: gradle/actions/setup-gradle@v3
         with:
