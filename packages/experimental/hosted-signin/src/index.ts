@@ -1367,8 +1367,8 @@ A phrase is enough if the second word is left empty.</p>
 
       const apiKey = process.env.DEEPSEEK_API_KEY ?? ''
       if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
-      let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown }
-      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown } } catch {
+      let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown } } catch {
         respond(res, 400, { error: 'expected json' }); return
       }
       const question = String(body.text ?? '').slice(0, 500).trim()
@@ -1376,6 +1376,9 @@ A phrase is enough if the second word is left empty.</p>
       const context = String(body.context ?? '').slice(0, 300)
       // How much it should say, and whether it should look the question up first.
       const style = stranger ? 'brief' : body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
+      // A named backbone is honoured when it is configured; 'auto' is the chain.
+      const wanted = String((body as { backbone?: unknown }).backbone ?? 'auto').toLowerCase()
+      const backbone = ['auto', 'groq', 'gemini', 'openrouter', 'deepseek'].includes(wanted) ? wanted : 'auto'
       const wantsLookup = body.lookup !== false
       const reference = wantsLookup ? await referenceFor(question) : undefined
       // A short memory of the conversation, so a follow-up means something. Bounded on
@@ -1447,7 +1450,7 @@ A phrase is enough if the second word is left empty.</p>
 
       // 1. Groq, whose free tier is generous and fast.
       const groqKey = process.env.GROQ_API_KEY ?? ''
-      if (answer === '' && groqKey !== '') {
+      if (answer === '' && groqKey !== '' && (backbone === 'auto' || backbone === 'groq')) {
         try {
           const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
@@ -1473,7 +1476,7 @@ A phrase is enough if the second word is left empty.</p>
 
       // 2. Gemini's free tier.
       const geminiKey = process.env.GEMINI_API_KEY ?? ''
-      if (answer === '' && geminiKey !== '') {
+      if (answer === '' && geminiKey !== '' && (backbone === 'auto' || backbone === 'gemini')) {
         try {
           // The free tier's model ids move; try the live alias, then a lite fallback.
           const candidates = [process.env.GEMINI_MODEL ?? 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite']
@@ -1501,7 +1504,7 @@ A phrase is enough if the second word is left empty.</p>
 
       // 3. OpenRouter's free models, if the owner added a key for them.
       const orKey = process.env.OPENROUTER_API_KEY ?? ''
-      if (answer === '' && orKey !== '') {
+      if (answer === '' && orKey !== '' && (backbone === 'auto' || backbone === 'openrouter')) {
         try {
           const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -1525,13 +1528,18 @@ A phrase is enough if the second word is left empty.</p>
       if (answer !== '') {
         const clipped = answer.slice(0, 600)
         respond(res, 200, {
-          ok: true, answer: clipped, costUsd: 0, via,
+          ok: true, answer: clipped, costUsd: 0, via, backbone,
           ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
         })
         rememberAnswer(clipped, reference === undefined ? undefined : { title: reference.title, url: reference.url })
         return
       }
 
+      if (answer === '' && backbone !== 'deepseek' && backbone !== 'auto') {
+        // A named backbone failed and nothing else was tried: fall through to auto so the
+        // person still gets an answer, and say which one actually spoke.
+        noteProvider(backbone, false, 'named backbone returned nothing')
+      }
       try {
         const response = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
@@ -1570,6 +1578,7 @@ A phrase is enough if the second word is left empty.</p>
           answer,
           costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)),
           via: 'deepseek',
+          backbone,
           ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
         })
       } catch (error) {

@@ -430,6 +430,7 @@ const MIND_DEFAULTS = {
   voiceOut: false,   // read its lines aloud with the browser's own voice
   ask: true,         // let it actually think about a question it was not built to answer
   answerStyle: 'balanced', // brief · balanced · deep
+  backbone: 'auto',  // auto · groq · gemini · openrouter · deepseek
   lookItUp: true,    // consult a public reference before answering
   speechGap: 1,      // how long between things said (× the base gap)
   heartbeat: true,   // let real activity quicken the breath
@@ -1136,7 +1137,7 @@ function askTheMind(question) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       text: question, context, history: askHistory,
-      style: MIND.answerStyle, lookup: MIND.lookItUp,
+      style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone,
     }),
   })
     .then(function (response) { return response.json() })
@@ -2827,6 +2828,12 @@ function togglePanel() {
       + (MIND.answerStyle === name ? ' selected' : '') + '>' + name + '</option>').join('')
     + '</select></label>';
   html += toggle('lookItUp', 'looks things up first');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:6px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">backbone</span>'
+    + '<select data-key="backbone" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
+    + ['auto', 'groq', 'gemini', 'openrouter', 'deepseek'].map(name => '<option value="' + name + '"'
+      + (MIND.backbone === name ? ' selected' : '') + '>' + name + '</option>').join('')
+    + '</select></label>';
   html += '<button data-forget="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#8a7c62;cursor:pointer">forget the conversation</button>';
   html += '<p style="margin:0 0 6px;font-size:10px;color:#6f6553;line-height:1.5">'
@@ -3064,7 +3071,7 @@ function claimWord(word, second) {
     fetch('/api/mind/ask', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: question, context, style: MIND.answerStyle, lookup: MIND.lookItUp }),
+      body: JSON.stringify({ text: question, context, style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone }),
     })
       .then(function (response) { return response.json() })
       .then(function (body) {
