@@ -25,9 +25,11 @@ jobs:
         run: npm install -g @bubblewrap/cli
 
       - name: Materialise the keystore (if configured)
-        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        if: env.KEYSTORE_BASE64 != ''
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > android.keystore
           ls -l android.keystore
 
       - name: Scaffold the app from the live manifest
@@ -81,23 +83,31 @@ jobs:
       - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
 
       - name: Materialise the keystore (if configured)
-        if: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        if: env.KEYSTORE_BASE64 != ''
         run: |
-          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/android.keystore"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/android.keystore"
 
       - name: Build the assist APK
         working-directory: android/assist
         env:
-          KEYSTORE: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' && format('{0}/android.keystore', runner.temp) || '' }}
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE" ]; then
+          KEYSTORE="$RUNNER_TEMP/android.keystore"
+          if [ -n "$KEYSTORE_BASE64" ] && [ -f "$KEYSTORE" ]; then
             gradle assembleRelease \
               -Pandroid.injected.signing.store.file="$KEYSTORE" \
-              -Pandroid.injected.signing.store.password="${{ secrets.SIGNING_STORE_PASSWORD }}" \
-              -Pandroid.injected.signing.key.alias="${{ secrets.SIGNING_KEY_ALIAS }}" \
-              -Pandroid.injected.signing.key.password="${{ secrets.SIGNING_KEY_PASSWORD }}"
+              -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+              -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+              -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
           else
             gradle assembleDebug
           fi
