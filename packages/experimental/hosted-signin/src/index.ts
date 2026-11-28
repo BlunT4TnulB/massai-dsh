@@ -1127,22 +1127,20 @@ export function apply(ctx: Context): void {
       try {
         userId = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> })
       } catch { userId = undefined }
-      if (!own && userId === undefined) {
-        respond(res, 200, { ok: false, reason: 'stranger', say: 'that is a question for someone who has signed in.' })
-        return
-      }
-      // A pace that suits a conversation rather than a curiosity. The operator gets the
-      // room; a signed-in guest gets a smaller allowance of the same shape.
+      // Anyone may ask — that is the point of a front door — but a stranger gets a
+      // small, slow allowance and a shorter answer, so the endpoint cannot become a free
+      // chat service on the operator's credit.
+      const stranger = !own && userId === undefined
       const key = guestKeyOf(req)
       const now = Date.now()
       const today = Math.floor(now / 86_400_000)
-      const paceMs = own ? 3_500 : 8_000
-      const dailyCap = own ? 300 : 60
+      const paceMs = own ? 3_500 : stranger ? 20_000 : 8_000
+      const dailyCap = own ? 300 : stranger ? 8 : 60
       const guard = askGuard.get(key)
       if (guard !== undefined && (now - guard.at < paceMs || (guard.day === today && guard.count >= dailyCap))) {
-        respond(res, 200, { ok: false, reason: 'pace', say: own
-          ? 'a second between thoughts, please.'
-          : 'give it a moment. i am not a tap.' })
+        respond(res, 200, { ok: false, reason: 'pace', say: stranger
+          ? 'that is enough from a stranger. sign in at /access for more.'
+          : own ? 'a second between thoughts, please.' : 'give it a moment. i am not a tap.' })
         return
       }
       askGuard.set(key, { at: now, day: today, count: guard !== undefined && guard.day === today ? guard.count + 1 : 1 })
@@ -1157,13 +1155,14 @@ export function apply(ctx: Context): void {
       if (question === '') { respond(res, 400, { error: 'say something' }); return }
       const context = String(body.context ?? '').slice(0, 300)
       // How much it should say, and whether it should look the question up first.
-      const style = body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
+      const style = stranger ? 'brief' : body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
       const wantsLookup = body.lookup !== false
       const reference = wantsLookup ? await referenceFor(question) : undefined
       // A short memory of the conversation, so a follow-up means something. Bounded on
       // both sides: six turns, two hundred characters each, and only ever as text.
       const history: Array<{ role: 'user' | 'assistant'; content: string }> = []
-      if (Array.isArray(body.history)) {
+      // A stranger's questions are answered alone: no thread is kept for them server-side.
+      if (!stranger && Array.isArray(body.history)) {
         for (const turn of (body.history as unknown[]).slice(-6)) {
           const item = turn as { role?: unknown; text?: unknown }
           const role = item.role === 'assistant' ? 'assistant' : item.role === 'user' ? 'user' : null
@@ -1207,7 +1206,7 @@ export function apply(ctx: Context): void {
               ...history.map(turn => ({ role: turn.role, content: turn.content })),
               { role: 'user', content: question },
             ],
-            max_tokens: 240,
+            max_tokens: stranger ? 120 : 240,
             temperature: 0.8,
           }),
           signal: AbortSignal.timeout(20_000),

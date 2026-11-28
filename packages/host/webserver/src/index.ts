@@ -707,7 +707,14 @@ export class WebServer extends Service {
             // The root is not an explanation, it is an invitation: a black page
             // with the mind in it. Everything a first-timer needs is behind that
             // one circle; the words can wait until they have seen the thing.
-            if (target.pathname === '/' || target.pathname === '/welcome') {
+            // The mind is the product, so it is what the front door serves. The riddle
+            // page is a ritual, not a lock: it lives at /welcome for anyone who wants it.
+            if (target.pathname === '/') {
+              res.writeHead(302, { location: '/mind', 'cache-control': 'no-store' })
+              res.end()
+              return
+            }
+            if (target.pathname === '/welcome') {
               const splash = Buffer.from(intoTheUnknownPage())
               res.writeHead(200, {
                 'cache-control': 'no-store',

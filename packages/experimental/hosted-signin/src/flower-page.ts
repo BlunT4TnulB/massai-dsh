@@ -2900,6 +2900,40 @@ document.addEventListener('visibilitychange', function () {
   leftAt = 0;
 });
 
+// The box on the glass: ask anything, in words or by voice, and the mind answers in its
+// own voice — the same endpoint as /ask, so the caps and the sources are identical.
+(function wireAskbar() {
+  const form = document.getElementById('mindAsk');
+  const input = document.getElementById('mindAskInput');
+  if (form === null || input === null) return;
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (question === '') return;
+    input.value = '';
+    input.blur();
+    flashNote('thinking…');
+    const context = VIEWER_PROJECT === '' ? '' : 'their last project was ' + VIEWER_PROJECT + '.';
+    fetch('/api/mind/ask', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: question, context, style: MIND.answerStyle, lookup: MIND.lookItUp }),
+    })
+      .then(function (response) { return response.json() })
+      .then(function (body) {
+        if (body !== null && body.ok === true && typeof body.answer === 'string') {
+          const source = body.source !== null && typeof body.source === 'object' && typeof body.source.title === 'string'
+            ? ' (via ' + body.source.title + '.)' : '';
+          say(body.answer + source);
+          return;
+        }
+        say(body !== null && typeof body.say === 'string' ? body.say : 'the line went quiet. ask me again.');
+      })
+      .catch(function () { say('the line went quiet. ask me again.'); });
+  });
+  input.addEventListener('keydown', function (event) { event.stopPropagation() });
+})();
+
 addEventListener('message', function (event) {
   const data = event.data;
   if (data === null || typeof data !== 'object' || data.type !== 'massai:spin') return;
@@ -3321,7 +3355,19 @@ export function flowerPageHtml(embed = false, visualizer = false): string {
   /* Travelling in, the page's own voice fades: the deeper you are, the less the
      interface says. Lost is a feature here, not a failure. */
   .deep .overlay, .deep .hint, .deep .shapes, .deep .sim-ui, .deep .counter,
-  .deep .settled, .deep .sim, .deep .voice { position: fixed; left: 50%; bottom: 12.5vh; transform: translateX(-50%);
+  .deep .settled, .deep .sim, .deep .askbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 4; width: min(26rem, 86vw); margin: 0; transition: opacity .4s ease; }
+.askbar input { width: 100%; box-sizing: border-box; text-align: center; font: 13px system-ui, sans-serif;
+  color: rgba(247, 234, 210, .72); background: rgba(12, 11, 10, .55); border: 1px solid rgba(247, 205, 140, .16);
+  border-radius: 999px; padding: 9px 14px; outline: none; backdrop-filter: blur(6px);
+  transition: background .2s ease, border-color .2s ease, color .2s ease, text-align .2s ease; }
+.askbar input::placeholder { color: rgba(247, 234, 210, .34) }
+.askbar input:focus { text-align: left; color: #f6ead6; background: rgba(12, 11, 10, .9);
+  border-color: rgba(247, 205, 140, .45) }
+body.screensaver .askbar { opacity: 0; pointer-events: none }
+body.screensaver .askbar input { backdrop-filter: none }
+
+.voice { position: fixed; left: 50%; bottom: 12.5vh; transform: translateX(-50%);
   max-width: min(30rem, 84vw); margin: 0; text-align: center; pointer-events: none;
   font: italic 400 clamp(14px, 2.1vw, 19px)/1.5 Georgia, 'Times New Roman', serif;
   letter-spacing: .015em; color: rgba(247, 234, 210, 0); text-shadow: 0 0 22px rgba(255, 198, 120, .25);
@@ -3368,6 +3414,9 @@ body.screensaver .voice.speaking { opacity: .9; }
 </div>
 <p class="caption" id="caption"></p>
 <p class="voice" id="mindVoice" aria-live="polite"></p>
+<form class="askbar" id="mindAsk" autocomplete="off">
+  <input id="mindAskInput" type="text" placeholder="ask it anything…" aria-label="ask the mind anything">
+</form>
 <p class="node-name" id="nodeName"></p>
 <p class="still" id="still"></p>
 <p class="counter" id="counter"></p>
