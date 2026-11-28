@@ -401,8 +401,8 @@ export async function readCreators(): Promise<Creator[]> {
   if (!databaseConfigured()) return []
   try {
     await ensureCreatorTable()
-    const rows = await runSql('SELECT id, name, phrase FROM massai_creators ORDER BY id') as Creator[]
-    return rows
+    const rows = await runSql('SELECT id, name, phrase FROM massai_creators ORDER BY id')
+    return rows.map(row => ({ id: Number(row['id'] ?? 0), name: String(row['name'] ?? ''), phrase: String(row['phrase'] ?? '') }))
   } catch { return [] }
 }
 
