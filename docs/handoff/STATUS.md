@@ -1287,6 +1287,31 @@ typing "a shift schedule for four people at a cafe…" opened stage 2 with 8 que
 `single-file-app`; replacing it with "a printable recipe card for garlic pasta…" switched the shape to
 `single-page-site` — no button pressed. No console errors.
 
+## The front door asks (2026-11-27, `ba19cde`)
+
+`/ask` is the everyday-use surface: one box, one answer, one source, a rotating example question,
+"Speak it" (browser speech), "Read answers aloud", and a hand-off to the Expander for anything worth
+building. Strangers see a sign-in note instead of a disabled box.
+
+Reached from the splash (a quiet line under the poem), `/access`, and the app drawer.
+
+### The lookup had to be taught relevance
+
+First live answer cited **Adobada** (Mexican pork) for a question about coriander — a lookup that
+answers a different question is worse than none. Fixed in `viewer.ts`:
+
+- the search query is stripped to its content words (a small stopword list), not the whole sentence
+- the top five results are considered, and a candidate must share at least one meaningful word with the
+  question or no reference is used at all
+- the model is told to ignore a reference that does not answer the question, **silently**
+
+Verified after the fix: coriander → source `Coriander`, answer about wrapping/standing in water;
+"population of Calgary" → source `Calgary`, answer `1,306,784 as of 2021`. Both with a source link.
+
+### Costs, measured
+
+`$0.00006–0.00009` a question, printed on the page and on `/limits` with the caps.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 

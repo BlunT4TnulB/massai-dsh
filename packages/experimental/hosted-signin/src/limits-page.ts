@@ -141,6 +141,9 @@ open to everyone as a substitute: real, finished builds you can open without an 
 is never a trick: the way in is a gesture, a keypress, or patience — not a menu.</p>
 
 <h2>Talking to the mind</h2>
+<p>There are two front doors for asking: <a href="/ask">/ask</a> — one box, one answer, one source, for
+everyday questions — and the mind itself, where pressing <code>T</code> does the same thing inside the
+visualiser. The rest of this section applies to both.</p>
 <table>
   <tr><th>thing</th><th>the honest answer</th></tr>
   <tr><td>can I just ask it things?</td><td>Yes, if you are signed in. Press <code>T</code> in the mind, or tap "listen once" and speak. Everyday questions work; it answers in one to three sentences.</td></tr>
