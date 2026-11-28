@@ -1405,6 +1405,35 @@ signs with the same keystore as the wrapper when the four secrets exist. The art
   the owner's phone refuses to list Massai.
 - an icon and a release keystore (owner secrets), then Play/sideload.
 
+## Guest-first, verified (2026-11-27, `53fd3ce`)
+
+The owner's friend is about to test as a guest and plan, so the whole guest path was walked with no
+cookie at all and two real faults were found and fixed.
+
+### What a guest can now do
+
+| surface | guest |
+|---|---|
+| `/` | 302 → the mind. Opens, breathes, speaks, notices |
+| `/mind` | full visualiser, five-tap dials, `T` commands, the box on the glass |
+| ask a question | **yes** — 8 a day, 20 s apart, brief answers. Verified: "best way to ripen a hard avocado?" → correct answer, no source offered (honest) |
+| `/ask` | box open, no sign-in wall; the page states the guest allowance |
+| `/expand` | **planning is free for anyone**: 8 steps appeared as they typed, shape inferred (`single-page-site`), and the sealed prompt came back at 7,981 characters. Building still needs sign-in |
+
+### The two faults found by doing it as a guest
+
+1. **The Expander was broken for everyone by an apostrophe.** A `guestNote` string emitted `operator's`
+   into the page's own script, which is a syntax error — the whole page script died, so a guest saw no
+   steps and no seal. Escaped properly; verified 8 steps and a 7,981-character mask afterwards.
+2. **`/ask` still disabled the box for strangers** even though the API had begun allowing them. The box
+   is now open for everyone, with the allowance stated in a quiet line instead of a wall.
+
+### Still to name honestly for the friend's test
+
+- building from the Expander (and the whole workshop) needs sign-in; the page says so
+- a guest's thread is not kept; refreshing loses it
+- the guest allowance resets by network, not by account
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
