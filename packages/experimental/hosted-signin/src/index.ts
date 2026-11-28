@@ -1282,6 +1282,62 @@ A phrase is enough if the second word is left empty.</p>
     },
   })
 
+
+  // Installing the assistant from a phone: the APK lives in the image and is served with the
+  // right content type, next to a page that says exactly what to tap.
+  ctx.webServer.register({
+    kind: 'exact', path: '/install.apk', auth: 'anonymous',
+    handler: (req, res) => {
+      try {
+        const body = readFileSync(new URL('../assets/massai-assist.apk', import.meta.url))
+        res.writeHead(200, {
+          'content-type': 'application/vnd.android.package-archive',
+          'content-length': String(body.byteLength),
+          'content-disposition': 'attachment; filename="massai-assist.apk"',
+          'cache-control': 'public, max-age=300',
+        })
+        res.end(req.method === 'HEAD' ? undefined : body)
+      } catch (error) {
+        res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' })
+        res.end('the installer is not in this build')
+        void error
+      }
+    },
+  })
+
+  ctx.webServer.register({
+    kind: 'exact', path: '/install', auth: 'anonymous',
+    handler: (req, res) => {
+      const body = Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Install Massai</title>
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<style>body{margin:0;background:#0b0a09;color:#EDE7DA;font:16px/1.65 system-ui,sans-serif;padding:2rem 1.2rem 4rem;
+background-image:radial-gradient(50rem 32rem at 50% -12%,rgba(193,68,14,.16),transparent 72%)}
+main{max-width:34rem;margin:0 auto}h1{font-size:1.45rem;margin:0 0 .3rem}p{color:#a49a86}
+a.big{display:block;text-align:center;margin:1.4rem 0;padding:1rem;border-radius:14px;background:linear-gradient(180deg,#c1440e,#96330a);
+color:#fff;text-decoration:none;font-weight:700;letter-spacing:.02em}
+ol{padding-left:1.2rem}li{margin:.55rem 0;color:#d6cbb6}b{color:#f3ecdf}
+code{background:#1c1c23;padding:.1rem .35rem;border-radius:.25rem}
+.note{font-size:.82rem;color:#7d7364;margin-top:1.6rem;border-top:1px solid #26221d;padding-top:.9rem}</style></head>
+<body><main><h1>Install Massai as your assistant</h1>
+<p>Ten seconds of tapping. Nothing to configure on a computer.</p>
+<a class="big" href="/install.apk">Download Massai (10 KB) →</a>
+<ol>
+  <li>The download is an <b>.apk</b>. When the phone says <i>"For your security, your phone is not allowed to install unknown apps from this source"</i>, tap <b>Settings</b> on that message and turn on <b>Allow from this source</b>. Then go back and tap the file again.</li>
+  <li>When Play Protect asks, tap <b>Install anyway</b> — this is a self-signed build of our own app, not a store download.</li>
+  <li>Open <b>Massai</b> once. It will show the mind and ask you to allow the microphone. Allow it.</li>
+  <li>Make it the assistant: <b>Settings → Apps → Default apps → Assist &amp; voice input → Assist app → Massai</b>.
+      On Samsung: <b>Settings → Apps → Choose default apps → Digital assistant app → Massai</b>.</li>
+  <li>Hold the assistant button. The mind opens listening. Ask.</li>
+</ol>
+<p class="note">If the assistant list still offers only Google, your phone wants a <code>VoiceInteractionService</code> — tell the operator and they will build it.
+You can also just open <a href="/assist" style="color:#c9b389">/assist</a> in the browser and add it to your home screen — it behaves the same.</p>
+</main></body></html>`)
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(body.byteLength), 'cache-control': 'no-store' })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
+
   // The assistant surface: the mind full screen, with a box. This is what a held button opens.
   ctx.webServer.register({
     kind: 'exact', path: '/assist', auth: 'anonymous',
