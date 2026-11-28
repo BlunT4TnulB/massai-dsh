@@ -1185,6 +1185,10 @@ document.addEventListener('keydown', function (event) {
     event.preventDefault();
     openWord();
   }
+  if (event.key === 'y' || event.key === 'Y') {
+    event.preventDefault();
+    openLog();
+  }
 });
 
 // --- the mind speaks -------------------------------------------------------
@@ -1295,7 +1299,9 @@ function voiceEl() {
  */
 /** Read a line aloud, with the browser's own voice. Free, local, and never recorded. */
 function speakAloud(text) {
-  if (!MIND.voiceOut) return;
+  // The assistant surface asks for the voice when it opens; that is a property of the
+  // surface, not a change to the person's saved settings.
+  if (!MIND.voiceOut && !FORCED_VOICE) return;
   try {
     const synth = window.speechSynthesis;
     if (synth === null || synth === undefined) return;
@@ -2669,6 +2675,8 @@ async function poll() {
 poll();
 if (!QUIET) setInterval(poll, 2500);
 if (params.get('panel') === '1') togglePanel();
+/** The embedding surface asked for the mind's voice. */
+const FORCED_VOICE = params.get('speak') === '1';
 // An embedding surface may display the answer itself; when it says so, the mind keeps its
 // words to itself and still speaks them.
 if (params.get('voice') === '0') {
@@ -2915,6 +2923,48 @@ document.addEventListener('visibilitychange', function () {
   leftAt = 0;
 });
 
+// The log: what has been asked and answered here, kept in this browser so it can be
+// re-read and copied. Nothing here leaves the device.
+const transcript = [];
+try {
+  const saved = JSON.parse(window.localStorage.getItem('massai_log') ?? '[]');
+  if (Array.isArray(saved)) for (const entry of saved.slice(-30)) if (entry !== null && typeof entry === 'object') transcript.push(entry);
+} catch (error) { void error; }
+
+/** Keep one exchange. */
+function logExchange(question, answer) {
+  transcript.push({ q: String(question).slice(0, 300), a: String(answer).slice(0, 900), at: Date.now() });
+  while (transcript.length > 30) transcript.shift();
+  try { window.localStorage.setItem('massai_log', JSON.stringify(transcript)) } catch (error) { void error; }
+}
+
+/** Show the log in a scrollable panel with a copy button. */
+function openLog() {
+  let panel = document.getElementById('mindLog');
+  if (panel !== null) { panel.remove(); return }
+  panel = document.createElement('div');
+  panel.id = 'mindLog';
+  panel.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:10vh;z-index:65;'
+    + 'width:min(30rem,92vw);max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;'
+    + 'background:rgba(12,11,10,.95);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
+    + 'padding:12px 14px;font:12px system-ui,sans-serif;color:#E7DCC6;backdrop-filter:blur(8px)';
+  const head = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    + '<span style="letter-spacing:.2em;font-size:10px;color:#8a7c62">THE LOG</span>'
+    + '<button id="logCopy" style="padding:3px 8px;border-radius:6px;border:1px solid #3a332a;background:#1a1714;color:#E7DCC6;cursor:pointer">copy all</button></div>';
+  const rows = transcript.length === 0
+    ? '<p style="color:#8a7c62">nothing asked yet. press T, or use the box.</p>'
+    : transcript.slice().reverse().map(entry =>
+        '<p style="margin:8px 0 2px;color:#9a8f7c">' + String(entry.q ?? '').replace(/[<>&]/g, '') + '</p>'
+        + '<p style="margin:0 0 6px;color:#f0e6d2">' + String(entry.a ?? '').replace(/[&<>]/g, '') + '</p>').join('');
+  panel.innerHTML = head + rows;
+  document.body.appendChild(panel);
+  const copy = document.getElementById('logCopy');
+  if (copy !== null) copy.addEventListener('click', function () {
+    const text = transcript.map(entry => 'Q: ' + entry.q + '\nA: ' + entry.a).join('\n\n');
+    navigator.clipboard.writeText(text).then(function () { flashNote('copied'); }).catch(function () { flashNote('select and copy'); });
+  });
+}
+
 // The word: a private entry that turns this browser into the operator. Typed, or spoken
 // through the browser's own recogniser — either way the phrase is compared on the server.
 function openWord() {
@@ -3012,6 +3062,7 @@ function claimWord(word, second) {
         if (body !== null && body.ok === true && typeof body.answer === 'string') {
           const source = body.source !== null && typeof body.source === 'object' && typeof body.source.title === 'string'
             ? ' (via ' + body.source.title + '.)' : '';
+          logExchange(question, body.answer);
           say(body.answer + source);
           return;
         }

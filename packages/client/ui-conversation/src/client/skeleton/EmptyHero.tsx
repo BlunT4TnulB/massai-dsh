@@ -315,6 +315,13 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
             <div className={css.immersion}>
               <StarterShelf />
               <HeroHint t={t} />
+              <button
+                type="button"
+                className={css.talkButton}
+                onClick={() => { window.dispatchEvent(new CustomEvent('massai:open-chat')) }}
+              >
+                talk to it
+              </button>
             </div>
           )
           : (
@@ -332,6 +339,13 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
                 </span>
               </div>
               <div className={css.body} />
+              <button
+                type="button"
+                className={css.talkButton}
+                onClick={() => { window.dispatchEvent(new CustomEvent('massai:open-chat')) }}
+              >
+                talk to it
+              </button>
               {/* The narrow layout is what a phone gets; the shelf belongs there too. */}
               <StarterShelf />
             </div>

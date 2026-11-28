@@ -275,6 +275,12 @@ export function ConversationContent(props: ConversationContentProps) {
     return () => { window.removeEventListener('message', receive) }
   }, [enter])
   useEffect(() => {
+    // A plain control on the hero, for anyone who would rather not learn a gesture first.
+    const openChat = (): void => { enter() }
+    window.addEventListener('massai:open-chat', openChat)
+    return () => { window.removeEventListener('massai:open-chat', openChat) }
+  }, [enter])
+  useEffect(() => {
     if (!hero || entered) return undefined
     const timer = window.setTimeout(() => { setNudged(true) }, 22000)
     const onKey = (event: KeyboardEvent): void => {
