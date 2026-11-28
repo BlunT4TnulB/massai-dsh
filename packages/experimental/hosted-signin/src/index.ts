@@ -1191,8 +1191,9 @@ export function apply(ctx: Context): void {
           : 'Answer in one or two sentences, then at most one sentence of useful detail.',
         reference === undefined
           ? 'No reference was found for this question: answer from what you know, and say plainly if you are unsure.'
-          : 'A reference was found (' + reference.title + '). Use it when it is relevant, and if you use it, '
-            + 'finish by naming the source in a few words, for example "according to Wikipedia". Reference text: '
+          : 'A reference was found (' + reference.title + '). Use it only if it actually answers the question, '
+            + 'and finish by naming the source in a few words, for example "according to Wikipedia". '
+            + 'If it does not answer the question, ignore it completely and do not mention it. Reference text: '
             + reference.extract,
       ].filter(line => line !== '').join(' ')
       try {

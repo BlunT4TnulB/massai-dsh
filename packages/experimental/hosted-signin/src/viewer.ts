@@ -121,16 +121,38 @@ export async function referenceFor(question: string): Promise<Reference | undefi
     if (refCache.size > 200) { const first = refCache.keys().next(); if (!first.done) refCache.delete(first.value) }
     return value
   }
+  /** Words worth searching for: the nouns, not the grammar around them. */
+  const STOP = new Set(['what', 'which', 'when', 'where', 'who', 'whom', 'whose', 'why', 'how', 'the', 'a', 'an',
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'do', 'does', 'did', 'can', 'could', 'should', 'would',
+    'will', 'shall', 'may', 'might', 'must', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'about', 'and', 'or',
+    'but', 'if', 'then', 'than', 'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'we', 'our',
+    'you', 'your', 'he', 'she', 'they', 'them', 'there', 'here', 'best', 'good', 'way', 'ways', 'much', 'many',
+    'keep', 'make', 'get', 'got', 'use', 'used', 'really', 'actually', 'honestly', 'please', 'tell', 'know'])
+  const wordsOf = (text: string): string[] => text.toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(word => word.length > 2 && !STOP.has(word))
+  const queryWords = wordsOf(question)
+  const query = queryWords.length > 0 ? queryWords.slice(0, 8).join(' ') : question.slice(0, 120)
+  /** How much a candidate title shares with the question's own words. */
+  const overlap = (title: string): number => {
+    const titleWords = new Set(wordsOf(title))
+    return queryWords.filter(word => titleWords.has(word) || title.toLowerCase().includes(word)).length
+  }
   try {
-    const searchUrl = 'https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=1&srsearch='
-      + encodeURIComponent(question.slice(0, 160))
+    const searchUrl = 'https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srlimit=5&srsearch='
+      + encodeURIComponent(query)
     const search = await fetch(searchUrl, {
       headers: { 'user-agent': 'Massai/1.0 (a small workshop; contact: the operator)' },
       signal: AbortSignal.timeout(4000),
     })
     if (!search.ok) return remember(undefined)
     const body = await search.json() as { query?: { search?: Array<{ title?: string; snippet?: string }> } }
-    const title = body.query?.search?.[0]?.title
+    // A lookup that answers a different question is worse than no lookup: it makes the
+    // answer sound researched while the source is wrong. So a candidate has to share at
+    // least one meaningful word with the question, or it is not used at all.
+    const candidates = (body.query?.search ?? []).filter(item => typeof item.title === 'string')
+    const chosen = candidates.find(item => overlap(String(item.title)) > 0)
+    const title = chosen?.title
     if (title === undefined || title === '') return remember(undefined)
     const summaryUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_'))
     const summary = await fetch(summaryUrl, {
