@@ -85,6 +85,7 @@ ${signedIn ? '' : `<div class="signin"><b>Sign in to ask.</b> The thinking is fo
   <button id="listen" class="ghost" type="button" ${signedIn ? '' : 'disabled'}>Speak it</button>
   <button id="aloud" class="ghost" type="button" aria-pressed="false">Read answers aloud</button>
   <a href="/expand"><button class="ghost" type="button">Make something instead →</button></a>
+  <button id="fresh" class="ghost" type="button">Start over</button>
 </div>
 <p class="hint" id="hint"></p>
 <div class="thread" id="thread"></div>
@@ -101,6 +102,8 @@ check the source on anything that matters. Costs the operator about six hundredt
   const input = $('q')
   const hint = $('hint')
   let aloud = false
+  /** The last few exchanges, sent with the next question so a follow-up lands. */
+  const conversation = []
 
   // The placeholder rotates, so the page suggests rather than waits.
   let promptIndex = 0
@@ -165,7 +168,10 @@ check the source on anything that matters. Costs the operator about six hundredt
       const response = await fetch('/api/mind/ask', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: question, style: 'balanced', lookup: true, history: [] }),
+        body: JSON.stringify({
+          text: question, style: 'balanced', lookup: true,
+          history: conversation.slice(-6).map(turn => ({ role: turn.role, text: turn.text })),
+        }),
         signal: controller.signal,
       })
       if (response.status === 401 || response.status === 403) {
@@ -175,6 +181,9 @@ check the source on anything that matters. Costs the operator about six hundredt
       const body = await response.json()
       if (body !== null && body.ok === true && typeof body.answer === 'string') {
         fill(turn, body.answer, body.source ?? null)
+        conversation.push({ role: 'user', text: question })
+        conversation.push({ role: 'assistant', text: body.answer })
+        while (conversation.length > 6) conversation.shift()
         return
       }
       fail(turn, body !== null && typeof body.say === 'string' ? body.say : 'the line went quiet. try again.')
@@ -190,6 +199,13 @@ check the source on anything that matters. Costs the operator about six hundredt
   $('askForm').addEventListener('submit', (event) => {
     event.preventDefault()
     void ask(input.value.trim())
+  })
+  $('fresh').addEventListener('click', () => {
+    conversation.length = 0
+    thread.innerHTML = ''
+    hint.textContent = 'a fresh page. ask anything.'
+    input.value = ''
+    input.focus()
   })
   $('aloud').addEventListener('click', () => {
     aloud = !aloud
