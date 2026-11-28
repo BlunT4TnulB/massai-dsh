@@ -2822,7 +2822,6 @@ function togglePanel() {
     + 'background:rgba(12,11,10,.94);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
     + 'padding:12px 14px calc(18px + env(safe-area-inset-bottom));font:12px system-ui,sans-serif;'
     + 'color:#E7DCC6;backdrop-filter:blur(8px)';
-  panel.append(handle);
 
   let html = '<div style="letter-spacing:.22em;font-size:10px;color:#8a7c62;margin-bottom:8px">MIND</div>';
   /** One labelled slider row. */
@@ -2947,6 +2946,7 @@ function togglePanel() {
     + '<b style="color:#8a7c62">glass</b> 2 taps stir · 3 taps fullscreen · 5 taps dials · three fingers wide→closed opens the workshop<br>'
     + '<b style="color:#8a7c62">panel</b> drag the handle to push it away</p>';
   panel.innerHTML = html;
+  panel.insertBefore(handle, panel.firstChild);
 
   panel.addEventListener('input', function (event) {
     const el = event.target;
