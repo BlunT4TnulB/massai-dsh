@@ -1076,6 +1076,15 @@ function obey(raw) {
   }
   const presetName = Object.keys(PRESETS).find(name => text.includes(name));
   if (presetName !== undefined) { applyPreset(presetName); return reply(presetName + '.') }
+  if (/(what is your name|whats your name|what's your name|your name|what should i call you|who are you called)/.test(text)) {
+    return reply('Massai.');
+  }
+  if (/(where are we|where am i|where is this|what is this place)/.test(text)) {
+    return reply('the Mind.');
+  }
+  if (/(what is the mind|what's the mind|whats the mind|explain the mind|describe the mind)/.test(text)) {
+    return reply('you are inside the Mind, on Massai — a sphere made of what you finished. the whole of it is too long to describe; you would have to keep falling.');
+  }
   if (/(who made you|who created you|who built you|your creator|who is your creator)/.test(text)) {
     return reply('BlunTnTnulB made me. i am what their work looks like from the inside.');
   }
