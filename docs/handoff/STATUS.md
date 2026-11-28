@@ -1434,6 +1434,35 @@ cookie at all and two real faults were found and fixed.
 - a guest's thread is not kept; refreshing loses it
 - the guest allowance resets by network, not by account
 
+## The word that opens it (2026-11-28, `be39feb`)
+
+The owner recorded a phrase and asked for it to be the way in — spoken, with an optional second word
+after it.
+
+### How it works
+
+```
+storage      a one-row table massai_secret (phrase, second) written from /key, never from a config file
+             and never logged; the environment variable DSH_PASSPHRASE is a fallback only
+setting      /key — owner only (403 otherwise) — password fields, shows only *whether* a phrase is set
+saying it    press L in the mind: it listens with the browser's recogniser and also accepts typing;
+             the audio never leaves the device, only the transcribed text is compared
+matching     normalised (case, punctuation, spacing) with an edit-distance tolerance of ~16% of the
+             phrase, because speech recognition mishears
+attempts     five in ten minutes per network, then the door ignores that network for a while
+result       mints the same signed operator marker as the token — HttpClientOnly, SameSite=Lax, 30 days
+second word  when set, the first phrase is answered with "the second word", and both must match
+```
+
+Verified live: `/key` 200 for the operator and 403 for a stranger; the phrase set from the owner's own
+recording; the exact phrase returned `ok` with a `dsh_owner` cookie minted; a misheard spelling of the
+same phrase was accepted; "open sesame" was refused with "that is not the word".
+
+### Open question for the owner
+
+The "secondary" was not specified — the server already supports a second word asked after the first,
+so the only thing missing is deciding what it should be.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 

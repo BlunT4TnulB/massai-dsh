@@ -2936,6 +2936,25 @@ function openWord() {
     });
     document.body.appendChild(input);
     flashNote('say it, or type it');
+    // Say it: the browser's own recogniser hears the phrase and hands it over. The audio
+    // never leaves the device; only the text does, and only to the comparison.
+    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof Ctor === 'function') {
+      try {
+        const recognition = new Ctor();
+        recognition.lang = navigator.language || 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onresult = function (event) {
+          const heard = event.results && event.results[0] && event.results[0][0]
+            ? String(event.results[0][0].transcript) : '';
+          if (heard.trim() === '') return;
+          if (document.getElementById('mindWord') !== null) input.remove();
+          claimWord(heard.trim(), '');
+        };
+        recognition.start();
+      } catch (error) { void error; }
+    }
   }
   input.focus();
 }
