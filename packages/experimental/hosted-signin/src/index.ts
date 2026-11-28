@@ -41,7 +41,7 @@ import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readUsageRows, recordUsage, runSql,
+  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readSecret, readUsageRows, recordUsage, runSql, writeSecret,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
@@ -131,6 +131,40 @@ const OWNER_COOKIE = 'dsh_owner'
  * @param token - the deployment token.
  * @returns the marker value.
  */
+/** A phrase as it is compared: lower case, letters and digits only, single spaces. */
+function normaliseWord(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/** Edit distance, for the shape of a misheard word rather than an exact match. */
+function editDistance(left: string, right: string): number {
+  const rows = left.length + 1
+  const cols = right.length + 1
+  let previous = Array.from({ length: cols }, (_, index) => index)
+  for (let row = 1; row < rows; row += 1) {
+    const current = [row]
+    for (let col = 1; col < cols; col += 1) {
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1
+      current[col] = Math.min((previous[col] ?? 0) + 1, (current[col - 1] ?? 0) + 1, (previous[col - 1] ?? 0) + cost)
+    }
+    previous = current
+  }
+  return previous[cols - 1] ?? 0
+}
+
+/**
+ * Whether what was said is the phrase, allowing for speech recognition.
+ * @param said - the normalised attempt.
+ * @param expected - the normalised phrase.
+ * @returns true when the attempt is close enough to be the same phrase.
+ */
+function phraseMatches(said: string, expected: string): boolean {
+  if (said === '' || expected === '') return false
+  if (said === expected) return true
+  const tolerance = Math.max(2, Math.round(expected.length * 0.16))
+  return editDistance(said, expected) <= tolerance
+}
+
 function ownerMarker(token: string): string {
   return createHmac('sha256', token).update('massai-owner').digest('hex')
 }
@@ -921,6 +955,105 @@ export function apply(ctx: Context): void {
 
 
 
+
+
+
+  // The owner's private page for the phrase. It never displays what is set — only whether
+  // something is — so a shoulder or a screenshot cannot take it.
+  ctx.webServer.register({
+    kind: 'exact', path: '/key', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (!isOwnerRequest(req)) { res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }); res.end('operator only'); return }
+      const current = await readSecret().catch(() => undefined)
+      if (req.method === 'POST') {
+        try {
+          const fields = await readFields(req)
+          const phrase = String(fields.get('phrase') ?? '').trim().slice(0, 120)
+          const second = String(fields.get('second') ?? '').trim().slice(0, 60)
+          if (phrase === '') throw new Error('a phrase is required')
+          await writeSecret(phrase.toLowerCase(), second === '' ? undefined : second.toLowerCase())
+          res.writeHead(303, { location: '/key?saved=1', 'cache-control': 'no-store' })
+          res.end()
+        } catch (error) {
+          respond(res, 400, { error: error instanceof Error ? error.message : String(error) })
+        }
+        return
+      }
+      const body = Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>The word</title>
+<link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<style>body{margin:0;background:#0b0b0d;color:#EDE7DA;font:16px/1.6 system-ui,sans-serif;padding:2rem 1.2rem}
+main{max-width:32rem;margin:0 auto}h1{font-size:1.3rem;margin:0 0 .3rem}p{color:#a49a86}
+label{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#9b8f78;margin:1rem 0 .3rem}
+input{width:100%;box-sizing:border-box;background:#12100e;border:1px solid #322c24;border-radius:9px;color:#EDE7DA;padding:.65rem .75rem;font:inherit}
+button{margin-top:1.2rem;border:1px solid #c1440e;background:#c1440e;color:#fff;border-radius:9px;padding:.6rem 1rem;font:inherit;cursor:pointer}
+.saved{color:#7ee2a8}.state{color:#c9b389}code{background:#1c1c23;padding:.1rem .3rem;border-radius:.25rem}</style></head>
+<body><main><h1>The word the mind answers to</h1>
+<p>Say this to the mind — press <code>L</code> in it — and it will make this browser the operator.
+It is stored in the database, never shown here, and never written to a log.</p>
+<p class="state">Set now: ${current === undefined ? 'nothing yet' : 'a phrase' + (current.second === undefined ? '' : ', and a second word')}</p>
+${req.url !== null && req.url.includes('saved=1') ? '<p class="saved">Saved.</p>' : ''}
+<form method="post" action="/key">
+  <label for="phrase">Phrase</label>
+  <input id="phrase" name="phrase" type="password" autocomplete="new-password" placeholder="what you will say">
+  <label for="second">Second word (optional — asked for after the phrase)</label>
+  <input id="second" name="second" type="password" autocomplete="new-password" placeholder="a second thing only you know">
+  <button type="submit">Set it</button>
+</form>
+<p style="margin-top:1.4rem;font-size:.8rem;color:#6f6553">Five attempts in ten minutes, then the door ignores the network for a while.
+A phrase is enough if the second word is left empty.</p>
+<a href="/mind" style="color:#9c9180;font-size:.85rem">← back to the mind</a></main></body></html>`)
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-length': String(body.byteLength), 'cache-control': 'no-store' })
+      res.end(req.method === 'HEAD' ? undefined : body)
+    },
+  })
+
+  // The spoken phrase: a word said to the mind is another way to be the operator.
+  // It is checked server-side against a secret the owner chose, with a tolerance for
+  // how speech recognition mangles a phrase, and it mints the same signed marker as
+  // the token — never a token in the page, never the phrase in a log.
+  const wordGuard = new Map<string, { at: number; tries: number }>()
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/owner/word', auth: 'anonymous',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
+      const configured = process.env.DSH_WEB_TOKEN ?? ''
+      const secret = await readSecret()
+      const expected = secret?.phrase ?? process.env.DSH_PASSPHRASE ?? ''
+      if (configured === '' || expected === '') { respond(res, 503, { ok: false, error: 'no phrase is set' }); return }
+      // Five attempts in ten minutes from one network; a phrase is not a password to grind.
+      const key = guestKeyOf(req)
+      const now = Date.now()
+      const guard = wordGuard.get(key)
+      if (guard !== undefined && now - guard.at < 600_000 && guard.tries >= 5) {
+        respond(res, 429, { ok: false, say: 'enough attempts. come back later.' })
+        return
+      }
+      wordGuard.set(key, { at: guard === undefined || now - guard.at > 600_000 ? now : guard.at, tries: guard === undefined || now - guard.at > 600_000 ? 1 : guard.tries + 1 })
+      let body: { word?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { word?: unknown } } catch {
+        respond(res, 400, { ok: false, error: 'expected json' }); return
+      }
+      const said = normaliseWord(String(body.word ?? ''))
+      if (!phraseMatches(said, normaliseWord(expected))) {
+        respond(res, 200, { ok: false, say: 'that is not the word.' })
+        return
+      }
+      if (secret?.second !== undefined) {
+        const asked = normaliseWord(String(body.second ?? ''))
+        if (!phraseMatches(asked, normaliseWord(secret.second))) {
+          respond(res, 200, { ok: false, needSecond: true, say: 'the second word.' })
+          return
+        }
+      }
+      res.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-type': 'application/json; charset=utf-8',
+        'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
+      })
+      res.end(JSON.stringify({ ok: true, say: 'you are the operator.' }))
+    },
+  })
 
   // Claim the operator console in this browser: one visit with the token sets a
   // signed marker cookie, and the token never has to be stored in the page.

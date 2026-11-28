@@ -328,3 +328,52 @@ export async function databaseStatus(): Promise<{
 export function lastDatabaseError(): string | undefined {
   return lastError
 }
+
+
+/** The phrase the mind answers to, held in the database rather than in a config file. */
+export interface SecretWord {
+  readonly phrase: string
+  /** A second word, asked for after the first, when one is set. */
+  readonly second?: string
+}
+
+/** Create the one-row table the phrase lives in. */
+async function ensureSecretTable(): Promise<void> {
+  await runSql(`CREATE TABLE IF NOT EXISTS massai_secret (
+    id integer PRIMARY KEY,
+    phrase text NOT NULL,
+    second text,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`)
+}
+
+/**
+ * Read the phrase, if one has been set.
+ * @returns the phrase and optional second word, or undefined when unset.
+ */
+export async function readSecret(): Promise<SecretWord | undefined> {
+  if (!databaseConfigured()) return undefined
+  try {
+    await ensureSecretTable()
+    const rows = await runSql<{ phrase: string; second: string | null }>('SELECT phrase, second FROM massai_secret WHERE id = 1')
+    const row = rows[0]
+    if (row === undefined) return undefined
+    return { phrase: row.phrase, ...(row.second === null || row.second === '' ? {} : { second: row.second }) }
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Set or replace the phrase. The operator does this from /key; nothing logs it.
+ * @param phrase - what the mind should answer to.
+ * @param second - an optional second word.
+ */
+export async function writeSecret(phrase: string, second?: string): Promise<void> {
+  await ensureSecretTable()
+  await runSql(
+    `INSERT INTO massai_secret (id, phrase, second, updated_at) VALUES (1, $1, $2, now())
+     ON CONFLICT (id) DO UPDATE SET phrase = EXCLUDED.phrase, second = EXCLUDED.second, updated_at = now()`,
+    [phrase, second === undefined || second === '' ? null : second],
+  )
+}

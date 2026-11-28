@@ -1045,6 +1045,7 @@ function obey(raw) {
     location.href = room;
     return reply(room.replace('/', 'the ') .replace('-', ' ') + '.');
   }
+  if (/(let me in|the word|opening word)/.test(text)) { openWord(); return reply('say it.'); }
   if (/(who is looking|who am i|do you know me)/.test(text)) {
     if (VIEWER === 'owner') return reply('the operator. the one who made this.');
     if (VIEWER !== 'stranger') return reply(VIEWER_LABEL === 'guest' ? 'a guest. still.' : 'a member, signed in.');
@@ -1176,6 +1177,10 @@ document.addEventListener('keydown', function (event) {
   if (event.key === 't' || event.key === 'T' || event.key === '/') {
     event.preventDefault();
     openSay();
+  }
+  if (event.key === 'l' || event.key === 'L') {
+    event.preventDefault();
+    openWord();
   }
 });
 
@@ -2906,6 +2911,60 @@ document.addEventListener('visibilitychange', function () {
   }
   leftAt = 0;
 });
+
+// The word: a private entry that turns this browser into the operator. Typed, or spoken
+// through the browser's own recogniser — either way the phrase is compared on the server.
+function openWord() {
+  let input = document.getElementById('mindWord');
+  if (input === null) {
+    input = document.createElement('input');
+    input.id = 'mindWord';
+    input.type = 'password';
+    input.setAttribute('autocomplete', 'new-password');
+    input.placeholder = 'the word';
+    input.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:9vh;z-index:70;'
+      + 'width:min(22rem,84vw);padding:10px 12px;border-radius:10px;border:1px solid rgba(247,205,140,.3);'
+      + 'background:rgba(12,11,10,.95);color:#F2E8D5;font:14px system-ui,sans-serif;text-align:center;outline:none';
+    input.addEventListener('keydown', function (event) {
+      event.stopPropagation();
+      if (event.key === 'Escape') { input.remove(); return }
+      if (event.key !== 'Enter') return;
+      const word = input.value;
+      input.value = '';
+      input.remove();
+      claimWord(word, '');
+    });
+    document.body.appendChild(input);
+    flashNote('say it, or type it');
+  }
+  input.focus();
+}
+
+/** Present a word to the server; ask for the second one when the phrase needs it. */
+function claimWord(word, second) {
+  fetch('/api/owner/word', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ word, second }),
+  })
+    .then(function (response) { return response.json() })
+    .then(function (body) {
+      if (body !== null && body.ok === true) {
+        VIEWER = 'owner';
+        say('you are the operator.');
+        setTimeout(function () { location.reload() }, 1800);
+        return;
+      }
+      if (body !== null && body.needSecond === true) {
+        flashNote('the second word');
+        const next = window.prompt('the second word');
+        if (next !== null && next.trim() !== '') claimWord(word, next.trim());
+        return;
+      }
+      say(body !== null && typeof body.say === 'string' ? body.say : 'that is not the word.');
+    })
+    .catch(function () { say('that did not reach me. try again.'); });
+}
 
 // The box on the glass: ask anything, in words or by voice, and the mind answers in its
 // own voice — the same endpoint as /ask, so the caps and the sources are identical.
