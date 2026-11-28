@@ -1365,7 +1365,13 @@ A phrase is enough if the second word is left empty.</p>
       }
       askGuard.set(key, { at: now, day: today, count: guard !== undefined && guard.day === today ? guard.count + 1 : 1 })
 
-      const apiKey = process.env.DEEPSEEK_API_KEY ?? ''
+      // Bring your own backbone: a key and a provider in the request are used for this one
+      // answer and never stored. It lets anyone point the mind at their own provider.
+      const knownProviders = ['groq', 'gemini', 'openrouter', 'deepseek']
+      const byokProvider = String(req.headers['x-llm-provider'] ?? '').toLowerCase()
+      const byokKey = String(req.headers['x-llm-key'] ?? '')
+      const bringYourOwn = knownProviders.includes(byokProvider) && byokKey.length >= 8 ? byokProvider : ''
+      const apiKey = bringYourOwn === 'deepseek' ? byokKey : (process.env.DEEPSEEK_API_KEY ?? '')
       if (apiKey === '') { respond(res, 200, { ok: false, reason: 'nokey', say: 'i have no voice to think with here.' }); return }
       let body: { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown }
       try { body = JSON.parse(await readBody(req)) as { text?: unknown; context?: unknown; history?: unknown; style?: unknown; lookup?: unknown; backbone?: unknown } } catch {
@@ -1378,7 +1384,8 @@ A phrase is enough if the second word is left empty.</p>
       const style = stranger ? 'brief' : body.style === 'brief' ? 'brief' : body.style === 'deep' ? 'deep' : 'balanced'
       // A named backbone is honoured when it is configured; 'auto' is the chain.
       const wanted = String((body as { backbone?: unknown }).backbone ?? 'auto').toLowerCase()
-      const backbone = ['auto', 'groq', 'gemini', 'openrouter', 'deepseek'].includes(wanted) ? wanted : 'auto'
+      const picked = ['auto', 'groq', 'gemini', 'openrouter', 'deepseek'].includes(wanted) ? wanted : 'auto'
+      const backbone = bringYourOwn !== '' && picked === 'auto' ? bringYourOwn : picked
       const wantsLookup = body.lookup !== false
       const reference = wantsLookup ? await referenceFor(question) : undefined
       // A short memory of the conversation, so a follow-up means something. Bounded on
@@ -1449,7 +1456,7 @@ A phrase is enough if the second word is left empty.</p>
       let output = 0
 
       // 1. Groq, whose free tier is generous and fast.
-      const groqKey = process.env.GROQ_API_KEY ?? ''
+      const groqKey = bringYourOwn === 'groq' ? byokKey : (process.env.GROQ_API_KEY ?? '')
       if (answer === '' && groqKey !== '' && (backbone === 'auto' || backbone === 'groq')) {
         try {
           const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1475,7 +1482,7 @@ A phrase is enough if the second word is left empty.</p>
       }
 
       // 2. Gemini's free tier.
-      const geminiKey = process.env.GEMINI_API_KEY ?? ''
+      const geminiKey = bringYourOwn === 'gemini' ? byokKey : (process.env.GEMINI_API_KEY ?? '')
       if (answer === '' && geminiKey !== '' && (backbone === 'auto' || backbone === 'gemini')) {
         try {
           // The free tier's model ids move; try the live alias, then a lite fallback.
@@ -1503,7 +1510,7 @@ A phrase is enough if the second word is left empty.</p>
       }
 
       // 3. OpenRouter's free models, if the owner added a key for them.
-      const orKey = process.env.OPENROUTER_API_KEY ?? ''
+      const orKey = bringYourOwn === 'openrouter' ? byokKey : (process.env.OPENROUTER_API_KEY ?? '')
       if (answer === '' && orKey !== '' && (backbone === 'auto' || backbone === 'openrouter')) {
         try {
           const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1579,6 +1586,7 @@ A phrase is enough if the second word is left empty.</p>
           costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)),
           via: 'deepseek',
           backbone,
+          ...(bringYourOwn === '' ? {} : { byok: bringYourOwn }),
           ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
         })
       } catch (error) {

@@ -1110,6 +1110,27 @@ function obey(raw) {
  * spoken in its own voice rather than shown as an error.
  * @param question - what the person said.
  */
+/** Keys the person typed here. They live in this browser and ride on their own requests. */
+function ownKeys() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('massai_keys') ?? '{}');
+    return saved !== null && typeof saved === 'object' ? saved : {};
+  } catch (error) { void error; return {}; }
+}
+
+/** Headers that carry anyone's own backbone, when they supplied one. */
+function keyHeaders() {
+  const keys = ownKeys();
+  const chosen = typeof keys.provider === 'string' ? keys.provider : '';
+  const key = chosen === '' ? '' : String(keys[chosen] ?? '');
+  const headers = { 'content-type': 'application/json' };
+  if (chosen !== '' && key.length >= 8) {
+    headers['x-llm-provider'] = chosen;
+    headers['x-llm-key'] = key;
+  }
+  return headers;
+}
+
 /** The last few exchanges, kept in this browser so a follow-up means something. */
 let askHistory = [];
 try {
@@ -1134,7 +1155,7 @@ function askTheMind(question) {
   flashNote('thinking…');
   fetch('/api/mind/ask', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: keyHeaders(),
     body: JSON.stringify({
       text: question, context, history: askHistory,
       style: MIND.answerStyle, lookup: MIND.lookItUp, backbone: MIND.backbone,
@@ -2839,6 +2860,23 @@ function togglePanel() {
   html += '<p style="margin:0 0 6px;font-size:10px;color:#6f6553;line-height:1.5">'
     + 'When on, a question outside its vocabulary goes to a model. A fraction of a cent each, '
     + 'capped, and signed-in only.</p>';
+  const keys = ownKeys();
+  html += head('your own keys');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">use</span>'
+    + '<select data-ownprovider="1" style="flex:1;background:#1a1714;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px">'
+    + ['', 'groq', 'gemini', 'openrouter', 'deepseek'].map(name => '<option value="' + name + '"'
+      + ((keys.provider ?? '') === name ? ' selected' : '') + '>' + (name === '' ? 'the deployment' : name) + '</option>').join('')
+    + '</select></label>';
+  for (const provider of ['groq', 'gemini', 'openrouter', 'deepseek']) {
+    html += '<label style="display:flex;align-items:center;gap:8px;margin:3px 0">'
+      + '<span style="width:6.4rem;color:#9a8f7c">' + provider + '</span>'
+      + '<input type="password" data-ownkey="' + provider + '" value="' + String(keys[provider] ?? '') + '" placeholder="paste a key" '
+      + 'style="flex:1;background:#141210;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px 6px;font:12px system-ui">'
+      + '</label>';
+  }
+  html += '<p style="margin:4px 0 0;font-size:10px;color:#6f6553;line-height:1.5">'
+    + 'Keys stay in this browser and are sent only with your own questions — never stored on the server.</p>';
   html += toggle('remember', 'remembers you');
   html += '<button data-say="1" style="margin:4px 0;padding:4px 8px;border-radius:6px;border:1px solid #3a332a;'
     + 'background:#1a1714;color:#E7DCC6;cursor:pointer">say something</button>';
@@ -2867,6 +2905,20 @@ function togglePanel() {
 
   panel.addEventListener('input', function (event) {
     const el = event.target;
+    // own keys are separate from the settings: saved here, sent per request, never in MIND
+    const ownKey = el.getAttribute('data-ownkey');
+    if (ownKey !== null) {
+      const keys = ownKeys();
+      keys[ownKey] = el.value;
+      try { window.localStorage.setItem('massai_keys', JSON.stringify(keys)) } catch (error) { void error; }
+      return;
+    }
+    if (el.getAttribute('data-ownprovider') === '1') {
+      const keys = ownKeys();
+      keys.provider = el.value;
+      try { window.localStorage.setItem('massai_keys', JSON.stringify(keys)) } catch (error) { void error; }
+      return;
+    }
     const key = el.getAttribute('data-key');
     if (key === null) return;
     if (el.type === 'checkbox') MIND[key] = el.checked;
