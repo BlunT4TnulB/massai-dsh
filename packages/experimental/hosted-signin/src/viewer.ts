@@ -163,13 +163,15 @@ export async function referenceFor(question: string): Promise<Reference | undefi
     const page = await summary.json() as { title?: string; extract?: string; content_urls?: { desktop?: { page?: string } } }
     const extract = String(page.extract ?? '').slice(0, 900).trim()
     if (extract === '') return remember(undefined)
-    // A title can share one word and still be the wrong article ("App Store (Apple)" for
-    // a question about cut apples). The reference is only used when the words line up in
-    // the title *and* the summary, or when the title matches clearly on its own.
+    // A title can share one word and still be the wrong article ("App Store (Apple)" for a
+    // question about cut apples), and a summary mentions enough common words to look
+    // relevant by accident. So the rule is shaped by how much was asked: a short question
+    // needs one title match, a longer one needs two. Otherwise no source is offered —
+    // which is the honest outcome, and the answer still comes from the model.
     const titleWords = new Set(wordsOf(String(page.title ?? title)))
     const titleHits = queryWords.filter(word => titleWords.has(word)).length
-    const extractHits = queryWords.filter(word => extract.toLowerCase().includes(word)).length
-    if (titleHits < 2 && titleHits + extractHits < 2) return remember(undefined)
+    const needed = queryWords.length > 2 ? 2 : 1
+    if (titleHits < needed) return remember(undefined)
     return remember({
       title: String(page.title ?? title),
       extract,
