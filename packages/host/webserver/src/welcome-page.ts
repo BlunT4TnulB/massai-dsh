@@ -276,6 +276,13 @@ export function intoTheUnknownPage(): string {
     border:1px solid rgba(247,205,140,.16);transition:box-shadow .4s ease,border-color .4s ease}
   .orb iframe{width:100%;height:100%;border:0;pointer-events:none;background:#000}
   .spin{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none}
+    .askline {
+      display: inline-block; margin-top: 1rem; font-size: .8rem; letter-spacing: .06em;
+      color: rgba(239, 220, 164, .55); text-decoration: none;
+      border-bottom: 1px solid rgba(239, 220, 164, .18); padding-bottom: 2px;
+      transition: color .2s ease, border-color .2s ease;
+    }
+    .askline:hover, .askline:focus-visible { color: #efdca4; border-color: rgba(239, 220, 164, .5); outline: none }
   .slogan{margin:.1rem 0 .2rem;font-size:.72rem;letter-spacing:.1em;color:#b98f5f;
     text-align:center;max-width:20rem;opacity:.9;transition:opacity .9s ease;min-height:1.2em}
   .poem{margin:.2rem 0 0;font-size:.72rem;line-height:1.75;color:#8a7a63;
@@ -313,6 +320,7 @@ export function intoTheUnknownPage(): string {
       Follow where the bright threads wind,<br>
       and step inside the Massai mind.</p>
     <p class="slogan" id="slogan">Speak the future you want to live in, then build it together.</p>
+    <a class="askline" href="/ask">or ask it something — one question, one answer →</a>
     <a class="sr" href="/flower">Enter the Unknown</a>
     <a class="sr" href="/mind">Open the visualiser instead</a>
   </div>
