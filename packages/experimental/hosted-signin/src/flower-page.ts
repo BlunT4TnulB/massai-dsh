@@ -2661,6 +2661,13 @@ async function poll() {
 poll();
 if (!QUIET) setInterval(poll, 2500);
 if (params.get('panel') === '1') togglePanel();
+// An embedding surface may display the answer itself; when it says so, the mind keeps its
+// words to itself and still speaks them.
+if (params.get('voice') === '0') {
+  const hideVoice = document.createElement('style');
+  hideVoice.textContent = '#mindVoice { display: none !important }';
+  document.head.appendChild(hideVoice);
+}
 if (MIND.keepAwake) void keepAwake(true);
 
 async function pollVitals() {

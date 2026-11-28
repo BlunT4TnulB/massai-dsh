@@ -58,7 +58,7 @@ export function assistPageHtml(signedIn: boolean): string {
   .hint{min-height:1.1em;margin:.5rem 0 0;text-align:center;font-size:.74rem;color:rgba(247,234,210,.4)}
   body.sleep .stage{opacity:0;transition:opacity .6s ease}
 </style></head><body>
-<iframe id="mind" src="/mind?embed=1&quiet=1&speak=1" title="The Massai mind" allow="autoplay"></iframe>
+<iframe id="mind" src="/mind?embed=1&quiet=1&speak=1&voice=0" title="The Massai mind" allow="autoplay"></iframe>
 <div class="stage">
   <p class="answer" id="answer" aria-live="polite"></p>
   <p class="source" id="source"></p>
@@ -68,7 +68,7 @@ export function assistPageHtml(signedIn: boolean): string {
     <button class="primary" type="submit">Ask</button>
   </form>
   <div class="row">
-    <button id="speak" type="button">🎙︎ Speak</button>
+    <button id="speak" type="button">Speak</button>
     <button id="again" type="button">Again</button>
   </div>
   <p class="hint" id="hint"></p>

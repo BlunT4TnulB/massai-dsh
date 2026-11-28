@@ -141,6 +141,9 @@ open to everyone as a substitute: real, finished builds you can open without an 
 is never a trick: the way in is a gesture, a keypress, or patience — not a menu.</p>
 
 <h2>Talking to the mind</h2>
+<p>It is also an assistant: on Android it can be the app the held button opens; on iOS a Shortcut can put
+it behind Siri or the Action button; in any browser it can be added as a search engine. The steps for
+every device are in the repository at <code>docs/assistant/README.md</code>.</p>
 <p>There are two front doors for asking: <a href="/ask">/ask</a> — one box, one answer, one source, for
 everyday questions — and the mind itself, where pressing <code>T</code> does the same thing inside the
 visualiser. The rest of this section applies to both.</p>
