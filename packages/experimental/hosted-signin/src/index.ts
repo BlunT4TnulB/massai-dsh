@@ -1503,7 +1503,10 @@ You can also just open <a href="/assist" style="color:#c9b389">/assist</a> in th
             + reference.extract,
       ].filter(line => line !== '').join(' ')
       // A short cache: the same question asked again costs nothing at all.
-      const cacheKey = (style + '|' + question.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 200)
+      // The cached answer belongs to a voice and a backbone as well as a question: a plain
+      // answer and an oracle's answer are not the same answer.
+      const cacheKey = (style + '|' + String(Math.round(tone * 10)) + '|' + (backbone === 'auto' ? 'auto' : backbone) + '|'
+        + question.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 200)
       const hit = answerCache.get(cacheKey)
       if (hit !== undefined && Date.now() - hit.at < 600_000) {
         respond(res, 200, { ok: true, answer: hit.answer, costUsd: 0, via: 'cache', ...(hit.source === undefined ? {} : { source: hit.source }) })
