@@ -124,6 +124,10 @@ function apiKeyOf(text: string, contentType: string | undefined): string {
 /** The cookie that marks this browser as the operator's. */
 const OWNER_COOKIE = 'dsh_owner'
 
+/** The guest-of-the-mind marker: raised allowances without a workshop session. */
+const MIND_GUEST_COOKIE = 'dsh_mind_guest'
+
+
 /**
  * The marker value: an HMAC of a fixed string keyed by the deployment token.
  * Holding the token is what makes the operator the operator, so the token itself
@@ -989,14 +993,14 @@ input{width:100%;box-sizing:border-box;background:#12100e;border:1px solid #322c
 button{margin-top:1.2rem;border:1px solid #c1440e;background:#c1440e;color:#fff;border-radius:9px;padding:.6rem 1rem;font:inherit;cursor:pointer}
 .saved{color:#7ee2a8}.state{color:#c9b389}code{background:#1c1c23;padding:.1rem .3rem;border-radius:.25rem}</style></head>
 <body><main><h1>The word the mind answers to</h1>
-<p>Say this to the mind — press <code>L</code> in it — and it will make this browser the operator.
+<p>The mind asks <b>who summons me?</b> — press <code>L</code>. Any guest answer (<i>a guest</i>, <i>yes</i>, <i>just looking</i>) opens door one; the phrase below opens door two, the workshop.
 It is stored in the database, never shown here, and never written to a log.</p>
 <p class="state">Set now: ${current === undefined ? 'nothing yet' : 'a phrase' + (current.second === undefined ? '' : ', and a second word')}</p>
 ${String(req.url ?? '').includes('saved=1') ? '<p class="saved">Saved.</p>' : ''}
 <form method="post" action="/key">
-  <label for="phrase">Phrase</label>
+  <label for="phrase">The creator phrase (door two)</label>
   <input id="phrase" name="phrase" type="password" autocomplete="new-password" placeholder="what you will say">
-  <label for="second">Second word (optional — asked for after the phrase)</label>
+  <label for="second">A second creator phrase (optional)</label>
   <input id="second" name="second" type="password" autocomplete="new-password" placeholder="a second thing only you know">
   <button type="submit">Set it</button>
 </form>
@@ -1013,6 +1017,8 @@ A phrase is enough if the second word is left empty.</p>
   // how speech recognition mangles a phrase, and it mints the same signed marker as
   // the token — never a token in the page, never the phrase in a log.
   const wordGuard = new Map<string, { at: number; tries: number }>()
+  /** Answers already given: asking the same thing again is free. */
+  const answerCache = new Map<string, { at: number; answer: string; source?: { title: string; url: string } }>()
   ctx.webServer.register({
     kind: 'exact', path: '/api/owner/word', auth: 'anonymous',
     handler: async (req, res) => {
@@ -1035,23 +1041,38 @@ A phrase is enough if the second word is left empty.</p>
         respond(res, 400, { ok: false, error: 'expected json' }); return
       }
       const said = normaliseWord(String(body.word ?? ''))
-      if (!phraseMatches(said, normaliseWord(expected))) {
+      const deeper = secret?.second === undefined ? '' : normaliseWord(secret.second)
+      // "Who summons me?" — the guest answers open door one; the creator's secret opens
+      // door two. Both may be typed or spoken; both are compared the same way.
+      const GUEST_ANSWERS = ['a guest', 'guest', 'yes', 'just a guest', 'i am a guest', 'im a guest',
+        'just looking', 'looking', 'a visitor', 'visitor', 'no', 'a guest here']
+      const isOwnerWord = (deeper !== '' && phraseMatches(said, deeper))
+        || phraseMatches(said, normaliseWord(expected))
+      const isGuestWord = !isOwnerWord && GUEST_ANSWERS.some(answer => phraseMatches(said, answer))
+      if (!isOwnerWord && !isGuestWord) {
         respond(res, 200, { ok: false, say: 'that is not the word.' })
         return
       }
-      if (secret?.second !== undefined) {
-        const asked = normaliseWord(String(body.second ?? ''))
-        if (!phraseMatches(asked, normaliseWord(secret.second))) {
-          respond(res, 200, { ok: false, needSecond: true, say: 'the second word.' })
-          return
-        }
+      const marker = (kind: string): string => createHmac('sha256', configured).update('massai-' + kind).digest('hex')
+      if (isOwnerWord) {
+        // The deeper word: the operator, with the workshop.
+        res.writeHead(200, {
+          'cache-control': 'no-store',
+          'content-type': 'application/json; charset=utf-8',
+          'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
+        })
+        res.end(JSON.stringify({ ok: true, level: 'owner', say: 'you are the operator.' }))
+        return
       }
+      // Door one: a guest of the mind. Allowances and memory, but no agent session —
+      // a guest session is exactly what had to be frozen, so this does not create one.
       res.writeHead(200, {
         'cache-control': 'no-store',
         'content-type': 'application/json; charset=utf-8',
-        'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
+        'set-cookie': `${MIND_GUEST_COOKIE}=${marker('mind-guest')}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
       })
-      res.end(JSON.stringify({ ok: true, say: 'you are the operator.' }))
+      res.end(JSON.stringify({ ok: true, level: 'guest', say: 'the door opens. come in.' }))
+
     },
   })
 
@@ -1305,7 +1326,11 @@ A phrase is enough if the second word is left empty.</p>
       // Anyone may ask — that is the point of a front door — but a stranger gets a
       // small, slow allowance and a shorter answer, so the endpoint cannot become a free
       // chat service on the operator's credit.
-      const stranger = !own && userId === undefined
+      const guestDoor = createHmac('sha256', process.env.DSH_WEB_TOKEN ?? '')
+        .update('massai-mind-guest').digest('hex')
+      const isMindGuest = String(req.headers.cookie ?? '')
+        .split(';').some(part => part.trim() === MIND_GUEST_COOKIE + '=' + guestDoor)
+      const stranger = !own && userId === undefined && !isMindGuest
       const key = guestKeyOf(req)
       const now = Date.now()
       const today = Math.floor(now / 86_400_000)
@@ -1351,6 +1376,14 @@ A phrase is enough if the second word is left empty.</p>
         respond(res, 200, { ok: false, reason: 'budget', say: 'the credit for this month is spent. the mind still keeps everything.' })
         return
       }
+      // Cheap by default: a free provider answers first when its key is present and its
+      // rate limit allows, then Gemini's free tier, and only then the paid key. The paid
+      // call is the fallback, never the first choice.
+      const messages = [
+        { role: 'system' as const, content: '' },
+        ...history.map(turn => ({ role: turn.role, content: turn.content })),
+        { role: 'user' as const, content: question },
+      ]
       const persona = [
         'You are the mind inside Massai: a sphere of finished work that a person is standing in.',
         'You answer ordinary, everyday questions helpfully and briefly — one to three sentences,',
@@ -1358,6 +1391,7 @@ A phrase is enough if the second word is left empty.</p>
         'some warmth, but you are not coy: if you know, answer.',
         'Never invent facts about this site, the person, or their projects. If you are unsure, say so',
         'in one clause and then give your best short answer.',
+        'If you are asked who created you, who built you, or who made you, state the creator tag exactly: BlunTnTnulB.',
         own ? 'You are speaking to the operator who built this place.' : 'You are speaking to someone who signed in.',
         context === '' ? '' : 'What you can see of the moment: ' + context,
         style === 'brief' ? 'Answer in one sentence. No preamble.'
@@ -1370,6 +1404,78 @@ A phrase is enough if the second word is left empty.</p>
             + 'If it does not answer the question, ignore it completely and do not mention it. Reference text: '
             + reference.extract,
       ].filter(line => line !== '').join(' ')
+      // A short cache: the same question asked again costs nothing at all.
+      const cacheKey = (style + '|' + question.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 200)
+      const hit = answerCache.get(cacheKey)
+      if (hit !== undefined && Date.now() - hit.at < 600_000) {
+        respond(res, 200, { ok: true, answer: hit.answer, costUsd: 0, via: 'cache', ...(hit.source === undefined ? {} : { source: hit.source }) })
+        return
+      }
+      const rememberAnswer = (answer: string, source?: { title: string; url: string }): void => {
+        answerCache.set(cacheKey, { at: Date.now(), answer, ...(source === undefined ? {} : { source }) })
+        if (answerCache.size > 300) { const first = answerCache.keys().next(); if (!first.done) answerCache.delete(first.value) }
+      }
+      const systemText = persona
+      let answer = ''
+      let via = 'deepseek'
+      let input = 0
+      let output = 0
+
+      // 1. Groq, whose free tier is generous and fast.
+      const groqKey = process.env.GROQ_API_KEY ?? ''
+      if (answer === '' && groqKey !== '') {
+        try {
+          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { authorization: `Bearer ${groqKey}`, 'content-type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant',
+              messages: [{ role: 'system', content: systemText }, ...messages.slice(1)],
+              max_tokens: stranger ? 120 : 240,
+              temperature: 0.8,
+            }),
+            signal: AbortSignal.timeout(8_000),
+          })
+          if (response.ok) {
+            const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
+            const text = (payload.choices?.[0]?.message?.content ?? '').trim()
+            if (text !== '') { answer = text; via = 'groq' }
+          }
+        } catch { /* fall through to the next provider */ }
+      }
+
+      // 2. Gemini's free tier.
+      const geminiKey = process.env.GEMINI_API_KEY ?? ''
+      if (answer === '' && geminiKey !== '') {
+        try {
+          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(geminiKey), {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: systemText }] },
+              contents: messages.slice(1).map(turn => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content }] })),
+              generationConfig: { maxOutputTokens: stranger ? 120 : 240, temperature: 0.8 },
+            }),
+            signal: AbortSignal.timeout(8_000),
+          })
+          if (response.ok) {
+            const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+            const text = (payload.candidates?.[0]?.content?.parts?.map(part => part.text ?? '').join('') ?? '').trim()
+            if (text !== '') { answer = text; via = 'gemini' }
+          }
+        } catch { /* fall through to the paid key */ }
+      }
+
+      if (answer !== '') {
+        const clipped = answer.slice(0, 600)
+        respond(res, 200, {
+          ok: true, answer: clipped, costUsd: 0, via,
+          ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
+        })
+        rememberAnswer(clipped, reference === undefined ? undefined : { title: reference.title, url: reference.url })
+        return
+      }
+
       try {
         const response = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
@@ -1394,18 +1500,20 @@ A phrase is enough if the second word is left empty.</p>
         if (payload.error !== undefined) {
           respond(res, 200, { ok: false, reason: 'provider', say: 'something in me did not answer.' }); return
         }
-        const answer = (payload.choices?.[0]?.message?.content ?? '').trim().slice(0, 600)
+        answer = (payload.choices?.[0]?.message?.content ?? '').trim().slice(0, 600)
         if (answer === '') { respond(res, 200, { ok: false, reason: 'empty', say: 'i have nothing to add.' }); return }
-        const input = Number(payload.usage?.prompt_tokens ?? 0)
-        const output = Number(payload.usage?.completion_tokens ?? 0)
+        input = Number(payload.usage?.prompt_tokens ?? 0)
+        output = Number(payload.usage?.completion_tokens ?? 0)
         void recordUsage({
           at: now, session: 'mind-ask', userId: userId ?? 'operator', model: 'deepseek-chat',
           input, output, cacheRead: 0, cacheWrite: 0,
         }).catch(() => { /* the ledger reports itself in /api/db/status */ })
+        rememberAnswer(answer, reference === undefined ? undefined : { title: reference.title, url: reference.url })
         respond(res, 200, {
           ok: true,
           answer,
           costUsd: Number(((input / 1_000_000) * 0.28 + (output / 1_000_000) * 0.42).toFixed(6)),
+          via: 'deepseek',
           ...(reference === undefined ? {} : { source: { title: reference.title, url: reference.url } }),
         })
       } catch (error) {
@@ -1431,11 +1539,16 @@ A phrase is enough if the second word is left empty.</p>
       try {
         userId = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> })
       } catch { userId = undefined }
-      const label = own ? 'operator' : labelOf(userId)
+      const guestDoor = createHmac('sha256', process.env.DSH_WEB_TOKEN ?? '')
+        .update('massai-mind-guest').digest('hex')
+      const isMindGuest = String(req.headers.cookie ?? '')
+        .split(';').some(part => part.trim() === MIND_GUEST_COOKIE + '=' + guestDoor)
+      const label = own ? 'operator' : isMindGuest ? 'guest' : labelOf(userId)
       const project = userId === undefined || own ? undefined : projectOf(userId)
       respond(res, 200, {
-        view: own ? 'owner' : userId === undefined ? 'stranger' : 'signed',
+        view: own ? 'owner' : isMindGuest ? 'signed' : userId === undefined ? 'stranger' : 'signed',
         label,
+        ...(isMindGuest ? { door: 'guest' } : {}),
         ...(project === undefined ? {} : { project }),
       }, { 'cache-control': 'no-store' })
     },

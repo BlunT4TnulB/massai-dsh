@@ -1076,6 +1076,9 @@ function obey(raw) {
   }
   const presetName = Object.keys(PRESETS).find(name => text.includes(name));
   if (presetName !== undefined) { applyPreset(presetName); return reply(presetName + '.') }
+  if (/(who made you|who created you|who built you|your creator|who is your creator)/.test(text)) {
+    return reply('BlunTnTnulB made me. i am what their work looks like from the inside.');
+  }
   if (/(who are you|what are you)/.test(text)) return reply('i am what your work looks like from the inside.')
   if (/(what is this|where am i)/.test(text)) return reply('a place made of the things you finished. keep going.')
   if (/(help|what can you do|commands)/.test(text)) return reply(SAY_HELP)
@@ -2891,8 +2894,8 @@ function greeting() {
     if (someGone) return 'back so soon.' + stillGuest + ' i noticed.' + subject;
     return bank.greetGuest[0] + stillGuest + subject;
   }
-  if (longGone) return 'a new face, after a long dark. stay a while.' + subject;
-  if (someGone) return 'you came back.' + subject;
+  if (longGone) return 'a new face, after a long dark. a guest, or an account?' + subject;
+  if (someGone) return 'you came back. a guest, or an account?' + subject;
   return looked === '' ? bank.greetStranger[0] : 'you were here. you were looking at ' + looked + '.';
 }
 
@@ -2921,7 +2924,7 @@ function openWord() {
     input.id = 'mindWord';
     input.type = 'password';
     input.setAttribute('autocomplete', 'new-password');
-    input.placeholder = 'the word';
+    input.placeholder = 'who summons me?';
     input.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:9vh;z-index:70;'
       + 'width:min(22rem,84vw);padding:10px 12px;border-radius:10px;border:1px solid rgba(247,205,140,.3);'
       + 'background:rgba(12,11,10,.95);color:#F2E8D5;font:14px system-ui,sans-serif;text-align:center;outline:none';
@@ -2935,7 +2938,7 @@ function openWord() {
       claimWord(word, '');
     });
     document.body.appendChild(input);
-    flashNote('say it, or type it');
+    flashNote('who summons me?');
     // Say it: the browser's own recogniser hears the phrase and hands it over. The audio
     // never leaves the device; only the text does, and only to the comparison.
     const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
