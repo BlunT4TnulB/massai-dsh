@@ -1363,6 +1363,48 @@ An unsourced answer is acceptable; a wrongly sourced one is not.
 3. **app-side "mind works"** — command → composer hides → work shown → it speaks → composer returns.
 4. **guest sandboxing** — the only path back to a free workshop preview.
 
+## Massai Assist — the held button answers (2026-11-27, `47e8bc1` + APK built)
+
+The owner's focus: **hold the assistant button, get Massai asking what you want, not Gemini.** That is
+an Android *assist app*, not a Google integration, and it is now built and downloaded.
+
+### The app (`android/assist/`)
+
+One activity, no libraries:
+
+```
+ACTION_ASSIST intent filter     Settings → Apps → Default apps → Assist & voice input → Assist app
+WebView                          https://massai-itu.ca/ask?assist=1
+system SpeechRecognizer          one sentence, no wake word, no background listening
+system TextToSpeech              the answer is spoken by the phone
+JS bridge                        window.MassaiHost.speak(answer); window.massai.ask(question)
+```
+
+Built by CI (`Build APK` → `assist` job), unsigned-debug signed for sideloading; the release build
+signs with the same keystore as the wrapper when the four secrets exist. The artifact is
+`massai-assist.apk` in the workspace.
+
+### The web side it needs (deployed)
+
+- `/ask?assist=1` focuses the box and starts listening; `?q=` answers immediately
+- `window.massai.ask()` / `window.MassaiHost.speak()` are the two hooks the app uses
+- the installed icon gains an **Ask Massai** long-press shortcut (`/mind.webmanifest`)
+
+### Two build faults fixed on the way
+
+1. `secrets` cannot appear in a workflow `if:` — the action parser rejected the whole file (422 on
+   dispatch). Mapped through `env` instead.
+2. `android-actions/setup-android@v3` fails upstream ("Failed to find package 'tools'"). The workflow
+   now uses the SDK the runner already has, accepts licences when a manager is found, and pins Gradle
+   8.7.
+
+### What remains for the held button
+
+- the Android picker on some devices lists only apps with a `VoiceInteractionService`; the assist
+  activity is set through *Assist app*. A stub `VoiceInteractionService` is the next Android step if
+  the owner's phone refuses to list Massai.
+- an icon and a release keystore (owner secrets), then Play/sideload.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
