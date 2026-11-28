@@ -1463,6 +1463,39 @@ same phrase was accepted; "open sesame" was refused with "that is not the word".
 The "secondary" was not specified — the server already supports a second word asked after the first,
 so the only thing missing is deciding what it should be.
 
+## Bring your own backbone (2026-11-28, `e00ce44`)
+
+The owner's principle: do not wall off options; keep DeepSeek the spine; make the cost of an endless
+assistant as low as possible.
+
+### What exists now
+
+```
+deployment-wide   GROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY
+                  plus GROQ_MODEL, GEMINI_MODEL, OPENROUTER_MODEL overrides
+                  order: groq → gemini → openrouter → deepseek (free first, paid as fallback)
+per person        five taps → panel → "your own keys": choose which provider to use and paste a key
+                  keys live ONLY in that browser (localStorage 'massai_keys'); they ride on that
+                  person's own questions as x-llm-provider / x-llm-key headers, are used for one
+                  answer, are never stored server-side and never logged
+selector          panel → backbone: auto · groq · gemini · openrouter · deepseek
+verification      byok proven live: a bogus key fell through to deepseek and reported byok,
+                  a valid one answered through the chosen provider
+```
+
+### Cost, measured
+
+| path | cost | note |
+|---|---|---|
+| auto / groq / gemini | **$0** | free tiers; ~0.3–2 s |
+| deepseek | $0.000079 an answer | 300/day cap ≈ 71¢/month; half off in the off-peak window |
+| workshop (agent) | ~$0.0017 a turn | paid by design; hard cap $5/month |
+
+### Not yet built (the next wall to remove)
+
+A **custom OpenAI-compatible endpoint** — base URL + model + key — so any provider on earth can be the
+mind's backbone without a code change. Same BYOK treatment, same transient use.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
