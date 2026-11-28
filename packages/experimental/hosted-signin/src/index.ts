@@ -30,6 +30,7 @@ import { agentsOf, classifyToolCall, countsOf, focusOf, kindsOf, readActivity, r
 import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession } from './hive.ts'
 import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
+import { askPageHtml } from './ask-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { labelOf, projectOf, referenceFor } from './viewer.ts'
 import { mePageHtml } from './me-page.ts'
@@ -1086,6 +1087,28 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // The front door for everyday use: one box, an answer, a source.
+  ctx.webServer.register({
+    kind: 'exact', path: '/ask', auth: 'anonymous',
+    handler: (req, res) => {
+      const auth = ctx.get('browserAuth') as
+        | { sessionUserId(request: { headers: Record<string, string | string[] | undefined> }): string | undefined }
+        | undefined
+      let signedIn = isOwnerRequest(req)
+      if (!signedIn) {
+        try { signedIn = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> }) !== undefined }
+        catch { signedIn = false }
+      }
+      const html = Buffer.from(askPageHtml(signedIn))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // The mind answers. A real model call, capped hard, and gated by who is standing there:
   // the operator and signed-in people may ask anything short; a stranger is refused with a
