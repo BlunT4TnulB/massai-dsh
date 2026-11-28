@@ -269,7 +269,7 @@ they run from the file itself, with no accounts and no build step.</p><ul>${rows
 
   // Compile only: free, deterministic, and the whole point of the split.
   ctx.webServer.register({
-    kind: 'exact', path: '/api/one-turn/compile', auth: 'required',
+    kind: 'exact', path: '/api/one-turn/compile', auth: 'anonymous',
     handler: async (req, res) => {
       if (req.method !== 'POST') { respond(res, 405, { error: 'method not allowed' }); return }
       try {

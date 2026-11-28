@@ -173,6 +173,7 @@ costs anything until you choose to build.</p>
       <button id="back" class="ghost" type="button">Back to the questions</button>
     </div>
     <p class="note" id="compileNote"></p>
+    <p class="note" id="guestNote" style="margin-top:.4rem"></p>
     <pre id="mask"></pre>
   </div>
 </div>
@@ -389,6 +390,8 @@ costs anything until you choose to build.</p>
           ['cost so far', '$0.00'],
         ].map(([k, v]) => '<div class="kv"><span>' + k + '</span><b>' + v + '</b></div>').join('');
         $('compileNote').textContent = 'This is the exact prompt the build receives. Editing the answers regenerates it.';
+        $('guestNote').textContent = 'Planning is free and open to anyone. Building it — spending the'
+          + ' operator\'s credit — needs a signed-in session.';
         return;
       }
       if (data.ok === false) {
