@@ -992,7 +992,7 @@ button{margin-top:1.2rem;border:1px solid #c1440e;background:#c1440e;color:#fff;
 <p>Say this to the mind — press <code>L</code> in it — and it will make this browser the operator.
 It is stored in the database, never shown here, and never written to a log.</p>
 <p class="state">Set now: ${current === undefined ? 'nothing yet' : 'a phrase' + (current.second === undefined ? '' : ', and a second word')}</p>
-${req.url !== null && req.url.includes('saved=1') ? '<p class="saved">Saved.</p>' : ''}
+${String(req.url ?? '').includes('saved=1') ? '<p class="saved">Saved.</p>' : ''}
 <form method="post" action="/key">
   <label for="phrase">Phrase</label>
   <input id="phrase" name="phrase" type="password" autocomplete="new-password" placeholder="what you will say">
@@ -1030,8 +1030,8 @@ A phrase is enough if the second word is left empty.</p>
         return
       }
       wordGuard.set(key, { at: guard === undefined || now - guard.at > 600_000 ? now : guard.at, tries: guard === undefined || now - guard.at > 600_000 ? 1 : guard.tries + 1 })
-      let body: { word?: unknown }
-      try { body = JSON.parse(await readBody(req)) as { word?: unknown } } catch {
+      let body: { word?: unknown; second?: unknown }
+      try { body = JSON.parse(await readBody(req)) as { word?: unknown; second?: unknown } } catch {
         respond(res, 400, { ok: false, error: 'expected json' }); return
       }
       const said = normaliseWord(String(body.word ?? ''))

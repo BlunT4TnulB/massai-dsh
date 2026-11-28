@@ -355,7 +355,7 @@ export async function readSecret(): Promise<SecretWord | undefined> {
   if (!databaseConfigured()) return undefined
   try {
     await ensureSecretTable()
-    const rows = await runSql<{ phrase: string; second: string | null }>('SELECT phrase, second FROM massai_secret WHERE id = 1')
+    const rows = await runSql('SELECT phrase, second FROM massai_secret WHERE id = 1') as Array<{ phrase: string; second: string | null }>
     const row = rows[0]
     if (row === undefined) return undefined
     return { phrase: row.phrase, ...(row.second === null || row.second === '' ? {} : { second: row.second }) }
