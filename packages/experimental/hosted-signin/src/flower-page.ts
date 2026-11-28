@@ -1077,6 +1077,16 @@ function obey(raw) {
   }
   if (/(tell me a riddle|riddle me|a riddle|something silly|make me laugh)/.test(text)) { riddle(); return 'riddle'; }
   if (/(the answer|what is it|give up|tell me the answer)/.test(text) && currentRiddle !== null) { riddle(); return 'answered'; }
+  const naming = /^(?:call me|my name is|i am|i'm|they call me)\s+(.+)$/.exec(text);
+  if (naming !== null && naming[1] !== undefined && naming[1].trim() !== '') {
+    const chosen = naming[1].trim().slice(0, 40);
+    try { window.localStorage.setItem('massai_alias', chosen) } catch (error) { void error; }
+    return reply(chosen + '. noted. i will try to remember which of you is which.');
+  }
+  if (/(what do you call me|my name|who am i to you)/.test(text)) {
+    const mine = myName();
+    return reply(mine === '' ? 'i have not been told. say "call me" and a name, and i will use it.' : mine + '. that is what i call you.');
+  }
   if (/(who summons|the word|let me in)/.test(text)) { openWord(); return reply('who summons me?') }
   if (/(who is looking|who am i|do you know me)/.test(text)) {
     if (VIEWER === 'owner') return reply('the operator. the one who made this.');
@@ -2905,6 +2915,12 @@ function togglePanel() {
     + 'When on, a question outside its vocabulary goes to a model. A fraction of a cent each, '
     + 'capped, and signed-in only.</p>';
   const keys = ownKeys();
+  html += head('what it calls you');
+  html += '<label style="display:flex;align-items:center;gap:8px;margin:3px 0">'
+    + '<span style="width:6.4rem;color:#9a8f7c">name</span>'
+    + '<input type="text" data-alias="1" value="' + myName().replace(/"/g, '&quot;') + '" placeholder="buddy, mango, jefferson…" '
+    + 'style="flex:1;background:#141210;color:#E7DCC6;border:1px solid #3a332a;border-radius:6px;padding:3px 6px;font:12px system-ui">'
+    + '</label>';
   html += head('your own keys');
   html += '<label style="display:flex;align-items:center;gap:8px;margin:4px 0">'
     + '<span style="width:6.4rem;color:#9a8f7c">use</span>'
@@ -2957,6 +2973,10 @@ function togglePanel() {
   panel.addEventListener('input', function (event) {
     const el = event.target;
     // own keys are separate from the settings: saved here, sent per request, never in MIND
+    if (el.getAttribute('data-alias') === '1') {
+      try { window.localStorage.setItem('massai_alias', el.value) } catch (error) { void error; }
+      return;
+    }
     const ownKey = el.getAttribute('data-ownkey');
     if (ownKey !== null) {
       const keys = ownKeys();
@@ -3037,6 +3057,9 @@ function togglePanel() {
 // Arriving somewhere again: it says it remembers the last thing you looked at.
 /** A line that says who is here, how long they were gone, and what they left behind. */
 function greeting() {
+  // A known name gets the theatrical welcome; a stranger still gets the plain one.
+  const known = myName();
+  if (known !== '' && VIEWER !== 'stranger') return namedGreeting();
   let looked = '';
   try { looked = String(window.localStorage.getItem('massai_looked_at') ?? ''); } catch (error) { void error; }
   const gap = awayFor;
@@ -3077,6 +3100,59 @@ document.addEventListener('visibilitychange', function () {
   }
   leftAt = 0;
 });
+
+// --- names, slogans, and a clock -------------------------------------------
+// The mind is allowed to be pleased to see you, and to be a little theatrical about it.
+// A name set here covers the whole browser; a creator name arrives from the door.
+const NICKNAMES = [
+  'buddy', 'mastermind', 'mango', '4 burger jefferson', 'jefferson', 'the blind bean',
+  'master of the blind bean', 'the regular', 'the architect', 'four burger', 'the intern', 'boss'
+];
+const SLOGANS = [
+  '{name}. the workshop missed you.',
+  'back again, {name}.',
+  'master of the blind bean returns.',
+  'will you be having the regular, {name}?',
+  'it has been a minute, {name}.',
+  'there you are, {name}. i was narrating the quiet.',
+  '{name}. the lattice held without you.',
+  'so. {name}. again.'
+];
+const CLOCK_LINES = [
+  'is it 4:20 somewhere?',
+  'it is div o\'clock somewhere.',
+  'is it that time yet?',
+  'i think it is that time. pause for a moment.'
+];
+
+/** The name the mind calls this person here. */
+function myName() {
+  try {
+    const alias = String(window.localStorage.getItem('massai_alias') ?? '').trim();
+    if (alias !== '') return alias;
+    const creator = String(window.localStorage.getItem('massai_creator') ?? '').trim();
+    return creator;
+  } catch (error) { void error; return ''; }
+}
+
+/** A name it might use today — sometimes a different one, for the deja vu of it. */
+function anyName() {
+  const mine = myName();
+  if (mine === '') return NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)];
+  if (Math.random() < 0.25) return NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)];
+  return mine;
+}
+
+/** A greeting that knows the name, and sometimes the hour. */
+function namedGreeting() {
+  const name = anyName();
+  const line = SLOGANS[Math.floor(Math.random() * SLOGANS.length)].replace(/\{name\}/g, name);
+  const now = new Date();
+  const clock = (now.getHours() === 16 && now.getMinutes() >= 18 && now.getMinutes() <= 22) || Math.random() < 0.06
+    ? ' ' + CLOCK_LINES[Math.floor(Math.random() * CLOCK_LINES.length)]
+    : '';
+  return line + clock;
+}
 
 // The log: what has been asked and answered here, kept in this browser so it can be
 // re-read and copied. Nothing here leaves the device.
@@ -3178,6 +3254,10 @@ function claimWord(word, second) {
     .then(function (body) {
       if (body !== null && body.ok === true) {
         VIEWER = 'owner';
+        if (typeof body.creator === 'string' && body.creator !== '') {
+          try { window.localStorage.setItem('massai_creator', body.creator) } catch (error) { void error; }
+        }
+        if (typeof body.creator === 'string' && body.creator !== '') { say(body.creator + '. the workshop is yours.'); return }
         say('you are the operator.');
         setTimeout(function () { location.reload() }, 1800);
         return;

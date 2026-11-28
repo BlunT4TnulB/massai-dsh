@@ -41,7 +41,7 @@ import { forgetRecord, memoryPageHtml } from './memory-page.ts'
 import { listWorkers, recordWorker, workerTokenAccepted, workersPageHtml } from './workers.ts'
 import { complete, enqueue, nextJob, relayStatus, workerConnected } from './worker-relay.ts'
 import {
-  creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readSecret, readUsageRows, recordUsage, runSql, writeSecret,
+  addCreator, creditLedger, creditTotal, databaseConfigured, databaseStatus, ensureSchema, eraseUserData, grantCredit, guestCounters, readCreators, readSecret, readUsageRows, recordUsage, removeCreator, runSql, writeSecret,
 } from './persistence.ts'
 import { admitGuestSession, guestKeyOf } from './abuse.ts'
 import { budgetReport, checkBudget } from './budget.ts'
@@ -969,9 +969,26 @@ export function apply(ctx: Context): void {
     handler: async (req, res) => {
       if (!isOwnerRequest(req)) { res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }); res.end('operator only'); return }
       const current = await readSecret().catch(() => undefined)
+      const creators = await readCreators().catch(() => [])
       if (req.method === 'POST') {
         try {
           const fields = await readFields(req)
+          // Adding or removing a creator, without touching the general phrase.
+          if (String(fields.get('action') ?? '') === 'creator') {
+            const name = String(fields.get('name') ?? '').trim().slice(0, 40)
+            const creatorPhrase = String(fields.get('creatorPhrase') ?? '').trim().slice(0, 120)
+            if (name === '' || creatorPhrase === '') throw new Error('a creator needs a name and a phrase')
+            await addCreator(name, creatorPhrase.toLowerCase())
+            res.writeHead(303, { location: '/key?saved=1', 'cache-control': 'no-store' })
+            res.end()
+            return
+          }
+          if (String(fields.get('action') ?? '') === 'remove') {
+            await removeCreator(Number(fields.get('id') ?? 0))
+            res.writeHead(303, { location: '/key?saved=1', 'cache-control': 'no-store' })
+            res.end()
+            return
+          }
           const phrase = String(fields.get('phrase') ?? '').trim().slice(0, 120)
           const second = String(fields.get('second') ?? '').trim().slice(0, 60)
           if (phrase === '') throw new Error('a phrase is required')
@@ -996,6 +1013,18 @@ button{margin-top:1.2rem;border:1px solid #c1440e;background:#c1440e;color:#fff;
 <p>The mind asks <b>who summons me?</b> — press <code>L</code>. Any guest answer (<i>a guest</i>, <i>yes</i>, <i>just looking</i>) opens door one; the phrase below opens door two, the workshop.
 It is stored in the database, never shown here, and never written to a log.</p>
 <p class="state">Set now: ${current === undefined ? 'nothing yet' : 'a phrase' + (current.second === undefined ? '' : ', and a second word')}</p>
+<p class="state">Creators: ${creators.length === 0 ? 'none yet' : creators.map(entry => entry.name).join(', ')}</p>
+${creators.length === 0 ? '' : creators.map(entry => '<form method="post" action="/key" style="display:inline"><input type="hidden" name="action" value="remove"><input type="hidden" name="id" value="' + entry.id + '"><button type="submit" style="background:#1a1714;border-color:#3a332a;color:#8a7c62;margin:4px 6px 0 0">forget ' + entry.name + '</button></form>').join('')}
+<h2 style="font-size:.9rem;margin:1.4rem 0 .2rem">Add a creator</h2>
+<p style="color:#7d7364;font-size:.82rem">Each creator gets their own phrase and is greeted by name. All creators share the workshop.</p>
+<form method="post" action="/key">
+  <input type="hidden" name="action" value="creator">
+  <label for="name">Their name</label>
+  <input id="name" name="name" type="text" placeholder="what the mind should call them">
+  <label for="creatorPhrase">Their phrase</label>
+  <input id="creatorPhrase" name="creatorPhrase" type="password" autocomplete="new-password" placeholder="what they will say">
+  <button type="submit">Add creator</button>
+</form>
 ${String(req.url ?? '').includes('saved=1') ? '<p class="saved">Saved.</p>' : ''}
 <form method="post" action="/key">
   <label for="phrase">The creator phrase (door two)</label>
@@ -1031,6 +1060,7 @@ A phrase is enough if the second word is left empty.</p>
       const configured = process.env.DSH_WEB_TOKEN ?? ''
       const secret = await readSecret()
       const expected = secret?.phrase ?? process.env.DSH_PASSPHRASE ?? ''
+      const creators = await readCreators().catch(() => [])
       if (configured === '' || expected === '') { respond(res, 503, { ok: false, error: 'no phrase is set' }); return }
       // Five attempts in ten minutes from one network; a phrase is not a password to grind.
       const key = guestKeyOf(req)
@@ -1051,7 +1081,10 @@ A phrase is enough if the second word is left empty.</p>
       // door two. Both may be typed or spoken; both are compared the same way.
       const GUEST_ANSWERS = ['a guest', 'guest', 'yes', 'just a guest', 'i am a guest', 'im a guest',
         'just looking', 'looking', 'a visitor', 'visitor', 'no', 'a guest here']
-      const isOwnerWord = (deeper !== '' && phraseMatches(said, deeper))
+      // A creator's own phrase is checked by name, so the mind can greet the right person.
+      const matchedCreator = creators.find(entry => phraseMatches(said, normaliseWord(entry.phrase)))
+      const isOwnerWord = matchedCreator !== undefined
+        || (deeper !== '' && phraseMatches(said, deeper))
         || phraseMatches(said, normaliseWord(expected))
       const isGuestWord = !isOwnerWord && GUEST_ANSWERS.some(answer => phraseMatches(said, answer))
       if (!isOwnerWord && !isGuestWord) {
@@ -1066,7 +1099,12 @@ A phrase is enough if the second word is left empty.</p>
           'content-type': 'application/json; charset=utf-8',
           'set-cookie': `${OWNER_COOKIE}=${ownerMarker(configured)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${60 * 60 * 24 * 30}`,
         })
-        res.end(JSON.stringify({ ok: true, level: 'owner', say: 'you are the operator.' }))
+        res.end(JSON.stringify({
+          ok: true,
+          level: 'owner',
+          say: 'you are the operator.',
+          ...(matchedCreator === undefined ? {} : { creator: matchedCreator.name }),
+        }))
         return
       }
       // Door one: a guest of the mind. Allowances and memory, but no agent session —

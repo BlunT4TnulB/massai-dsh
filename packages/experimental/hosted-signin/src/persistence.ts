@@ -377,3 +377,43 @@ export async function writeSecret(phrase: string, second?: string): Promise<void
     [phrase, second === undefined || second === '' ? null : second],
   )
 }
+
+
+/** A person with creator access, and the phrase that opens it for them. */
+export interface Creator {
+  readonly id: number
+  readonly name: string
+  readonly phrase: string
+}
+
+/** Create the creators table. */
+async function ensureCreatorTable(): Promise<void> {
+  await runSql(`CREATE TABLE IF NOT EXISTS massai_creators (
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    phrase text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`)
+}
+
+/** Every creator phrase currently configured. */
+export async function readCreators(): Promise<Creator[]> {
+  if (!databaseConfigured()) return []
+  try {
+    await ensureCreatorTable()
+    const rows = await runSql('SELECT id, name, phrase FROM massai_creators ORDER BY id') as Creator[]
+    return rows
+  } catch { return [] }
+}
+
+/** Add a creator. Called from /key by the operator. */
+export async function addCreator(name: string, phrase: string): Promise<void> {
+  await ensureCreatorTable()
+  await runSql('INSERT INTO massai_creators (name, phrase) VALUES ($1, $2)', [name, phrase])
+}
+
+/** Remove a creator by id. */
+export async function removeCreator(id: number): Promise<void> {
+  await ensureCreatorTable()
+  await runSql('DELETE FROM massai_creators WHERE id = $1', [id])
+}
