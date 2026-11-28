@@ -149,6 +149,10 @@ check the source on anything that matters. Costs the operator about six hundredt
       turn.append(line)
     }
     say(answer)
+    try {
+      const host = window.MassaiHost
+      if (host !== undefined && host !== null && typeof host.speak === 'function') host.speak(answer)
+    } catch (error) { void error }
   }
 
   const fail = (turn, message) => {
@@ -200,6 +204,20 @@ check the source on anything that matters. Costs the operator about six hundredt
     event.preventDefault()
     void ask(input.value.trim())
   })
+
+  // The assistant path: an installed host can load /ask?assist=1 and hand a heard
+  // question straight in, then read the answer itself. On the web this is inert.
+  window.massai = {
+    ask: (text) => { if (typeof text === 'string' && text.trim() !== '') void ask(text.trim()) },
+    focus: () => { input.focus() },
+  }
+  const params = new URLSearchParams(location.search)
+  if (params.get('q') !== null && params.get('q') !== '') void ask(String(params.get('q')))
+  if (params.get('assist') === '1') {
+    hint.textContent = 'listening…'
+    input.focus()
+    $('listen').click()
+  }
   $('fresh').addEventListener('click', () => {
     conversation.length = 0
     thread.innerHTML = ''

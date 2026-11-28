@@ -1278,6 +1278,10 @@ export function apply(ctx: Context): void {
         scope: '/',
         display: 'fullscreen',
         orientation: 'any',
+        // Long-press the installed icon: one shortcut that goes straight to a question.
+        shortcuts: [
+          { name: 'Ask Massai', short_name: 'Ask', url: '/ask', description: 'One question, one answer, a source.' },
+        ],
         background_color: '#060504',
         theme_color: '#060504',
         icons: [

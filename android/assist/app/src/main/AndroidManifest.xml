@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+  <queries>
+    <intent>
+      <action android:name="android.speech.RecognitionService" />
+    </intent>
+  </queries>
+
+  <application
+    android:allowBackup="false"
+    android:icon="@mipmap/ic_launcher"
+    android:label="Massai"
+    android:supportsRtl="true"
+    android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+
+    <!-- The assist entry point. Android lists every app that handles ACTION_ASSIST in
+         Settings → Apps → Default apps → Assist & voice input → Assist app. -->
+    <activity
+      android:name=".MainActivity"
+      android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|uiMode|density"
+      android:exported="true"
+      android:launchMode="singleTask"
+      android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+      android:windowSoftInputMode="stateAlwaysHidden|adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.ASSIST" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
