@@ -1252,7 +1252,7 @@ A phrase is enough if the second word is left empty.</p>
   // this can be public without revealing anything.
   ctx.webServer.register({
     kind: 'exact', path: '/api/mind/providers', auth: 'anonymous',
-    handler: (req, res) => {
+    handler: (_req, res) => {
       const rows = [
         { name: 'groq', configured: (process.env.GROQ_API_KEY ?? '') !== '', model: process.env.GROQ_MODEL ?? 'qwen/qwen3.8-27b' },
         { name: 'gemini', configured: (process.env.GEMINI_API_KEY ?? '') !== '', model: process.env.GEMINI_MODEL ?? 'gemini-flash-latest' },
