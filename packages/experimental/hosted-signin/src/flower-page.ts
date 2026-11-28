@@ -2935,6 +2935,14 @@ document.addEventListener('visibilitychange', function () {
 })();
 
 addEventListener('message', function (event) {
+  const incoming = event.data;
+  // The assistant surface hands the mind an answer to speak: the words, the rings and the
+  // breath belong to the mind, so the answer is delivered by the thing the person is looking at.
+  if (incoming !== null && typeof incoming === 'object' && incoming.type === 'massai:say'
+    && typeof incoming.text === 'string' && incoming.text.trim() !== '') {
+    say(incoming.text.trim());
+    return;
+  }
   const data = event.data;
   if (data === null || typeof data !== 'object' || data.type !== 'massai:spin') return;
   const dx = Number(data.dx) || 0;

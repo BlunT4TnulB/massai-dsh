@@ -27,7 +27,7 @@ import java.util.Locale;
  * the answer, and the action that made the app the assist handler at all.
  */
 public class MainActivity extends Activity {
-  private static final String HOME = "https://massai-itu.ca/ask?assist=1";
+  private static final String HOME = "https://massai-itu.ca/assist?assist=1";
   private static final int MIC = 41;
 
   private WebView web;

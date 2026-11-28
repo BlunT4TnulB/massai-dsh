@@ -31,6 +31,7 @@ export function askPageHtml(signedIn: boolean): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ask Massai</title>
 <link rel="icon" type="image/svg+xml" href="/massai-crest.svg">
+<link rel="search" type="application/opensearchdescription+xml" title="Massai" href="/opensearch.xml">
 <meta name="description" content="Ask Massai one thing and get a short answer with the source it used.">
 <style>
   *{box-sizing:border-box}

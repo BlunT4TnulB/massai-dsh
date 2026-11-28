@@ -31,6 +31,7 @@ import { hiveNodes, hiveSummary, queueNote, sessionFor, takeNotes, touchSession 
 import { confessionAt, readVitals, vitalsNotice } from './vitals.ts'
 import { flowerPageHtml } from './flower-page.ts'
 import { askPageHtml } from './ask-page.ts'
+import { assistPageHtml } from './assist-page.ts'
 import { limitsPageHtml } from './limits-page.ts'
 import { labelOf, projectOf, referenceFor } from './viewer.ts'
 import { mePageHtml } from './me-page.ts'
@@ -1087,6 +1088,47 @@ export function apply(ctx: Context): void {
     },
   })
 
+
+  // A search engine description, so any browser on any device can add Massai as one:
+  // type "massai <question>" in the address bar and it opens the answer.
+  ctx.webServer.register({
+    kind: 'exact', path: '/opensearch.xml', auth: 'anonymous',
+    handler: (req, res) => {
+      const xml = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Massai</ShortName>
+  <Description>Ask Massai a question and get a short answer with its source.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="16" height="16" type="image/svg+xml">https://massai-itu.ca/massai-crest.svg</Image>
+  <Url type="text/html" method="GET" template="https://massai-itu.ca/ask?q={searchTerms}" />
+</OpenSearchDescription>
+`)
+      res.writeHead(200, { 'content-type': 'application/opensearchdescription+xml; charset=utf-8', 'content-length': String(xml.byteLength) })
+      res.end(req.method === 'HEAD' ? undefined : xml)
+    },
+  })
+
+  // The assistant surface: the mind full screen, with a box. This is what a held button opens.
+  ctx.webServer.register({
+    kind: 'exact', path: '/assist', auth: 'anonymous',
+    handler: (req, res) => {
+      const auth = ctx.get('browserAuth') as
+        | { sessionUserId(request: { headers: Record<string, string | string[] | undefined> }): string | undefined }
+        | undefined
+      let signedIn = isOwnerRequest(req)
+      if (!signedIn) {
+        try { signedIn = auth?.sessionUserId({ headers: req.headers as Record<string, string | string[] | undefined> }) !== undefined }
+        catch { signedIn = false }
+      }
+      const html = Buffer.from(assistPageHtml(signedIn))
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'content-length': String(html.byteLength),
+        'cache-control': 'no-store',
+      })
+      res.end(req.method === 'HEAD' ? undefined : html)
+    },
+  })
 
   // The front door for everyday use: one box, an answer, a source.
   ctx.webServer.register({
