@@ -2805,6 +2805,16 @@ function togglePanel() {
   }
   panel = document.createElement('div');
   panel.id = 'mindPanel';
+  // A grab handle: draggable in any direction, and a flick past the threshold closes it.
+  // The panel is a thing on the glass, so it should be able to be pushed off it.
+  const handle = document.createElement('div');
+  handle.setAttribute('data-handle', '1');
+  handle.setAttribute('aria-label', 'drag to close the dials');
+  handle.style.cssText = 'position:sticky;top:-12px;margin:-12px -14px 8px;padding:10px 0 8px;'
+    + 'cursor:grab;touch-action:none;background:linear-gradient(180deg,rgba(12,11,10,.98),rgba(12,11,10,.86));'
+    + 'border-radius:12px 12px 0 0;text-align:center';
+  handle.innerHTML = '<span style="display:inline-block;width:42px;height:4px;border-radius:2px;'
+    + 'background:rgba(247,205,140,.35)"></span>';
   // It is a tall panel on a short phone: cap the height and let it scroll, with a
   // momentum scroll and a safe bottom inset so the last row is not under the thumb.
   panel.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:50;width:min(19rem,92vw);'
@@ -2812,6 +2822,7 @@ function togglePanel() {
     + 'background:rgba(12,11,10,.94);border:1px solid rgba(247,205,140,.22);border-radius:12px;'
     + 'padding:12px 14px calc(18px + env(safe-area-inset-bottom));font:12px system-ui,sans-serif;'
     + 'color:#E7DCC6;backdrop-filter:blur(8px)';
+  panel.append(handle);
 
   let html = '<div style="letter-spacing:.22em;font-size:10px;color:#8a7c62;margin-bottom:8px">MIND</div>';
   /** One labelled slider row. */
@@ -2929,6 +2940,12 @@ function togglePanel() {
     + 'background:#1a1714;color:#8a7c62;cursor:pointer">reset</button></div>';
   html += '<p style="margin:8px 0 0;font-size:10px;color:#6f6553;line-height:1.5">'
     + 'Reset returns to the mind as built. Nothing here changes what the workshop actually does.</p>';
+  html += '<p style="margin:10px 0 0;padding-top:8px;border-top:1px solid #26221d;font-size:10px;'
+    + 'color:#6f6553;line-height:1.6">'
+    + '<b style="color:#8a7c62">keys</b> S dials · Y log · L the word · T ask · Esc close<br>'
+    + '<b style="color:#8a7c62">mouse</b> drag turn · wheel depth · shift+wheel fine · alt+wheel breath · ctrl/cmd+tap inspect<br>'
+    + '<b style="color:#8a7c62">glass</b> 2 taps stir · 3 taps fullscreen · 5 taps dials · three fingers wide→closed opens the workshop<br>'
+    + '<b style="color:#8a7c62">panel</b> drag the handle to push it away</p>';
   panel.innerHTML = html;
 
   panel.addEventListener('input', function (event) {
@@ -2973,6 +2990,42 @@ function togglePanel() {
     applyPreset(name);
   });
   document.body.appendChild(panel);
+
+  // Drag the handle: the panel follows the finger, then either snaps back or leaves.
+  let drag = null;
+  let offset = { x: 0, y: 0 };
+  handle.addEventListener('pointerdown', function (event) {
+    drag = { x: event.clientX, y: event.clientY };
+    handle.style.cursor = 'grabbing';
+    try { handle.setPointerCapture(event.pointerId); } catch (error) { void error; }
+    event.stopPropagation();
+  });
+  handle.addEventListener('pointermove', function (event) {
+    if (drag === null) return;
+    offset = { x: event.clientX - drag.x, y: event.clientY - drag.y };
+    panel.style.transform = 'translate(' + offset.x + 'px,' + offset.y + 'px)';
+    panel.style.opacity = String(Math.max(0.35, 1 - Math.max(Math.abs(offset.x), Math.abs(offset.y)) / 220));
+  });
+  const settle = function () {
+    if (drag === null) return;
+    drag = null;
+    handle.style.cursor = 'grab';
+    const gone = Math.abs(offset.x) > 90 || Math.abs(offset.y) > 90;
+    if (gone) {
+      panel.style.transition = 'transform .22s ease, opacity .22s ease';
+      panel.style.transform = 'translate(' + (offset.x * 2.4) + 'px,' + (offset.y * 2.4) + 'px)';
+      panel.style.opacity = '0';
+      setTimeout(function () { if (panel !== null) panel.remove(); }, 220);
+      flashNote('closed');
+      return;
+    }
+    panel.style.transition = 'transform .2s ease, opacity .2s ease';
+    panel.style.transform = 'translate(0,0)';
+    panel.style.opacity = '1';
+    setTimeout(function () { panel.style.transition = '' }, 220);
+  };
+  handle.addEventListener('pointerup', settle);
+  handle.addEventListener('pointercancel', settle);
 }
 
 // Arriving somewhere again: it says it remembers the last thing you looked at.
@@ -3191,6 +3244,21 @@ addEventListener('message', function (event) {
 });
 
 canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
+/** How many threads a node carries, for the inspector. */
+function connectionsOf(index) {
+  try {
+    const me = nodes[index];
+    if (me === undefined) return 0;
+    let count = 0;
+    for (let other = 0; other < nodes.length; other += 1) {
+      if (other === index) continue;
+      const dist = Math.abs(nodes[other].lat - me.lat) + Math.abs(nodes[other].lon - me.lon);
+      if (dist < 0.9) count += 1;
+    }
+    return count;
+  } catch { return 0 }
+}
+
 function nodeAt(clientX, clientY) {
   let best = -1;
   // A thumb is not a mouse: on glass the door needs a generous target, and the
@@ -3380,6 +3448,12 @@ function resolveTaps() {
     flashNote(simLevel === 0 ? 'simulate · none' : 'simulate · ' + LEVELS[simLevel]);
     return;
   }
+  if (tapInspect) {
+    const at = lastTapPick;
+    tapInspect = false;
+    if (at >= 0) flashNote(describe(at) + ' · ' + connectionsOf(at) + ' threads');
+    return;
+  }
   // a single tap: the old behaviour, explore what is under it
   const picked = lastTapPick;
   if (DOOR_WORKS && picked === PORTAL) {
@@ -3418,6 +3492,8 @@ function resolveTaps() {
 }
 
 let lastTapPick = -1;
+/** True when this tap run began with a modifier: inspect the star instead of entering. */
+let tapInspect = false;
 
 /**
  * Record one tap and restart the buffer that resolves it.
@@ -3425,10 +3501,10 @@ let lastTapPick = -1;
  * @param y - pointer y in CSS pixels.
  * @returns nothing.
  */
-function noteTap(x, y) {
+function noteTap(x, y, inspectWanted) {
   tapCount += 1;
   observations.taps += 1;
-  if (tapCount === 1) lastTapPick = nodeAt(x, y);
+  if (tapCount === 1) { lastTapPick = nodeAt(x, y); tapInspect = inspectWanted === true; }
   clearTimeout(tapTimer);
   tapTimer = setTimeout(resolveTaps, 300);
 }
@@ -3476,7 +3552,7 @@ canvas.addEventListener('pointerup', function (event) {
   // barely moved, so a flick never counts as a double tap.
   const moved = Math.hypot(event.clientX - tapStart.x, event.clientY - tapStart.y);
   if (moved > 12) return;
-  noteTap(event.clientX, event.clientY);
+  noteTap(event.clientX, event.clientY, event.metaKey || event.ctrlKey);
 });
 canvas.addEventListener('pointercancel', function (event) {
   pointers.delete(event.pointerId);
@@ -3486,6 +3562,21 @@ addEventListener('pointerleave', function () { lookX = 0; lookY = 0; });
 canvas.addEventListener('wheel', function (event) {
   wake();
   event.preventDefault();
+  // Modifiers make the same wheel do different things, and only while the pointer is on
+  // the glass — none of these are OS gestures, so nothing competes with Mission Control.
+  if (event.altKey) {
+    MIND.breath = Math.max(0, Math.min(2.5, Math.round((MIND.breath + (event.deltaY > 0 ? -0.1 : 0.1)) * 100) / 100));
+    applyMind(true);
+    flashNote('breath ' + MIND.breath.toFixed(2));
+    return;
+  }
+  if (event.shiftKey) {
+    zoomLogTarget += event.deltaY > 0 ? -0.022 : 0.022;
+    driftHoldUntil = performance.now() + 22000;
+    driftBase = zoomLogTarget;
+    driftPhase = 0;
+    return;
+  }
   zoomLogTarget += event.deltaY > 0 ? -0.11 : 0.11;
   driftHoldUntil = performance.now() + 22000;
   driftBase = zoomLogTarget;
@@ -3493,6 +3584,15 @@ canvas.addEventListener('wheel', function (event) {
 }, { passive: false });
 addEventListener('keydown', function (event) {
   wake();
+  if (event.key === 'Escape') {
+    const panel = document.getElementById('mindPanel');
+    if (panel !== null) { panel.remove(); flashNote('closed'); return }
+    const log = document.getElementById('mindLog');
+    if (log !== null) { log.remove(); return }
+    const word = document.getElementById('mindWord');
+    if (word !== null) { word.remove(); return }
+    return;
+  }
   if (event.key === 'ArrowLeft') yaw -= 0.1;
   if (event.key === 'ArrowRight') yaw += 0.1;
   if (event.key === 'ArrowUp') pitch = Math.max(-1.5, pitch - 0.07);
