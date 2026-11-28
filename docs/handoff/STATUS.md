@@ -1312,6 +1312,57 @@ Verified after the fix: coriander → source `Coriander`, answer about wrapping/
 
 `$0.00006–0.00009` a question, printed on the page and on `/limits` with the caps.
 
+## The mind is the front door (2026-11-27, `1edd2f3`)
+
+The architecture changed as the owner asked: the product is the mind, so the mind is what `/` serves.
+
+```
+GET /           302 → /mind        (anonymous and signed-in alike)
+GET /welcome    200               the riddle/orb ritual, kept for anyone who wants it
+/mind           the fullscreen mind, with a box on the glass
+/ask            the calmer one-box surface, for a focused session
+```
+
+The box on the mind (`#mindAsk`, a thin pill at the foot) posts to the same `/api/mind/ask` as `/ask`,
+so caps, sources, style and honesty are identical wherever a question is asked. It hides in the
+screensaver, because that mode has no chrome by design.
+
+### Anyone may now ask — with a stranger allowance
+
+```
+operator      3.5 s pace · 300/day · 240 tokens · history kept · balanced or deep
+signed-in     8 s pace · 60/day · 240 tokens · history kept
+stranger      20 s pace · 8/day · 120 tokens · no history · brief answers only
+```
+
+Stranger questions are answered alone: their thread is not stored server-side. When the allowance is
+gone it says so in character ("that is enough from a stranger. sign in at /access for more.").
+
+### A source must be earned
+
+Three wrong citations in a row taught the rule. First "Adobada" (pork) for coriander, then
+"App Store (Apple)" for cut apples, then "Go Fridge" for cooked rice — each caused by a title sharing
+one common word. The rule now: **a question with more than two content words needs two of them in the
+title, or no source is offered at all.** Verified after the change:
+
+| question | source |
+|---|---|
+| how do I stop a cut apple going brown? | **none** — answer still given, honestly unsourced |
+| what is the population of Calgary? | Calgary · correct figure |
+| best way to keep coriander fresh? | Coriander |
+
+An unsourced answer is acceptable; a wrongly sourced one is not.
+
+### Still to build for the full "everything mind"
+
+1. **secret spoken phrase** for full access — the owner's proposal. Design: `/api/owner/claim` also
+   accepts a passphrase (env `DSH_PASSPHRASE`, timing-safe compare) so a word said to the mind mints the
+   operator cookie. Not built yet; the token cookie works today.
+2. **search provider** (Brave/Tavily) for the living web, which is the only gap left between this and
+   "never open Google again".
+3. **app-side "mind works"** — command → composer hides → work shown → it speaks → composer returns.
+4. **guest sandboxing** — the only path back to a free workshop preview.
+
 ## OPEN STEERS — never lose these (as at 2026-11-27)
 A running list, because the conversation is long and the asks keep coming.
 
