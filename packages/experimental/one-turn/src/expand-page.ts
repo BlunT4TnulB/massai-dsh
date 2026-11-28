@@ -391,7 +391,7 @@ costs anything until you choose to build.</p>
         ].map(([k, v]) => '<div class="kv"><span>' + k + '</span><b>' + v + '</b></div>').join('');
         $('compileNote').textContent = 'This is the exact prompt the build receives. Editing the answers regenerates it.';
         $('guestNote').textContent = 'Planning is free and open to anyone. Building it — spending the'
-          + ' operator\'s credit — needs a signed-in session.';
+          + ' operator\\'s credit — needs a signed-in session.';
         return;
       }
       if (data.ok === false) {

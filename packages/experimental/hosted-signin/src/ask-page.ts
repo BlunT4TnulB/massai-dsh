@@ -74,15 +74,16 @@ export function askPageHtml(signedIn: boolean): string {
 <p class="lede">A short answer, in the mind's own voice, and the source it used. If the answer is worth
 building, it hands you to the Expander — this page is for questions, not projects.</p>
 
-${signedIn ? '' : `<div class="signin"><b>Sign in to ask.</b> The thinking is for people who came in —
-<a href="/access">/access</a> — while the mind itself stays open to anyone.</div>`}
+${signedIn ? '' : `<div class="signin"><b>Anyone can ask.</b> As a guest that is eight questions a day,
+twenty seconds apart, answered briefly. <a href="/access">Sign in</a> for sixty a day, longer answers and a
+thread that is kept.</div>`}
 
-<form id="askForm" ${signedIn ? '' : 'aria-disabled="true"'}>
-  <input id="q" type="text" autocomplete="off" placeholder="${PROMPTS[0]}" ${signedIn ? '' : 'disabled'}>
-  ${signedIn ? '<button id="send" class="primary" type="submit">Ask</button>' : ''}
+<form id="askForm">
+  <input id="q" type="text" autocomplete="off" placeholder="${PROMPTS[0]}">
+  <button id="send" class="primary" type="submit">Ask</button>
 </form>
 <div class="row">
-  <button id="listen" class="ghost" type="button" ${signedIn ? '' : 'disabled'}>Speak it</button>
+  <button id="listen" class="ghost" type="button">Speak it</button>
   <button id="aloud" class="ghost" type="button" aria-pressed="false">Read answers aloud</button>
   <a href="/expand"><button class="ghost" type="button">Make something instead →</button></a>
   <button id="fresh" class="ghost" type="button">Start over</button>
@@ -179,7 +180,7 @@ check the source on anything that matters. Costs the operator about six hundredt
         signal: controller.signal,
       })
       if (response.status === 401 || response.status === 403) {
-        fail(turn, 'that is a question for someone who has signed in — /access')
+        fail(turn, 'that is the end of the guest allowance for today. sign in at /access for more.')
         return
       }
       const body = await response.json()
