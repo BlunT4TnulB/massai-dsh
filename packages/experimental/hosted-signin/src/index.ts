@@ -1019,6 +1019,11 @@ A phrase is enough if the second word is left empty.</p>
   const wordGuard = new Map<string, { at: number; tries: number }>()
   /** Answers already given: asking the same thing again is free. */
   const answerCache = new Map<string, { at: number; answer: string; source?: { title: string; url: string } }>()
+  /** Which backbones answered, and which failed, for the operator to see. */
+  const providerHealth = new Map<string, { ok: boolean; at: number; detail: string }>()
+  const noteProvider = (name: string, ok: boolean, detail: string): void => {
+    providerHealth.set(name, { ok, at: Date.now(), detail: detail.slice(0, 120) })
+  }
   ctx.webServer.register({
     kind: 'exact', path: '/api/owner/word', auth: 'anonymous',
     handler: async (req, res) => {
@@ -1243,6 +1248,21 @@ A phrase is enough if the second word is left empty.</p>
   })
 
 
+  // Which backbones are available and how they last behaved — configured flags only, so
+  // this can be public without revealing anything.
+  ctx.webServer.register({
+    kind: 'exact', path: '/api/mind/providers', auth: 'anonymous',
+    handler: (req, res) => {
+      const rows = [
+        { name: 'groq', configured: (process.env.GROQ_API_KEY ?? '') !== '', model: process.env.GROQ_MODEL ?? 'qwen/qwen3.8-27b' },
+        { name: 'gemini', configured: (process.env.GEMINI_API_KEY ?? '') !== '', model: process.env.GEMINI_MODEL ?? 'gemini-flash-latest' },
+        { name: 'openrouter', configured: (process.env.OPENROUTER_API_KEY ?? '') !== '', model: process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free' },
+        { name: 'deepseek', configured: (process.env.DEEPSEEK_API_KEY ?? '') !== '', model: 'deepseek-chat' },
+      ].map(row => ({ ...row, last: providerHealth.get(row.name) ?? null }))
+      respond(res, 200, { order: ['groq', 'gemini', 'openrouter', 'deepseek'], providers: rows }, { 'cache-control': 'no-store' })
+    },
+  })
+
   // A search engine description, so any browser on any device can add Massai as one:
   // type "massai <question>" in the address bar and it opens the answer.
   ctx.webServer.register({
@@ -1429,17 +1449,20 @@ A phrase is enough if the second word is left empty.</p>
             method: 'POST',
             headers: { authorization: `Bearer ${groqKey}`, 'content-type': 'application/json' },
             body: JSON.stringify({
-              model: 'llama-3.1-8b-instant',
+              model: process.env.GROQ_MODEL ?? 'qwen/qwen3.8-27b',
               messages: [{ role: 'system', content: systemText }, ...messages.slice(1)],
-              max_tokens: stranger ? 120 : 240,
+              max_tokens: 400,
               temperature: 0.8,
             }),
-            signal: AbortSignal.timeout(8_000),
+            signal: AbortSignal.timeout(9_000),
           })
           if (response.ok) {
             const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
             const text = (payload.choices?.[0]?.message?.content ?? '').trim()
-            if (text !== '') { answer = text; via = 'groq' }
+            if (text !== '') { answer = text; via = 'groq'; noteProvider('groq', true, 'answered') }
+            else noteProvider('groq', false, 'empty content')
+          } else {
+            noteProvider('groq', false, 'http ' + String(response.status))
           }
         } catch { /* fall through to the next provider */ }
       }
@@ -1448,22 +1471,51 @@ A phrase is enough if the second word is left empty.</p>
       const geminiKey = process.env.GEMINI_API_KEY ?? ''
       if (answer === '' && geminiKey !== '') {
         try {
-          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(geminiKey), {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: systemText }] },
-              contents: messages.slice(1).map(turn => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content }] })),
-              generationConfig: { maxOutputTokens: stranger ? 120 : 240, temperature: 0.8 },
-            }),
-            signal: AbortSignal.timeout(8_000),
-          })
-          if (response.ok) {
-            const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-            const text = (payload.candidates?.[0]?.content?.parts?.map(part => part.text ?? '').join('') ?? '').trim()
-            if (text !== '') { answer = text; via = 'gemini' }
+          // The free tier's model ids move; try the live alias, then a lite fallback.
+          const candidates = [process.env.GEMINI_MODEL ?? 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite']
+          for (const model of candidates) {
+            try {
+              const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(geminiKey), {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  system_instruction: { parts: [{ text: systemText }] },
+                  contents: messages.slice(1).map(turn => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content }] })),
+                  generationConfig: { maxOutputTokens: 400, temperature: 0.8 },
+                }),
+                signal: AbortSignal.timeout(9_000),
+              })
+              if (!response.ok) { noteProvider('gemini', false, model + ' http ' + String(response.status)); continue }
+              const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+              const text = (payload.candidates?.[0]?.content?.parts?.map(part => part.text ?? '').join('') ?? '').trim()
+              if (text === '') { noteProvider('gemini', false, model + ' empty'); continue }
+              answer = text; via = 'gemini'; noteProvider('gemini', true, model); break
+            } catch { noteProvider('gemini', false, model + ' transport') }
           }
         } catch { /* fall through to the paid key */ }
+      }
+
+      // 3. OpenRouter's free models, if the owner added a key for them.
+      const orKey = process.env.OPENROUTER_API_KEY ?? ''
+      if (answer === '' && orKey !== '') {
+        try {
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { authorization: `Bearer ${orKey}`, 'content-type': 'application/json' },
+            body: JSON.stringify({
+              model: process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free',
+              messages: [{ role: 'system', content: systemText }, ...messages.slice(1)],
+              max_tokens: 400,
+              temperature: 0.8,
+            }),
+            signal: AbortSignal.timeout(12_000),
+          })
+          if (response.ok) {
+            const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
+            const text = (payload.choices?.[0]?.message?.content ?? '').trim()
+            if (text !== '') { answer = text; via = 'openrouter'; noteProvider('openrouter', true, 'answered') }
+          }
+        } catch { noteProvider('openrouter', false, 'transport') }
       }
 
       if (answer !== '') {
