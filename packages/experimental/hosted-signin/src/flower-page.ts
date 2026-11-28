@@ -1047,6 +1047,34 @@ function obey(raw) {
     return reply(room.replace('/', 'the ') .replace('-', ' ') + '.');
   }
   if (/(let me in|the word|opening word)/.test(text)) { openWord(); return reply('say it.'); }
+  // Everything a pathway could mean, said out loud. Voice and typing reach the same
+  // words, so one vocabulary covers both.
+  if (/(last chat|last conversation|continue where|resume)/.test(text)) {
+    if (!signedIn) return reply('your last conversation belongs to whoever signed in.');
+    location.href = '/';
+    return reply('the last conversation.');
+  }
+  if (/(last project|most recent build|what i built last|latest project)/.test(text)) {
+    if (!signedIn) return reply('projects belong to whoever signed in. that is not you yet.');
+    fetch('/api/projects/list', { headers: { accept: 'application/json' } })
+      .then(function (response) { return response.ok ? response.json() : null })
+      .then(function (body) {
+        const first = body !== null && Array.isArray(body.projects) ? body.projects[0] : undefined;
+        if (first !== undefined && typeof first.name === 'string') flashNote(first.name);
+      })
+      .catch(function () { /* the page itself still opens */ });
+    location.href = '/projects';
+    return reply('the last thing you built.');
+  }
+  if (/(account|my account|billing|spend|what have i spent)/.test(text)) { location.href = '/me'; return reply('your account.') }
+  if (/(the log|what did i ask|my questions)/.test(text)) { openLog(); return reply('the log.') }
+  if (/(let me ask|ask box|ask something)/.test(text)) {
+    const box = document.getElementById('mindAskInput');
+    if (box !== null) { box.focus(); return reply('ask.') }
+    openSay();
+    return reply('ask.');
+  }
+  if (/(who summons|the word|let me in)/.test(text)) { openWord(); return reply('who summons me?') }
   if (/(who is looking|who am i|do you know me)/.test(text)) {
     if (VIEWER === 'owner') return reply('the operator. the one who made this.');
     if (VIEWER !== 'stranger') return reply(VIEWER_LABEL === 'guest' ? 'a guest. still.' : 'a member, signed in.');
@@ -3241,7 +3269,10 @@ canvas.addEventListener('pointermove', function (event) {
   if (pointers.size >= 3) {
     // three fingers, starting closed, ending open — the way in now that no door is drawn
     const spread = pointerSpread();
-    if (!threeFired && threeStart > 6 && spread > threeStart * 1.5 && spread - threeStart > 30) {
+    // Open then closing: three fingers held apart, then brought together. Closing the
+    // hand is the more natural "gathering something in" and it no longer fights the
+    // spread-the-horizon gesture.
+    if (!threeFired && threeStart > 40 && spread < threeStart * 0.65 && threeStart - spread > 30) {
       threeFired = true;
       openTheMind();
     }
@@ -3639,7 +3670,7 @@ body.screensaver .voice.speaking { opacity: .9; }
 <p class="sim" id="simulated">simulated — no live activity yet</p>
 <p class="being" id="being"></p>
 <p class="confession" id="confession"></p>
-<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>two taps</b> stirs it · <b>three taps</b> is the whole screen · <b>five taps</b> opens the dials · <b>three fingers opening</b> lets you in</p>
+<p class="hint" id="hint"><b>drag</b> to turn · <b>two fingers</b> move the centre and the depth · <b>two taps</b> stirs it · <b>three taps</b> is the whole screen · <b>five taps</b> opens the dials · <b>three fingers closing</b> lets you in</p>
 <!-- the simulator lives on the glass now: double tap stirs it, triple tap calms it -->
   <span class="shapes"><a href="/flower">galaxy</a> &nbsp;|&nbsp; <a href="/map">where everything is →</a></span>
 <script>${FLOWER_SCRIPT}</script>
